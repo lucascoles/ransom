@@ -54,14 +54,19 @@ struct ConfettiBurst: View {
     }
 
     private func seed() {
-        let colors: [Color] = [Palette.green, Palette.lime, Palette.flame, Palette.violet, Color(hex: 0xFFD84D)]
+        // Rex's own colours lead, since he's the one celebrating. Palette.lime went
+        // with the green mascot and no longer exists.
+        let colors: [Color] = [
+            Palette.brand, Palette.Rex.gold, Palette.flame,
+            Palette.green, Palette.violet, Color(hex: 0xFFD84D)
+        ]
         pieces = (0..<pieceCount).map { _ in
             Piece(
                 x: CGFloat.random(in: 0.02...0.98),
                 delay: Double.random(in: 0...0.5),
                 drift: CGFloat.random(in: -34...34),
                 spin: Double.random(in: -320...320),
-                color: colors.randomElement() ?? Palette.green,
+                color: colors.randomElement() ?? Palette.brand,
                 size: CGFloat.random(in: 6...11),
                 isCircle: Bool.random()
             )
