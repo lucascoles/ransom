@@ -79,6 +79,16 @@ struct IntensityStep: View {
                 .padding(.vertical, 6)
                 .ransomCard()
                 .padding(.top, 4)
+
+                // The tariff is the differentiator, so it gets said out loud before
+                // they pay for it — not discovered on the fourth unlock of the day.
+                Text("That's the **first** unlock. The fourth costs double, the sixth triple, and anything after 10pm carries a surcharge. Walk away for three hours and the price resets.")
+                    .font(RansomFont.caption(13))
+                    .foregroundStyle(Palette.inkSoft)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 2)
+                    .padding(.top, 10)
             }
         }
     }
@@ -337,7 +347,8 @@ struct PlanRevealStep: View {
     var body: some View {
         StepScaffold(
             title: "Your plan is ready",
-            subtitle: "This is the deal Rex will hold you to.",
+            subtitle: profile.identity.map { "You said: \($0.statement)" }
+                ?? "This is the deal Rex will hold you to.",
             buttonTitle: "Start my first week",
             onNext: onNext
         ) {
@@ -359,11 +370,13 @@ struct PlanRevealStep: View {
                     )
                 }
 
+                firstMonthCard
+
                 projectionCard
 
                 RexScene(
                     pose: .flex,
-                    line: "That's \(plan.repsPerUnlock * 7 * 3) reps a week if you scroll like you say you do. See you on the floor.",
+                    line: "That's about \(plan.firstWeekReps.formatted()) \(plan.exercise.shortTitle.lowercased()) in week one, if you scroll like you say you do. See you on the floor.",
                     size: 104
                 )
                 .padding(.top, 2)
@@ -408,6 +421,51 @@ struct PlanRevealStep: View {
             }
         }
         .padding(.vertical, 6)
+        .ransomCard()
+    }
+
+    /// Both halves read the same curve as the chart below, so the hours falling and
+    /// the reps climbing can never tell the user two different stories.
+    private var firstMonthCard: some View {
+        VStack(spacing: 12) {
+            Text("YOUR FIRST MONTH")
+                .font(RansomFont.caption(11))
+                .tracking(1.4)
+                .foregroundStyle(Palette.inkFaint)
+
+            HStack(spacing: 0) {
+                VStack(spacing: 2) {
+                    Text("\(Int(plan.firstMonthHoursSaved.rounded()))h")
+                        .font(RansomFont.display(30))
+                        .foregroundStyle(Palette.green)
+                    Text("not scrolled")
+                        .font(RansomFont.caption(12))
+                        .foregroundStyle(Palette.inkSoft)
+                }
+                .frame(maxWidth: .infinity)
+
+                Rectangle()
+                    .fill(Palette.hairline)
+                    .frame(width: 1)
+                    .frame(maxHeight: .infinity)
+
+                VStack(spacing: 2) {
+                    Text(plan.firstMonthReps.formatted())
+                        .font(RansomFont.display(30))
+                        .foregroundStyle(Palette.brand)
+                    Text("\(plan.exercise.shortTitle.lowercased()) paid")
+                        .font(RansomFont.caption(12))
+                        .foregroundStyle(Palette.inkSoft)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+
+            Text("Two lines that move at once. Hours down, reps up.")
+                .font(RansomFont.caption(12.5))
+                .foregroundStyle(Palette.inkSoft)
+                .multilineTextAlignment(.center)
+        }
         .ransomCard()
     }
 

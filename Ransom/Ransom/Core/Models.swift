@@ -191,25 +191,54 @@ struct RansomPlan: Equatable {
     var expectedUnlocksPerDay: Int
     /// Minutes of scrolling we expect the plan to remove per day.
     var projectedMinutesSavedPerDay: Int
+    /// The user's own stated daily hours, kept so projections and copy agree.
+    var hoursPerDay: Double
+    /// The sentence they committed to in the intake, echoed back where it counts.
+    var identity: Identity?
 
-    /// Reps this year at the user's own stated habit, under the real tariff.
+    /// How much of the daily habit the tariff is expected to remove by a given day,
+    /// ramping to a third over four weeks.
     ///
-    /// Deliberately computed rather than written: three separate reviewers quoted
-    /// 20,000, 15,000 and 17,000 for this figure and the true range across plans is
-    /// 12,775 to 98,550. A round invented number sitting next to the computed
-    /// days-saved figure discredits both.
-    var projectedRepsPerYear: Int {
-        let unlocks = (0..<expectedUnlocksPerDay).reduce(0) { total, index in
-            total + Tariff.quote(base: repsPerUnlock, unlocksToday: index,
-                                 nightSurchargeEnabled: false).reps
-        }
-        return unlocks * 365
+    /// One curve serves every projection in the app. The plan screen's chart already
+    /// promises screen time falls; an earlier version held unlocks flat forever and
+    /// quoted 108,000 reps a year beside that same falling line. Arithmetically
+    /// correct, internally contradictory, and not a number anyone believes.
+    private static func reduction(onDay day: Int) -> Double {
+        0.35 * min(1, Double(day) / 28)
     }
 
-    /// Rounded the way a person would say it out loud, never down.
-    var projectedRepsRounded: Int {
-        let value = projectedRepsPerYear
-        let step = value >= 10_000 ? 1_000 : 500
+    /// Reps paid across the first `days`, priced by the real tariff and discounted
+    /// by the unlocks the tariff is expected to prevent.
+    func projectedReps(overDays days: Int) -> Int {
+        var total = 0.0
+        for day in 0..<days {
+            let unlocks = Double(expectedUnlocksPerDay) * (1 - Self.reduction(onDay: day))
+            let whole = Int(unlocks)
+            for index in 0..<whole {
+                total += Double(Tariff.quote(base: repsPerUnlock, unlocksToday: index,
+                                             nightSurchargeEnabled: false).reps)
+            }
+            let partial = Tariff.quote(base: repsPerUnlock, unlocksToday: whole,
+                                       nightSurchargeEnabled: false).reps
+            total += (unlocks - Double(whole)) * Double(partial)
+        }
+        return Int(total.rounded())
+    }
+
+    /// Hours of scrolling the same curve expects to remove across the first `days`.
+    func projectedHoursSaved(overDays days: Int) -> Double {
+        (0..<days).reduce(0) { total, day in
+            total + hoursPerDay * Self.reduction(onDay: day)
+        }
+    }
+
+    var firstWeekReps: Int { Self.round(projectedReps(overDays: 7)) }
+    var firstMonthReps: Int { Self.round(projectedReps(overDays: 30)) }
+    var firstMonthHoursSaved: Double { projectedHoursSaved(overDays: 30) }
+
+    /// Rounded the way a person would say it out loud.
+    private static func round(_ value: Int) -> Int {
+        let step = value >= 10_000 ? 1_000 : (value >= 2_000 ? 100 : 50)
         return Int((Double(value) / Double(step)).rounded()) * step
     }
 
@@ -236,7 +265,9 @@ struct RansomPlan: Equatable {
             dailyRepGoal: dailyGoal,
             exercise: exercise,
             expectedUnlocksPerDay: load.expectedUnlocks,
-            projectedMinutesSavedPerDay: savedPerDay
+            projectedMinutesSavedPerDay: savedPerDay,
+            hoursPerDay: load.hoursPerDay,
+            identity: profile.identity
         )
     }
 }

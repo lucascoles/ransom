@@ -116,7 +116,7 @@ struct FirstRepStep: View {
             Text("That's one.")
                 .font(RansomFont.title(28))
                 .foregroundStyle(Palette.ink)
-            Text("There's about \(plan.projectedRepsRounded.formatted()) more in a year of you.")
+            Text("There's about \(plan.firstMonthReps.formatted()) more in your first month.")
                 .font(RansomFont.body(16))
                 .foregroundStyle(Palette.inkSoft)
                 .multilineTextAlignment(.center)

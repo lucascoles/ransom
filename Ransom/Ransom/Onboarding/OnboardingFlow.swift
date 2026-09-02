@@ -96,7 +96,10 @@ struct OnboardingFlow: View {
             IntensityStep(profile: $draft, onNext: { advance(to: .firstRep) })
 
         case .firstRep:
-            FirstRepStep(profile: draft, onNext: { advance(to: .building) })
+            FirstRepStep(profile: draft, onNext: { advance(to: .notifications) })
+
+        case .notifications:
+            NotificationsStep(onNext: { advance(to: .building) })
 
         case .building:
             BuildingPlanStep(profile: draft, onNext: { advance(to: .plan) })
@@ -153,6 +156,9 @@ enum OnboardingStep: Int, CaseIterable, Hashable {
     case exercises
     case intensity
     case firstRep
+    // Asking here, right after they've earned something, is the one moment the
+    // permission reads as Rex keeping his side of the deal rather than a tax.
+    case notifications
     case building
     case plan
     case paywall

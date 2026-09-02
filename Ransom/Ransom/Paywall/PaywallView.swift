@@ -44,46 +44,41 @@ struct PaywallView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    RexImage(pose: .flex, size: 150)
-                        .padding(.top, context == .standalone ? 4 : 24)
+                    RexImage(pose: .flex, size: 104)
+                        .padding(.top, context == .standalone ? 2 : 10)
 
                     Text("Ransom Pro")
-                        .font(RansomFont.display(34))
+                        .font(RansomFont.display(30))
                         .foregroundStyle(Palette.ink)
 
-                    Text("The whole point of the app.")
-                        .font(RansomFont.body(15))
+                    Text(subtitle)
+                        .font(RansomFont.body(14))
                         .foregroundStyle(Palette.inkSoft)
                         .padding(.top, 2)
 
-                    VStack(spacing: 12) {
+                    VStack(spacing: 10) {
                         feature(
                             icon: "lock.shield.fill",
                             title: "Block any app you choose",
-                            detail: "Instagram, TikTok, YouTube, games — as many as you like."
+                            detail: "Instagram, TikTok, games — as many as you like."
                         )
                         feature(
                             icon: "figure.strengthtraining.functional",
                             title: "\(plan.repsPerUnlock) reps buys \(plan.minutesPerUnlock) minutes",
-                            detail: "Counted automatically by your phone's sensors."
+                            detail: "The price rises the more you come back."
                         )
                         feature(
                             icon: "chart.line.uptrend.xyaxis",
-                            title: "Streaks, totals and trends",
-                            detail: "Every rep you've ever paid, tracked over time."
-                        )
-                        feature(
-                            icon: "slider.horizontal.3",
-                            title: "Tune the difficulty",
-                            detail: "Chill to Beast mode. Switch movements whenever."
+                            title: "Every rep you've ever paid",
+                            detail: "Lifetime totals, streaks and hours saved."
                         )
                     }
                     .padding(.horizontal, Metrics.screenPadding)
-                    .padding(.top, 26)
+                    .padding(.top, 16)
 
                     planPicker
                         .padding(.horizontal, Metrics.screenPadding)
-                        .padding(.top, 22)
+                        .padding(.top, 16)
                 }
                 .padding(.bottom, 20)
             }
@@ -98,21 +93,28 @@ struct PaywallView: View {
 
     // MARK: - Pieces
 
+    /// Echoes back the sentence they chose in the intake. The paywall is the last
+    /// place that promise is worth repeating before it costs money.
+    private var subtitle: String {
+        guard let identity = plan.identity else { return "The whole point of the app." }
+        return "Keep being \(identity.shortForm)."
+    }
+
     private func feature(icon: String, title: String, detail: String) -> some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .center, spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Palette.green)
-                .frame(width: 38, height: 38)
+                .frame(width: 32, height: 32)
                 .background(Circle().fill(Palette.greenSoft))
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(RansomFont.headline(16))
+                    .font(RansomFont.headline(15))
                     .foregroundStyle(Palette.ink)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(detail)
-                    .font(RansomFont.body(14))
+                    .font(RansomFont.body(13))
                     .foregroundStyle(Palette.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -123,7 +125,7 @@ struct PaywallView: View {
     /// Two plans, annual pre-selected. The weekly rate is what makes starting feel
     /// cheap; the annual is what the weekly rate exists to make look reasonable.
     private var planPicker: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             planRow(.annual)
             planRow(.weekly)
         }
