@@ -314,7 +314,10 @@ struct RexView: View {
                 .offset(y: 44 - 22 * p.armBend)
         }
         .frame(width: 28, height: 74, alignment: .top)
-        .rotationEffect(.degrees(angle), anchor: .top)
+        // Negated: a pose reads left-arm angles as "swing outward", but a positive
+        // rotation is clockwise on screen, which would tuck both arms behind the
+        // body instead. Without this, every raised-arm pose loses its arms.
+        .rotationEffect(.degrees(-angle), anchor: .top)
         .offset(x: 68 * side, y: p.bodyY - 24)
     }
 
