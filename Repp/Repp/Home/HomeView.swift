@@ -33,6 +33,8 @@ struct HomeView: View {
 
                 dailyGoalCard
 
+                tariffCard
+
                 weekCard
             }
             .padding(.horizontal, Metrics.screenPadding)
@@ -85,7 +87,7 @@ struct HomeView: View {
 
     private var rexLine: String {
         if let pending = model.pendingUnlockAppName {
-            return "You tried to open \(pending). \(plan.repsPerUnlock) \(plan.exercise.title.lowercased()) and I'll step aside."
+            return "You tried to open \(pending). \(model.quote.reps) \(plan.exercise.title.lowercased()) and I'll step aside."
         }
         if screenTime.isCurrentlyUnlocked {
             return "You paid. Go enjoy it — I'll be here when the time's up."
@@ -111,12 +113,25 @@ struct HomeView: View {
     }
 
     private var earnCard: some View {
-        VStack(spacing: 14) {
+        let quote = model.quote
+
+        return VStack(spacing: 14) {
+            if let explanation = quote.explanation {
+                HStack(spacing: 6) {
+                    Image(systemName: quote.isAtCap ? "exclamationmark.triangle.fill" : "arrow.up.right")
+                        .font(.system(size: 11, weight: .bold))
+                    Text(explanation)
+                        .font(ReppFont.caption(12))
+                }
+                .foregroundStyle(Palette.flame)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             HStack(spacing: 0) {
                 VStack(spacing: 2) {
-                    Text("\(plan.repsPerUnlock)")
+                    Text("\(quote.reps)")
                         .font(ReppFont.display(40))
-                        .foregroundStyle(Palette.ink)
+                        .foregroundStyle(quote.isSurcharged ? Palette.flame : Palette.ink)
                     Text(plan.exercise.title.lowercased())
                         .font(ReppFont.caption(12))
                         .foregroundStyle(Palette.inkSoft)
@@ -142,7 +157,7 @@ struct HomeView: View {
             PrimaryButton(title: "Earn my time", icon: "bolt.fill") {
                 workoutRequest = WorkoutRequest(
                     exercise: plan.exercise,
-                    target: plan.repsPerUnlock,
+                    target: quote.reps,
                     trigger: model.pendingUnlockAppName
                 )
             }
@@ -188,7 +203,9 @@ struct HomeView: View {
 
     /// Keeps every movement worth the same amount of scroll time.
     private func scaledTarget(for exercise: Exercise) -> Int {
-        let equivalents = Double(plan.repsPerUnlock) * plan.exercise.effortWeight
+        // Priced from the current quote, not the base rate — otherwise switching
+        // movement would be a way to dodge the tariff.
+        let equivalents = Double(model.quote.reps) * plan.exercise.effortWeight
         return max(3, Int((equivalents / exercise.effortWeight).rounded()))
     }
 
@@ -323,6 +340,58 @@ struct HomeView: View {
             Spacer(minLength: 0)
         }
         .reppCard()
+    }
+
+    /// The whole price ladder, with today's position marked. Predictability is what
+    /// separates a tariff people accept from one that feels like a punishment.
+    private var tariffCard: some View {
+        let schedule = model.tariffSchedule
+        let current = model.quote.unlockNumber
+
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("Today's rates")
+                    .font(ReppFont.headline(16))
+                    .foregroundStyle(Palette.ink)
+                Spacer()
+                Text("\(model.unlocksToday) used")
+                    .font(ReppFont.caption(13))
+                    .foregroundStyle(Palette.inkSoft)
+            }
+
+            VStack(spacing: 8) {
+                ForEach(Array(schedule.enumerated()), id: \.offset) { index, tier in
+                    let upper = index + 1 < schedule.count ? schedule[index + 1].unlock - 1 : nil
+                    let isNow = current >= tier.unlock && (upper.map { current <= $0 } ?? true)
+
+                    HStack(spacing: 10) {
+                        Text(rangeLabel(from: tier.unlock, to: upper))
+                            .font(ReppFont.caption(13))
+                            .foregroundStyle(isNow ? Palette.ink : Palette.inkSoft)
+                            .frame(width: 82, alignment: .leading)
+
+                        Capsule()
+                            .fill(isNow ? Palette.flame : Palette.hairline)
+                            .frame(height: 4)
+
+                        Text("\(tier.reps)")
+                            .font(ReppFont.caption(14))
+                            .foregroundStyle(isNow ? Palette.flame : Palette.inkSoft)
+                            .frame(width: 30, alignment: .trailing)
+                    }
+                }
+            }
+
+            Text("Leave the apps alone for three hours and you drop a tier.")
+                .font(ReppFont.caption(12))
+                .foregroundStyle(Palette.inkFaint)
+        }
+        .reppCard()
+    }
+
+    private func rangeLabel(from: Int, to upper: Int?) -> String {
+        guard let upper else { return "Unlock \(from)+" }
+        return from == upper ? "Unlock \(from)" : "Unlocks \(from)–\(upper)"
     }
 
     private var weekCard: some View {

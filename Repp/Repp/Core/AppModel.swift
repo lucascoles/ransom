@@ -34,6 +34,18 @@ final class AppModel {
 
     var plan: ReppPlan { ReppPlan.make(from: profile) }
 
+    /// What the next unlock costs under the tariff — base price for the first
+    /// couple of the day, climbing after that.
+    var quote: Tariff.Quote { ledger.currentQuote() }
+
+    var unlocksToday: Int { ledger.unlocksToday }
+
+    /// The full ladder, for the rates card. Users have to be able to see what's
+    /// coming or the escalation reads as arbitrary.
+    var tariffSchedule: [(unlock: Int, reps: Int, multiplier: Double)] {
+        Tariff.schedule(base: plan.repsPerUnlock)
+    }
+
     // MARK: Lifecycle
 
     init() {
@@ -185,6 +197,7 @@ final class AppModel {
         )
         history.append(record)
         ledger.grant(minutes: minutes)
+        ledger.recordUnlock()
         pendingUnlockAppName = nil
         return minutes
     }
@@ -214,6 +227,8 @@ final class AppModel {
             minutes: plan.minutesPerUnlock,
             exercise: plan.exercise
         )
+        // They flagged late-night scrolling during intake; charge for it.
+        ledger.nightSurchargeEnabled = profile.peakTimes.contains(.lateNight)
     }
 
     private func persist() {

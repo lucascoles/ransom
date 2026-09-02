@@ -40,14 +40,16 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
 
     private func makeConfiguration(appName: String?) -> ShieldConfiguration {
         let ledger = UnlockLedger()
-        let reps = ledger.repsPerUnlock
+        let quote = ledger.currentQuote()
         let exercise = ledger.exerciseName
         let minutes = ledger.minutesPerUnlock
 
-        let title = appName.map { "\($0) costs \(reps) \(exercise.lowercased())" }
-            ?? ShieldCopy.headline(reps: reps, exercise: exercise)
+        let title = appName.map { "\($0) costs \(quote.reps) \(exercise.lowercased())" }
+            ?? ShieldCopy.headline(reps: quote.reps, exercise: exercise)
 
-        let subtitle = "\(ShieldCopy.taunt())\nOne set buys you \(minutes) minutes."
+        // When the tariff is up, say why. An unexplained price rise reads as a bug.
+        let lead = quote.explanation ?? ShieldCopy.taunt()
+        let subtitle = "\(lead)\nOne set buys you \(minutes) minutes."
 
         return ShieldConfiguration(
             backgroundBlurStyle: .systemUltraThinMaterialDark,

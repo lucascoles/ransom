@@ -100,10 +100,9 @@ struct RootView: View {
               model.hasCompletedOnboarding else { return }
 
         selectedTab = 0
-        let plan = model.plan
         workoutRequest = WorkoutRequest(
-            exercise: plan.exercise,
-            target: plan.repsPerUnlock,
+            exercise: model.plan.exercise,
+            target: model.quote.reps,
             trigger: model.pendingUnlockAppName
         )
     }

@@ -93,6 +93,59 @@ public struct UnlockLedger {
         defaults.removeObject(forKey: ReppCore.Key.pendingUnlockAppName)
     }
 
+    // MARK: - The tariff counter
+
+    /// Unlocks bought today. Rolls over on its own at midnight, so nothing has to
+    /// run at midnight to reset it.
+    public var unlocksToday: Int {
+        let storedDay = defaults.integer(forKey: ReppCore.Key.unlockCountDay)
+        guard storedDay == Self.dayStamp() else { return 0 }
+        return defaults.integer(forKey: ReppCore.Key.unlocksToday)
+    }
+
+    public var lastUnlockAt: Date? {
+        let seconds = defaults.double(forKey: ReppCore.Key.lastUnlockAt)
+        guard seconds > 0 else { return nil }
+        return Date(timeIntervalSince1970: seconds)
+    }
+
+    /// Call once per completed set, after the time is granted.
+    public func recordUnlock(now: Date = Date()) {
+        let today = Self.dayStamp(now)
+        let current = defaults.integer(forKey: ReppCore.Key.unlockCountDay) == today
+            ? defaults.integer(forKey: ReppCore.Key.unlocksToday)
+            : 0
+        defaults.set(current + 1, forKey: ReppCore.Key.unlocksToday)
+        defaults.set(today, forKey: ReppCore.Key.unlockCountDay)
+        defaults.set(now.timeIntervalSince1970, forKey: ReppCore.Key.lastUnlockAt)
+    }
+
+    public var nightSurchargeEnabled: Bool {
+        get {
+            // Absent means on: the late-night rate is the default.
+            defaults.object(forKey: ReppCore.Key.nightSurcharge) as? Bool ?? true
+        }
+        nonmutating set { defaults.set(newValue, forKey: ReppCore.Key.nightSurcharge) }
+    }
+
+    /// What the next unlock costs right now. The shield and the app both price
+    /// from here, so they can never disagree.
+    public func currentQuote(now: Date = Date()) -> Tariff.Quote {
+        Tariff.quote(
+            base: repsPerUnlock,
+            unlocksToday: unlocksToday,
+            lastUnlockAt: lastUnlockAt,
+            nightSurchargeEnabled: nightSurchargeEnabled,
+            now: now
+        )
+    }
+
+    /// Days since the epoch — a cheap, timezone-local day identity.
+    private static func dayStamp(_ date: Date = Date(), calendar: Calendar = .current) -> Int {
+        let start = calendar.startOfDay(for: date)
+        return Int(start.timeIntervalSince1970 / 86_400)
+    }
+
     // MARK: - Config mirrored for the extensions
 
     /// The shield extensions can't read the app's main store, so the app mirrors the
