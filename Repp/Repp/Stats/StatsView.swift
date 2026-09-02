@@ -204,7 +204,7 @@ struct StatsView: View {
     private var headlineCard: some View {
         VStack(spacing: 14) {
             HStack(spacing: 14) {
-                RexView(pose: model.streak > 2 ? .cheer : .idle, size: 92, isAlive: false)
+                RexImage(pose: model.streak > 2 ? .cheer : .idle, size: 92, isAlive: false)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 8) {
                         Text("\(model.streak) day streak")

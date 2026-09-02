@@ -79,7 +79,7 @@ struct WorkoutView: View {
             }
             .padding(.bottom, 4)
 
-            RexView(pose: .pushUp(down: engine.depth > 0.5), size: 168)
+            RexImage(pose: .pushUp(down: engine.depth > 0.5), size: 168, depth: engine.depth)
                 .padding(.top, -8)
 
             Text(engine.formHint ?? exercise.coachingCue)
@@ -210,7 +210,7 @@ private struct CountdownOverlay: View {
         ZStack {
             Palette.canvas.opacity(0.96).ignoresSafeArea()
             VStack(spacing: 18) {
-                RexView(pose: .coach, size: 150)
+                RexImage(pose: .coach, size: 150)
                 Text("\(value)")
                     .font(ReppFont.counter(96))
                     .foregroundStyle(Palette.green)

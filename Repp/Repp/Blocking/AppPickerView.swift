@@ -39,7 +39,7 @@ struct AppPickerView: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: 12) {
-            RexView(pose: .coach, size: 76, isAlive: false)
+            RexImage(pose: .coach, size: 76, isAlive: false)
             Text("Pick the apps you want to have to earn. Rex will guard every one of them.")
                 .font(ReppFont.body(14))
                 .foregroundStyle(Palette.inkSoft)

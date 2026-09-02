@@ -23,7 +23,7 @@ struct WorkoutCompleteView: View {
             VStack(spacing: 0) {
                 Spacer()
 
-                RexView(pose: didEarn ? .cheer : .sad, size: 190)
+                RexImage(pose: didEarn ? .cheer : .sad, size: 190)
 
                 Text(didEarn ? "Unlocked." : "So close.")
                     .font(ReppFont.display(38))

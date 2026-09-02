@@ -40,18 +40,37 @@ enum Palette {
 
     static let hairline   = Color.adaptive(light: 0xE7E5DC, dark: 0x2A3026)
 
-    /// The one loud colour. Used for progress, primary actions and Rex's skin.
-    static let green      = Color.adaptive(light: 0x2FBF4E, dark: 0x45D96A)
-    static let greenSoft  = Color.adaptive(light: 0xE4F7E5, dark: 0x18301C)
-    static let lime       = Color(hex: 0xC6F24E)
+    /// Rex's tangerine. The brand colour — the character, the icon, and anything
+    /// that needs to sound an alarm. Sampled from the artwork rather than picked,
+    /// so the palette follows the character instead of fighting it.
+    static let brand      = Color.adaptive(light: 0xF06027, dark: 0xFF7A45)
+    static let brandSoft  = Color.adaptive(light: 0xFDEBE2, dark: 0x35190F)
 
-    static let flame      = Color.adaptive(light: 0xFF7A38, dark: 0xFF9057)
-    static let flameSoft  = Color.adaptive(light: 0xFFEDE2, dark: 0x332014)
+    /// Purely semantic: earned, unlocked, the door is open. Deliberately deeper and
+    /// less candy than before, so it reads as a state rather than as a mascot —
+    /// Rex used to be this colour, and the two were competing.
+    static let green      = Color.adaptive(light: 0x2E9E4E, dark: 0x4CCB6B)
+    static let greenSoft  = Color.adaptive(light: 0xE2F4E7, dark: 0x142E1B)
+
+    /// Streaks and milestones. Trophy gold, moved off orange so it stops
+    /// colliding with Rex.
+    static let flame      = Color.adaptive(light: 0xD99A1F, dark: 0xF0B84A)
+    static let flameSoft  = Color.adaptive(light: 0xFBF0D8, dark: 0x322611)
+
+    /// The character's own colours, for anything drawn to match him.
+    enum Rex {
+        static let body      = Color(hex: 0xF06027)
+        static let highlight = Color(hex: 0xF8773B)
+        static let shadow    = Color(hex: 0xD15423)
+        static let belly     = Color(hex: 0xFCD8B0)
+        static let gold      = Color(hex: 0xF7A83B)
+    }
 
     static let violet     = Color.adaptive(light: 0x6C5CE7, dark: 0x8B7CFF)
     static let danger     = Color.adaptive(light: 0xE23D3D, dark: 0xFF6B6B)
 
     static let onGreen    = Color.adaptive(light: 0xFFFFFF, dark: 0x07120A)
+    static let onBrand    = Color.adaptive(light: 0xFFFFFF, dark: 0x1A0A04)
 }
 
 // MARK: - Type

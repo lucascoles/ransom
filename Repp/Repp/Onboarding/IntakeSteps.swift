@@ -11,7 +11,7 @@ struct WelcomeStep: View {
         VStack(spacing: 0) {
             Spacer()
 
-            RexView(pose: appeared ? .flex : .idle, size: 210)
+            RexImage(pose: appeared ? .flex : .idle, size: 210)
                 .scaleEffect(appeared ? 1 : 0.85)
                 .opacity(appeared ? 1 : 0)
 

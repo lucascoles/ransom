@@ -20,7 +20,7 @@ struct RexScene: View {
     var body: some View {
         HStack(alignment: .top, spacing: 4) {
             if bubbleAlignment == .trailing { bubble }
-            RexView(pose: pose, size: size)
+            RexImage(pose: pose, size: size)
             if bubbleAlignment == .leading { bubble }
         }
         .onAppear(perform: startTyping)

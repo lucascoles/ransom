@@ -47,7 +47,7 @@ struct SettingsView: View {
     private var subscriptionCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
-                RexView(pose: .flex, size: 66, isAlive: false)
+                RexImage(pose: .flex, size: 66, isAlive: false)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(store.isSubscribed || model.isSubscribed ? "Repp Pro" : "Repp Free")
                         .font(ReppFont.headline(17))

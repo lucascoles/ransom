@@ -44,7 +44,7 @@ struct PaywallView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    RexView(pose: .flex, size: 150)
+                    RexImage(pose: .flex, size: 150)
                         .padding(.top, context == .standalone ? 4 : 24)
 
                     Text("Repp Pro")

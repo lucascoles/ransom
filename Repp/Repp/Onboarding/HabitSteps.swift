@@ -122,7 +122,7 @@ struct RealityCheckStep: View {
         VStack(spacing: 0) {
             Spacer()
 
-            RexView(pose: revealed ? .coach : .sad, size: 150)
+            RexImage(pose: revealed ? .coach : .sad, size: 150)
 
             VStack(spacing: 6) {
                 Text("At \(load.title.lowercased()) a day, that's")
@@ -130,10 +130,10 @@ struct RealityCheckStep: View {
                     .foregroundStyle(Palette.inkSoft)
 
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    CountingNumber(value: revealed ? daysPerYear : 0, font: ReppFont.display(78), color: Palette.flame)
+                    CountingNumber(value: revealed ? daysPerYear : 0, font: ReppFont.display(78), color: Palette.brand)
                     Text("days")
                         .font(ReppFont.title(28))
-                        .foregroundStyle(Palette.flame)
+                        .foregroundStyle(Palette.brand)
                 }
 
                 Text("of your year. \(hoursPerYear) hours, gone.")

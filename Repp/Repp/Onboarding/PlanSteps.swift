@@ -302,7 +302,7 @@ struct BuildingPlanStep: View {
 
             Spacer()
 
-            RexView(pose: .idle, size: 110)
+            RexImage(pose: .idle, size: 110)
                 .padding(.bottom, 30)
         }
         .onAppear(perform: run)
