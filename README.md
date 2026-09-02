@@ -15,7 +15,7 @@ You pick the apps. Repp shields them. Opening one gets you Rex instead of your f
 with a number on it: *12 push-ups and it's yours.* Do the set — the phone counts it —
 and the shield lifts for the minutes you earned. When they're spent, Rex is back.
 
-$5.99/month, gated behind a Cal-AI-style intake flow that turns a handful of answers
+$5.99/week or $39.99/year, gated behind a Cal-AI-style intake flow that turns a handful of answers
 into a concrete deal ("10 push-ups → 15 minutes") before it ever asks for money.
 
 ## Opening it
@@ -44,8 +44,11 @@ blocking is not.
 
 ### Testing the subscription
 
-`Config/Repp.storekit` defines the $5.99/month product with a 3-day trial. The
-`Repp` scheme references it, so purchases work locally without App Store Connect.
+`Config/Repp.storekit` defines both products — $5.99/week and $39.99/year, in one
+subscription group with the annual at the higher service level so weekly→annual is
+an immediate upgrade rather than a deferred crossgrade. Both carry a 3-day trial.
+The `Repp` scheme references the file, so purchases work locally without App Store
+Connect.
 If Xcode doesn't pick it up: Product → Scheme → Edit Scheme → Run → Options →
 StoreKit Configuration → `Repp.storekit`.
 

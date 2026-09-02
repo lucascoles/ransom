@@ -81,7 +81,7 @@ struct PaywallView: View {
                     .padding(.horizontal, Metrics.screenPadding)
                     .padding(.top, 26)
 
-                    priceCard
+                    planPicker
                         .padding(.horizontal, Metrics.screenPadding)
                         .padding(.top, 22)
                 }
@@ -120,36 +120,80 @@ struct PaywallView: View {
         }
     }
 
-    private var priceCard: some View {
-        VStack(spacing: 6) {
-            if let trial = store.trialDescription {
-                Pill(text: trial.uppercased(), icon: "gift.fill")
-                    .padding(.bottom, 2)
-            }
-
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(store.displayPrice)
-                    .font(ReppFont.display(38))
-                    .foregroundStyle(Palette.ink)
-                Text("/ month")
-                    .font(ReppFont.headline(16))
-                    .foregroundStyle(Palette.inkSoft)
-            }
-
-            Text("Cancel anytime in Settings.")
-                .font(ReppFont.caption(12))
-                .foregroundStyle(Palette.inkSoft)
+    /// Two plans, annual pre-selected. The weekly rate is what makes starting feel
+    /// cheap; the annual is what the weekly rate exists to make look reasonable.
+    private var planPicker: some View {
+        VStack(spacing: 10) {
+            planRow(.annual)
+            planRow(.weekly)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 20)
-        .background(
-            RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
-                .fill(Palette.surface)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
-                .strokeBorder(Palette.green, lineWidth: 2)
-        )
+    }
+
+    private func planRow(_ plan: SubscriptionManager.Plan) -> some View {
+        let isSelected = store.selectedPlan == plan
+        let isAnnual = plan == .annual
+
+        return Button {
+            Haptics.select()
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
+                store.selectedPlan = plan
+            }
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
+                    .font(.system(size: 21))
+                    .foregroundStyle(isSelected ? Palette.green : Palette.hairline)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 8) {
+                        Text(plan.title)
+                            .font(ReppFont.headline(17))
+                            .foregroundStyle(Palette.ink)
+
+                        if isAnnual, let saving = store.annualSavingsPercent {
+                            Pill(text: "SAVE \(saving)%", tint: Palette.onGreen, background: Palette.green)
+                        }
+                    }
+
+                    Text(isAnnual ? annualSubtitle : weeklySubtitle)
+                        .font(ReppFont.body(13))
+                        .foregroundStyle(Palette.inkSoft)
+                }
+
+                Spacer(minLength: 4)
+
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text(store.displayPrice(for: plan))
+                        .font(ReppFont.title(20))
+                        .foregroundStyle(Palette.ink)
+                    Text("/ \(plan.periodLabel)")
+                        .font(ReppFont.caption(12))
+                        .foregroundStyle(Palette.inkSoft)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 15)
+            .background(
+                RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
+                    .fill(isSelected ? Palette.greenSoft : Palette.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
+                    .strokeBorder(isSelected ? Palette.green : Palette.hairline, lineWidth: isSelected ? 2 : 1)
+            )
+        }
+        .pressable(scale: 0.985)
+    }
+
+    private var annualSubtitle: String {
+        if let perWeek = store.annualPerWeek {
+            return "Works out at \(perWeek) a week"
+        }
+        return "Billed once a year"
+    }
+
+    private var weeklySubtitle: String {
+        store.trialDescription(for: .weekly).map { "\($0), then billed weekly" } ?? "Billed every week"
     }
 
     private var footer: some View {
@@ -161,12 +205,17 @@ struct PaywallView: View {
                     .multilineTextAlignment(.center)
             }
 
-            PrimaryButton(
-                title: store.trialDescription == nil ? "Subscribe" : "Start free trial",
-                isLoading: isWorking
-            ) {
+            PrimaryButton(title: ctaTitle, isLoading: isWorking) {
                 buy()
             }
+
+            // Price, term and renewal, spelled out. Required, and the honest thing
+            // to do next to a weekly rate.
+            Text(store.disclosure(for: store.selectedPlan))
+                .font(ReppFont.caption(11))
+                .foregroundStyle(Palette.inkFaint)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 18) {
                 TextButton(title: "Restore") { restore() }
@@ -188,13 +237,17 @@ struct PaywallView: View {
         )
     }
 
+    private var ctaTitle: String {
+        store.trialDescription(for: store.selectedPlan) == nil ? "Subscribe" : "Start free trial"
+    }
+
     // MARK: - Actions
 
     private func buy() {
         errorMessage = nil
         isWorking = true
         Task {
-            let success = await store.purchase()
+            let success = await store.purchase(store.selectedPlan)
             isWorking = false
             if success {
                 complete()

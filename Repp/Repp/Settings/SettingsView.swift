@@ -53,7 +53,7 @@ struct SettingsView: View {
                         .font(ReppFont.headline(17))
                         .foregroundStyle(Palette.ink)
                     Text(store.isSubscribed || model.isSubscribed
-                         ? store.pricePerMonthLine
+                         ? store.activePlanLine
                          : "Blocking needs Pro.")
                         .font(ReppFont.body(13))
                         .foregroundStyle(Palette.inkSoft)
