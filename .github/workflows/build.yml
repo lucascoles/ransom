@@ -1,0 +1,56 @@
+name: Build
+
+# The app is written on Linux, where there is no Swift toolchain, so this is the
+# only thing that actually compiles it. Runs on every push so a broken build is
+# caught here rather than on someone's Mac.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build for simulator
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode version
+        run: xcodebuild -version
+
+      # A generic simulator destination, so this doesn't break when GitHub
+      # changes which iPhone models ship on the runner image.
+      #
+      # Signing is off: Family Controls and App Groups need a provisioning
+      # profile from a paid team, which CI has no business holding. The
+      # simulator doesn't enforce entitlements, so the code still compiles
+      # exactly as it would for a device.
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Ransom/Ransom.xcodeproj \
+            -scheme Ransom \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            ONLY_ACTIVE_ARCH=NO \
+            | tee build.log
+
+      - name: Errors and warnings
+        if: always()
+        run: |
+          echo "### Build issues" >> "$GITHUB_STEP_SUMMARY"
+          grep -E "(error|warning):" build.log | sort -u | head -100 >> "$GITHUB_STEP_SUMMARY" || echo "None." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
