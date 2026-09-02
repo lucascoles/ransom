@@ -9,6 +9,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build for simulator
@@ -54,3 +57,74 @@ jobs:
         with:
           name: build-log
           path: build.log
+
+  # Compiling proves the app links. This proves it actually runs, and puts a
+  # picture of every screen in the repo where a human can look at it.
+  screenshots:
+    name: Screenshot every screen
+    needs: build
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Boot a simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl create ransom-shots "iPhone 16 Pro")
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+
+      - name: Build and install
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Ransom/Ransom.xcodeproj \
+            -scheme Ransom \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -configuration Debug \
+            -derivedDataPath dd \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            > build-sim.log 2>&1 || { tail -60 build-sim.log; exit 1; }
+          xcrun simctl install "${{ steps.sim.outputs.udid }}" \
+            "$(find dd/Build/Products -name 'Ransom.app' -maxdepth 3 | head -1)"
+
+      # One launch per screen, using the debug -RansomStartStep hook. Driving the
+      # real UI would need a test target; this gets the same pictures without one.
+      - name: Capture
+        run: |
+          UDID="${{ steps.sim.outputs.udid }}"
+          mkdir -p screenshots
+          i=0
+          for STEP in welcome name apps scrollLoad reality identity age body fitness \
+                      exercises intensity firstRep notifications building plan paywall; do
+            i=$((i+1))
+            xcrun simctl terminate "$UDID" com.ransom.app 2>/dev/null || true
+            xcrun simctl launch "$UDID" com.ransom.app -RansomStartStep "$STEP" || {
+              echo "::warning::$STEP failed to launch"; continue; }
+            sleep 4
+            printf -v N "%02d" $i
+            xcrun simctl io "$UDID" screenshot "screenshots/$N-$STEP.png" || \
+              echo "::warning::$STEP screenshot failed"
+          done
+          ls -la screenshots
+
+      - name: Commit them
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add screenshots
+          git diff --staged --quiet && { echo "No change."; exit 0; }
+          git commit -m "Screenshots from ${GITHUB_SHA:0:7} [skip ci]"
+          git push
+
+      - name: Keep the log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sim-build-log
+          path: build-sim.log

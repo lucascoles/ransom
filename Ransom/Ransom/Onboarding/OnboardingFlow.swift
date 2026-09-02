@@ -6,8 +6,8 @@ struct OnboardingFlow: View {
     @Environment(AppModel.self) private var model
     @Environment(ScreenTimeManager.self) private var screenTime
 
-    @State private var draft = UserProfile()
-    @State private var step: OnboardingStep = .welcome
+    @State private var draft = UserProfile.launchSeed ?? UserProfile()
+    @State private var step: OnboardingStep = OnboardingStep.launchStep ?? .welcome
     @State private var history: [OnboardingStep] = []
     @State private var isMovingForward = true
 
@@ -174,5 +174,20 @@ enum OnboardingStep: Int, CaseIterable, Hashable {
         let total = Double(OnboardingStep.paywall.rawValue)
         guard total > 0 else { return 0 }
         return Double(rawValue) / total
+    }
+
+    /// Opens the app on one named screen instead of the welcome step, so a
+    /// screenshot run can capture the whole flow without driving the UI:
+    ///
+    ///     xcrun simctl launch DEVICE com.ransom.app -RansomStartStep identity
+    ///
+    /// Debug builds only — a release build always starts at `.welcome`.
+    static var launchStep: OnboardingStep? {
+        #if DEBUG
+        guard let name = UserDefaults.standard.string(forKey: "RansomStartStep") else { return nil }
+        return allCases.first { String(describing: $0) == name }
+        #else
+        return nil
+        #endif
     }
 }

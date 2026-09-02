@@ -177,6 +177,26 @@ struct UserProfile: Codable, Equatable {
         // Ordered by effort so the plan is quoted against the hardest thing they picked.
         exercises.sorted { $0.effortWeight > $1.effortWeight }.first ?? .pushUps
     }
+
+    /// A filled-in profile for screenshot runs, so screens that quote the plan
+    /// back at the user have real answers to quote instead of defaults.
+    /// Paired with `OnboardingStep.launchStep`; debug builds only.
+    static var launchSeed: UserProfile? {
+        #if DEBUG
+        guard UserDefaults.standard.string(forKey: "RansomStartStep") != nil else { return nil }
+        var profile = UserProfile()
+        profile.firstName = "Sam"
+        profile.identity = .stronger
+        profile.distractingApps = [.instagram, .tiktok, .youtube, .reddit]
+        profile.scrollLoad = .heavy
+        profile.fitnessLevel = .sometimes
+        profile.exercises = [.pushUps, .jumpingJacks]
+        profile.peakTimes = [.evening, .lateNight]
+        return profile
+        #else
+        return nil
+        #endif
+    }
 }
 
 // MARK: - Derived plan
