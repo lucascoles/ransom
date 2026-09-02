@@ -22,5 +22,14 @@ public enum RansomCore {
         public static let minutesPerUnlock = "ransom.config.minutesPerUnlock"
         public static let exerciseName = "ransom.config.exerciseName"
         public static let shieldHeadline = "ransom.shield.headline"
+
+        // The tariff counter. Both the app and the shield price from these, so
+        // they can never quote the user two different numbers.
+        public static let unlocksToday = "ransom.tariff.unlocksToday"
+        /// Day stamp the count belongs to, so it rolls over without anything
+        /// having to run at midnight.
+        public static let unlockCountDay = "ransom.tariff.unlockCountDay"
+        public static let lastUnlockAt = "ransom.tariff.lastUnlockAt"
+        public static let nightSurcharge = "ransom.tariff.nightSurcharge"
     }
 }
