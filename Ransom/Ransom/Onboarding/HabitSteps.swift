@@ -83,9 +83,9 @@ struct ScrollLoadStep: View {
 
     var body: some View {
         StepScaffold(
-            title: "How long do you spend in them a day?",
-            subtitle: "Screen Time already knows. Might as well say it out loud.",
-            showsButton: false,
+            title: "How long, honestly?",
+            subtitle: "Screen Time already knows. Say it out loud.",
+            isButtonEnabled: profile.scrollLoad != nil,
             onNext: onNext
         ) {
             VStack(spacing: 12) {
@@ -95,9 +95,28 @@ struct ScrollLoadStep: View {
                         icon: "clock.fill",
                         isSelected: profile.scrollLoad == load
                     ) {
-                        profile.scrollLoad = load
-                        AutoAdvance.after(onNext)
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            profile.scrollLoad = load
+                        }
                     }
+                }
+
+                // "When" belongs with "how long" — same behaviour, one screen. It
+                // also earns its keep: late-night is what turns on the surcharge.
+                if profile.scrollLoad != nil {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("And when does it get you?")
+                            .font(RansomFont.headline(16))
+                            .foregroundStyle(Palette.ink)
+
+                        FlowChips(
+                            options: TimeOfDay.allCases,
+                            selection: $profile.peakTimes,
+                            label: { "\($0.emoji)  \($0.shortTitle)" }
+                        )
+                    }
+                    .padding(.top, 6)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
             }
         }
@@ -175,72 +194,6 @@ struct RealityCheckStep: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(RansomFont.headline(15)).foregroundStyle(Palette.ink)
                 Text(detail).font(RansomFont.body(14)).foregroundStyle(Palette.inkSoft)
-            }
-        }
-    }
-}
-
-// MARK: - Goals
-
-struct GoalsStep: View {
-    @Binding var profile: UserProfile
-    var onNext: () -> Void
-
-    var body: some View {
-        StepScaffold(
-            title: "What are you actually after?",
-            subtitle: "Pick as many as you like.",
-            isButtonEnabled: !profile.goals.isEmpty,
-            onNext: onNext
-        ) {
-            VStack(spacing: 12) {
-                ForEach(Goal.allCases) { goal in
-                    ChoiceCard(
-                        title: goal.title,
-                        emoji: goal.emoji,
-                        isSelected: profile.goals.contains(goal),
-                        allowsMultiple: true
-                    ) {
-                        if profile.goals.contains(goal) {
-                            profile.goals.remove(goal)
-                        } else {
-                            profile.goals.insert(goal)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Peak times
-
-struct PeakTimesStep: View {
-    @Binding var profile: UserProfile
-    var onNext: () -> Void
-
-    var body: some View {
-        StepScaffold(
-            title: "When does the scrolling start?",
-            subtitle: "Rex pays extra attention in these windows.",
-            isButtonEnabled: !profile.peakTimes.isEmpty,
-            onNext: onNext
-        ) {
-            VStack(spacing: 12) {
-                ForEach(TimeOfDay.allCases) { time in
-                    ChoiceCard(
-                        title: time.title,
-                        emoji: time.emoji,
-                        isSelected: profile.peakTimes.contains(time),
-                        allowsMultiple: true
-                    ) {
-                        if profile.peakTimes.contains(time) {
-                            profile.peakTimes.remove(time)
-                        } else {
-                            profile.peakTimes.insert(time)
-                        }
-                    }
-                }
             }
         }
     }

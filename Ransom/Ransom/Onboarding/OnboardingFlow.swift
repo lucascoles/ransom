@@ -66,19 +66,7 @@ struct OnboardingFlow: View {
             WelcomeStep(onStart: { advance(to: .name) })
 
         case .name:
-            NameStep(profile: $draft, onNext: { advance(to: .gender) })
-
-        case .gender:
-            GenderStep(profile: $draft, onNext: { advance(to: .age) })
-
-        case .age:
-            AgeStep(profile: $draft, onNext: { advance(to: .body) })
-
-        case .body:
-            BodyStep(profile: $draft, onNext: { advance(to: .fitness) })
-
-        case .fitness:
-            FitnessStep(profile: $draft, onNext: { advance(to: .apps) })
+            NameStep(profile: $draft, onNext: { advance(to: .apps) })
 
         case .apps:
             AppsStep(profile: $draft, onNext: { advance(to: .scrollLoad) })
@@ -87,28 +75,28 @@ struct OnboardingFlow: View {
             ScrollLoadStep(profile: $draft, onNext: { advance(to: .reality) })
 
         case .reality:
-            RealityCheckStep(profile: draft, onNext: { advance(to: .goals) })
+            RealityCheckStep(profile: draft, onNext: { advance(to: .identity) })
 
-        case .goals:
-            GoalsStep(profile: $draft, onNext: { advance(to: .exercises) })
+        case .identity:
+            IdentityStep(profile: $draft, onNext: { advance(to: .age) })
+
+        case .age:
+            AgeStep(profile: $draft, onNext: { advance(to: .body) })
+
+        case .body:
+            BodyStep(profile: $draft, onNext: { advance(to: .fitness) })
+
+        case .fitness:
+            FitnessStep(profile: $draft, onNext: { advance(to: .exercises) })
 
         case .exercises:
             ExercisesStep(profile: $draft, onNext: { advance(to: .intensity) })
 
         case .intensity:
-            IntensityStep(profile: $draft, onNext: { advance(to: .peakTimes) })
+            IntensityStep(profile: $draft, onNext: { advance(to: .firstRep) })
 
-        case .peakTimes:
-            PeakTimesStep(profile: $draft, onNext: { advance(to: .notifications) })
-
-        case .notifications:
-            NotificationsStep(onNext: { advance(to: .referral) })
-
-        case .referral:
-            ReferralStep(profile: $draft, onNext: { advance(to: .socialProof) })
-
-        case .socialProof:
-            SocialProofStep(onNext: { advance(to: .building) })
+        case .firstRep:
+            FirstRepStep(profile: draft, onNext: { advance(to: .building) })
 
         case .building:
             BuildingPlanStep(profile: draft, onNext: { advance(to: .plan) })
@@ -151,27 +139,27 @@ struct OnboardingFlow: View {
 enum OnboardingStep: Int, CaseIterable, Hashable {
     case welcome
     case name
-    case gender
-    case age
-    case body
-    case fitness
+    // The confession comes first: the reality check only lands because the user
+    // just named their own apps and their own hours.
     case apps
     case scrollLoad
     case reality
-    case goals
+    case identity
+    // Calibration sits after the hook, so it reads as building the fix rather
+    // than filling in a form.
+    case age
+    case body
+    case fitness
     case exercises
     case intensity
-    case peakTimes
-    case notifications
-    case referral
-    case socialProof
+    case firstRep
     case building
     case plan
     case paywall
 
     var showsChrome: Bool {
         switch self {
-        case .welcome, .building, .paywall: return false
+        case .welcome, .building, .paywall, .firstRep: return false
         default: return true
         }
     }

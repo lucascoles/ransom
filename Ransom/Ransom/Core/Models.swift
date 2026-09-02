@@ -15,39 +15,6 @@ enum Gender: String, CaseIterable, Codable, Identifiable {
     }
 }
 
-enum Goal: String, CaseIterable, Codable, Identifiable {
-    case lessScreenTime
-    case getStronger
-    case buildHabit
-    case loseWeight
-    case moreFocus
-    case moveMore
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .lessScreenTime: return "Cut my screen time"
-        case .getStronger:    return "Get stronger"
-        case .buildHabit:     return "Build a daily habit"
-        case .loseWeight:     return "Lose weight"
-        case .moreFocus:      return "Focus better"
-        case .moveMore:       return "Just move more"
-        }
-    }
-
-    var emoji: String {
-        switch self {
-        case .lessScreenTime: return "📵"
-        case .getStronger:    return "💪"
-        case .buildHabit:     return "🔁"
-        case .loseWeight:     return "🔥"
-        case .moreFocus:      return "🎯"
-        case .moveMore:       return "🏃"
-        }
-    }
-}
-
 /// The apps people name when asked what eats their day. Used before we ask for the
 /// real Screen Time permission, so the flow stays friendly up front.
 enum DistractingApp: String, CaseIterable, Codable, Identifiable {
@@ -133,6 +100,16 @@ enum TimeOfDay: String, CaseIterable, Codable, Identifiable {
         }
     }
 
+    /// Compact label for the chip row on the hours screen.
+    var shortTitle: String {
+        switch self {
+        case .morning:   return "Mornings"
+        case .midday:    return "Lunch"
+        case .evening:   return "After work"
+        case .lateNight: return "Late night"
+        }
+    }
+
     var emoji: String {
         switch self {
         case .morning:   return "🌅"
@@ -187,7 +164,7 @@ struct UserProfile: Codable, Equatable {
     var heightCm: Double = 175
     var weightKg: Double = 72
     var fitnessLevel: FitnessLevel?
-    var goals: Set<Goal> = []
+    var identity: Identity?
     var distractingApps: Set<DistractingApp> = []
     var scrollLoad: ScrollLoad?
     var exercises: Set<Exercise> = [.pushUps]
@@ -210,8 +187,31 @@ struct RansomPlan: Equatable {
     var minutesPerUnlock: Int
     var dailyRepGoal: Int
     var exercise: Exercise
+    /// Unlocks a day the plan expects, from the user's stated hours.
+    var expectedUnlocksPerDay: Int
     /// Minutes of scrolling we expect the plan to remove per day.
     var projectedMinutesSavedPerDay: Int
+
+    /// Reps this year at the user's own stated habit, under the real tariff.
+    ///
+    /// Deliberately computed rather than written: three separate reviewers quoted
+    /// 20,000, 15,000 and 17,000 for this figure and the true range across plans is
+    /// 12,775 to 98,550. A round invented number sitting next to the computed
+    /// days-saved figure discredits both.
+    var projectedRepsPerYear: Int {
+        let unlocks = (0..<expectedUnlocksPerDay).reduce(0) { total, index in
+            total + Tariff.quote(base: repsPerUnlock, unlocksToday: index,
+                                 nightSurchargeEnabled: false).reps
+        }
+        return unlocks * 365
+    }
+
+    /// Rounded the way a person would say it out loud, never down.
+    var projectedRepsRounded: Int {
+        let value = projectedRepsPerYear
+        let step = value >= 10_000 ? 1_000 : 500
+        return Int((Double(value) / Double(step)).rounded()) * step
+    }
 
     static func make(from profile: UserProfile) -> RansomPlan {
         let exercise = profile.primaryExercise
@@ -235,6 +235,7 @@ struct RansomPlan: Equatable {
             minutesPerUnlock: minutes,
             dailyRepGoal: dailyGoal,
             exercise: exercise,
+            expectedUnlocksPerDay: load.expectedUnlocks,
             projectedMinutesSavedPerDay: savedPerDay
         )
     }

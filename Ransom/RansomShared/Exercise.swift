@@ -175,3 +175,47 @@ public enum FitnessLevel: String, CaseIterable, Codable, Identifiable, Sendable 
         }
     }
 }
+
+
+/// What the user says they are, rather than what they want.
+///
+/// Replaces the old six-checkbox goals screen. Identity-based commitments predict
+/// follow-through far better than outcome goals, and unlike the checklist this one
+/// is quoted back on the plan screen and the paywall, so it earns its screen.
+public enum Identity: String, CaseIterable, Codable, Identifiable, Sendable {
+    case stronger
+    case eveningsBack
+    case movesDaily
+    case finishesThings
+
+    public var id: String { rawValue }
+
+    /// Always first person. The user is completing a sentence about themselves.
+    public var statement: String {
+        switch self {
+        case .stronger:       return "I'm someone who gets stronger without going to a gym."
+        case .eveningsBack:   return "I'm someone who takes their evenings back."
+        case .movesDaily:     return "I'm someone who moves every day."
+        case .finishesThings: return "I'm someone who finishes what they start."
+        }
+    }
+
+    /// The short form, for echoing back on the plan and paywall.
+    public var shortForm: String {
+        switch self {
+        case .stronger:       return "stronger without a gym"
+        case .eveningsBack:   return "evenings back"
+        case .movesDaily:     return "moving every day"
+        case .finishesThings: return "finishing what you start"
+        }
+    }
+
+    public var emoji: String {
+        switch self {
+        case .stronger:       return "💪"
+        case .eveningsBack:   return "🌙"
+        case .movesDaily:     return "🏃"
+        case .finishesThings: return "🎯"
+        }
+    }
+}

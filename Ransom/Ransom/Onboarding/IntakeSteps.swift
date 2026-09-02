@@ -63,8 +63,8 @@ struct NameStep: View {
     var body: some View {
         StepScaffold(
             title: "What should Rex call you?",
-            subtitle: "Optional. It just makes the nagging more personal.",
-            buttonTitle: profile.firstName.isEmpty ? "Skip" : "Continue",
+            subtitle: "Optional. It makes the nagging personal.",
+            buttonTitle: "Continue",
             onNext: onNext
         ) {
             VStack(spacing: 18) {
