@@ -130,10 +130,13 @@ final class PoseRepCounter: NSObject {
     /// The single number each movement is judged on, normalised 0-1, where 1 is
     /// the bottom of the rep. Derived from joint positions rather than the phone.
     private func measure(_ observation: VNHumanBodyPoseObservation) -> (value: Double, hint: String?)? {
-        func point(_ joint: VNHumanBodyPoseObservation.JointName) -> CGPoint? {
+        // Converted to Double at the boundary. Vision hands back CGPoint, and
+        // letting CGFloat travel through the maths means every branch below has
+        // to be cast back at its return.
+        func point(_ joint: VNHumanBodyPoseObservation.JointName) -> (x: Double, y: Double)? {
             guard let p = try? observation.recognizedPoint(joint),
                   p.confidence > minimumConfidence else { return nil }
-            return p.location
+            return (Double(p.location.x), Double(p.location.y))
         }
 
         switch exercise.sensing {
