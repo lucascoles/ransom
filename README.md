@@ -1,7 +1,7 @@
 # Ransom — *Earn your scroll.*
 
 An iOS app that puts a price on Instagram, TikTok and whatever else eats your day.
-The price is reps. Rex, a lime-green gecko with strong opinions, collects.
+The price is reps. Rex, a very buff tangerine T-rex with comically small arms, collects.
 
 Built in SwiftUI for iOS 17+, on Apple's Screen Time frameworks (FamilyControls,
 ManagedSettings, DeviceActivity). Everything stays on device — no account, no
@@ -21,7 +21,7 @@ into a concrete deal ("10 push-ups → 15 minutes") before it ever asks for mone
 ## Opening it
 
 ```
-open ios/Ransom/Ransom.xcodeproj
+open Ransom/Ransom.xcodeproj
 ```
 
 Requires **Xcode 16+**. Then, once:
@@ -55,14 +55,14 @@ StoreKit Configuration → `Ransom.storekit`.
 ## How it's put together
 
 ```
-ios/Ransom/
+Ransom/
 ├── Ransom/                    App target
 │   ├── RansomApp.swift        Entry point; owns the three environment objects
 │   ├── RootView.swift       Onboarding gate, tabs, workout presentation
 │   ├── Core/                Theme, models, AppModel store, StoreKit, notifications
 │   ├── Components/          Buttons, choice cards, rings, bars, confetti
-│   ├── Mascot/              Rex — the whole character, in vectors
-│   ├── Onboarding/          18-step intake flow
+│   ├── Mascot/              Rex — eight illustrated poses, cross-faded
+│   ├── Onboarding/          16-step intake flow
 │   ├── Home/ Stats/ Settings/ Paywall/
 │   ├── Workout/             Rep detection engine + the set screen
 │   └── Blocking/            Screen Time authorization and shield control

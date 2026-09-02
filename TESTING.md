@@ -5,7 +5,7 @@ with no Swift toolchain, so treat the first build as a bug-fixing session, not a
 run. Everything below is about getting to that first build with the fewest
 surprises.
 
-Open `ios/Ransom/Ransom.xcodeproj`. Ignore `project.yml` — it's an XcodeGen
+Open `Ransom/Ransom.xcodeproj`. Ignore `project.yml` — it's an XcodeGen
 fallback for regenerating the project if the `.pbxproj` ever gets mangled by a
 merge. The checked-in project file is the real one.
 
