@@ -1,0 +1,74 @@
+{
+  "identifier" : "3E1B9A20",
+  "nonRenewingSubscriptions" : [],
+  "products" : [],
+  "settings" : {
+    "_askToBuyEnabled" : false,
+    "_billingIssuesEnabled" : false,
+    "_storefront" : "USA",
+    "_storeKitErrors" : []
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21447676",
+      "localizations" : [],
+      "name" : "Ransom Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "39.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6742001",
+          "introductoryOffer" : {
+            "internalID" : "6742002",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P3D"
+          },
+          "localizations" : [
+            {
+              "description" : "Block the apps that eat your day. Earn them back with reps.",
+              "displayName" : "Ransom Pro — Annual",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.ransom.app.pro.annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Ransom Pro Annual",
+          "subscriptionGroupID" : "21447676",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "5.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6742003",
+          "introductoryOffer" : {
+            "internalID" : "6742004",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P3D"
+          },
+          "localizations" : [
+            {
+              "description" : "Block the apps that eat your day. Earn them back with reps.",
+              "displayName" : "Ransom Pro — Weekly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.ransom.app.pro.weekly",
+          "recurringSubscriptionPeriod" : "P1W",
+          "referenceName" : "Ransom Pro Weekly",
+          "subscriptionGroupID" : "21447676",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

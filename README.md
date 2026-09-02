@@ -1,4 +1,4 @@
-# Repp — *Earn your scroll.*
+# Ransom — *Earn your scroll.*
 
 An iOS app that puts a price on Instagram, TikTok and whatever else eats your day.
 The price is reps. Rex, a lime-green gecko with strong opinions, collects.
@@ -11,7 +11,7 @@ server, no analytics.
 
 ## The idea
 
-You pick the apps. Repp shields them. Opening one gets you Rex instead of your feed,
+You pick the apps. Ransom shields them. Opening one gets you Rex instead of your feed,
 with a number on it: *12 push-ups and it's yours.* Do the set — the phone counts it —
 and the shield lifts for the minutes you earned. When they're spent, Rex is back.
 
@@ -21,16 +21,16 @@ into a concrete deal ("10 push-ups → 15 minutes") before it ever asks for mone
 ## Opening it
 
 ```
-open ios/Repp/Repp.xcodeproj
+open ios/Ransom/Ransom.xcodeproj
 ```
 
 Requires **Xcode 16+**. Then, once:
 
-1. Select the `Repp` target → Signing & Capabilities → set your **Team**.
-   Do the same for `ReppShield`, `ReppShieldAction` and `ReppMonitor`.
-2. Change the bundle IDs from `com.repp.app*` to something under your own prefix,
-   and update the App Group (`group.com.repp.app`) in all four `.entitlements`
-   files in `Config/` **and** in `ReppShared/ReppConstants.swift`.
+1. Select the `Ransom` target → Signing & Capabilities → set your **Team**.
+   Do the same for `RansomShield`, `RansomShieldAction` and `RansomMonitor`.
+2. Change the bundle IDs from `com.ransom.app*` to something under your own prefix,
+   and update the App Group (`group.com.ransom.app`) in all four `.entitlements`
+   files in `Config/` **and** in `RansomShared/RansomConstants.swift`.
 3. **Family Controls needs a distribution entitlement from Apple.** Development
    builds work with the capability enabled; shipping to the App Store requires
    requesting the Family Controls entitlement at
@@ -44,20 +44,20 @@ blocking is not.
 
 ### Testing the subscription
 
-`Config/Repp.storekit` defines both products — $5.99/week and $39.99/year, in one
+`Config/Ransom.storekit` defines both products — $5.99/week and $39.99/year, in one
 subscription group with the annual at the higher service level so weekly→annual is
 an immediate upgrade rather than a deferred crossgrade. Both carry a 3-day trial.
-The `Repp` scheme references the file, so purchases work locally without App Store
+The `Ransom` scheme references the file, so purchases work locally without App Store
 Connect.
 If Xcode doesn't pick it up: Product → Scheme → Edit Scheme → Run → Options →
-StoreKit Configuration → `Repp.storekit`.
+StoreKit Configuration → `Ransom.storekit`.
 
 ## How it's put together
 
 ```
-ios/Repp/
-├── Repp/                    App target
-│   ├── ReppApp.swift        Entry point; owns the three environment objects
+ios/Ransom/
+├── Ransom/                    App target
+│   ├── RansomApp.swift        Entry point; owns the three environment objects
 │   ├── RootView.swift       Onboarding gate, tabs, workout presentation
 │   ├── Core/                Theme, models, AppModel store, StoreKit, notifications
 │   ├── Components/          Buttons, choice cards, rings, bars, confetti
@@ -66,10 +66,10 @@ ios/Repp/
 │   ├── Home/ Stats/ Settings/ Paywall/
 │   ├── Workout/             Rep detection engine + the set screen
 │   └── Blocking/            Screen Time authorization and shield control
-├── ReppShared/              Compiled into all four targets
-├── ReppShield/              Shield UI extension — the block screen
-├── ReppShieldAction/        Shield button handling
-├── ReppMonitor/             DeviceActivityMonitor — puts the shield back
+├── RansomShared/              Compiled into all four targets
+├── RansomShield/              Shield UI extension — the block screen
+├── RansomShieldAction/        Shield button handling
+├── RansomMonitor/             DeviceActivityMonitor — puts the shield back
 └── Config/                  Info.plists, entitlements, StoreKit config
 ```
 
@@ -78,13 +78,13 @@ ever gets mangled by a merge. The checked-in project file is authoritative.
 
 ### Rex
 
-`Repp/Mascot/Rex.swift` draws the character from SwiftUI shapes — no image assets.
+`Ransom/Mascot/Rex.swift` draws the character from SwiftUI shapes — no image assets.
 A pose is a struct of ~15 numbers (limb angles, mouth curve, eye squint, tail droop),
 so SwiftUI interpolates between any two poses and every expression change animates
 for free. He idles, breathes, blinks on a random timer, and does push-ups in time
 with your actual reps.
 
-The shield extension can't host SwiftUI, so `ReppShared/RexBadge.swift` redraws his
+The shield extension can't host SwiftUI, so `RansomShared/RexBadge.swift` redraws his
 face in Core Graphics. Same character, one source of truth, no bitmaps.
 
 ### Counting reps
@@ -109,13 +109,13 @@ Earned time is enforced twice over, and whichever expires first wins:
 2. A wall-clock expiry in the shared `UnlockLedger`, re-checked by the app and by
    every extension each time one runs.
 
-`ReppMonitor` does the re-shielding, so it works even if Repp has been force-quit.
+`RansomMonitor` does the re-shielding, so it works even if Ransom has been force-quit.
 
 ### The shield handoff
 
 iOS extensions can't launch their host app. So when you tap **Earn my time** on the
-block screen, `ReppShieldAction` writes the request to the App Group, posts a Darwin
-notification, and fires a local notification. Whether Repp is backgrounded or cold,
+block screen, `RansomShieldAction` writes the request to the App Group, posts a Darwin
+notification, and fires a local notification. Whether Ransom is backgrounded or cold,
 it picks the request up and drops you straight into a set for the app you were
 reaching for. This is the one seam in the flow that Apple's frameworks don't let us
 close — the block screen says so plainly rather than pretending otherwise.
@@ -135,6 +135,6 @@ everything after it is the plan.
 ## Not built yet
 
 - Localisation (all copy is English, inline)
-- Unit tests around `ReppPlan.make` and `UnlockLedger` expiry maths
+- Unit tests around `RansomPlan.make` and `UnlockLedger` expiry maths
 - Widget / Live Activity for the earned-time countdown
 - A real Terms and Privacy page (the paywall links to placeholder URLs)
