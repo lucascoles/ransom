@@ -86,6 +86,67 @@ final class AppModel {
         return count
     }
 
+    // MARK: Lifetime
+
+    /// Every rep of one movement, all time. The headline number on the Progress tab.
+    func lifetimeReps(of exercise: Exercise) -> Int {
+        history.filter { $0.exercise == exercise }.reduce(0) { $0 + $1.reps }
+    }
+
+    var lifetimePushUps: Int { lifetimeReps(of: .pushUps) }
+
+    /// Days on which at least one set was completed.
+    var activeDays: Int {
+        let calendar = Calendar.current
+        return Set(history.map { calendar.startOfDay(for: $0.date) }).count
+    }
+
+    /// Calendar days Repp has been installed, at least one.
+    var daysSinceStart: Int {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: history.first?.date ?? profile.createdAt)
+        let days = calendar.dateComponents([.day], from: start, to: calendar.startOfDay(for: Date())).day ?? 0
+        return max(1, days + 1)
+    }
+
+    /// Minutes of scrolling the gate has displaced, all time.
+    ///
+    /// The honest version of this number: what the user told us they used to scroll
+    /// per day, times the days since they started, minus every minute they've
+    /// actually bought back with reps. It can't go below zero — if someone earns
+    /// more time than their old baseline, Repp hasn't saved them anything and
+    /// shouldn't claim it has.
+    var lifetimeMinutesSaved: Int {
+        let baselinePerDay = (profile.scrollLoad ?? .medium).hoursPerDay * 60
+        let wouldHaveScrolled = baselinePerDay * Double(daysSinceStart)
+        return max(0, Int(wouldHaveScrolled) - totalMinutesEarned)
+    }
+
+    var lifetimeDaysSaved: Double {
+        Double(lifetimeMinutesSaved) / (60 * 24)
+    }
+
+    /// Average minutes a day actually spent in the gated apps.
+    var averageEarnedMinutesPerDay: Int {
+        totalMinutesEarned / max(1, daysSinceStart)
+    }
+
+    /// The longest run of consecutive logged days, ever.
+    var bestStreak: Int {
+        let calendar = Calendar.current
+        let days = Set(history.map { calendar.startOfDay(for: $0.date) }).sorted()
+        guard !days.isEmpty else { return 0 }
+
+        var best = 1
+        var run = 1
+        for index in 1..<days.count {
+            let gap = calendar.dateComponents([.day], from: days[index - 1], to: days[index]).day ?? 0
+            run = gap == 1 ? run + 1 : 1
+            best = max(best, run)
+        }
+        return best
+    }
+
     func reps(on date: Date) -> Int {
         let calendar = Calendar.current
         return history

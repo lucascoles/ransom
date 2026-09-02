@@ -36,11 +36,13 @@ struct StatsView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
+                lifetimeCard
+                    .padding(.top, 4)
+
                 SegmentPicker(
                     options: Window.allCases.map { (value: $0, label: $0.title) },
                     selection: $window
                 )
-                .padding(.top, 4)
 
                 headlineCard
 
@@ -96,14 +98,127 @@ struct StatsView: View {
 
     // MARK: - Sections
 
+    /// The two numbers people actually stay subscribed for.
+    private var lifetimeCard: some View {
+        VStack(spacing: 16) {
+            Text("LIFETIME")
+                .font(ReppFont.caption(11))
+                .tracking(1.4)
+                .foregroundStyle(Palette.inkFaint)
+
+            HStack(spacing: 0) {
+                VStack(spacing: 2) {
+                    Text(model.lifetimePushUps, format: .number)
+                        .font(ReppFont.display(42))
+                        .foregroundStyle(Palette.ink)
+                        .contentTransition(.numericText(value: Double(model.lifetimePushUps)))
+                    Text("push-ups")
+                        .font(ReppFont.caption(13))
+                        .foregroundStyle(Palette.inkSoft)
+                }
+                .frame(maxWidth: .infinity)
+
+                Rectangle()
+                    .fill(Palette.hairline)
+                    .frame(width: 1, height: 46)
+
+                VStack(spacing: 2) {
+                    Text(model.lifetimeDaysSaved, format: .number.precision(.fractionLength(1)))
+                        .font(ReppFont.display(42))
+                        .foregroundStyle(Palette.flame)
+                    Text("days saved")
+                        .font(ReppFont.caption(13))
+                        .foregroundStyle(Palette.inkSoft)
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            savedDerivation
+
+            RexScene(
+                pose: model.lifetimePushUps > 500 ? .flex : .coach,
+                line: lifetimeLine,
+                size: 92
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 4)
+        .reppCard()
+    }
+
+    private var lifetimeLine: String {
+        let pushUps = model.lifetimePushUps
+        if pushUps == 0 {
+            return "Nothing banked yet. First set changes that."
+        }
+        return "\(pushUps.formatted()) push-ups you wouldn't have done otherwise. I counted every one."
+    }
+
+    /// Shows the arithmetic rather than asking for trust: what you used to scroll,
+    /// what you actually scroll now, and the gap between them.
+    private var savedDerivation: some View {
+        let baseline = Int((model.profile.scrollLoad ?? .medium).hoursPerDay * 60)
+        let now = model.averageEarnedMinutesPerDay
+        let widest = max(baseline, 1)
+
+        return VStack(alignment: .leading, spacing: 10) {
+            derivationBar(label: "Before Repp", minutes: baseline, widest: widest, tint: Palette.inkFaint)
+            derivationBar(label: "Now", minutes: now, widest: widest, tint: Palette.green)
+
+            Text("\(model.daysSinceStart) days × \(minutes(baseline - now)) saved a day")
+                .font(ReppFont.caption(12))
+                .foregroundStyle(Palette.inkSoft)
+        }
+        .padding(.top, 4)
+    }
+
+    private func derivationBar(label: String, minutes value: Int, widest: Int, tint: Color) -> some View {
+        HStack(spacing: 10) {
+            Text(label)
+                .font(ReppFont.caption(12))
+                .foregroundStyle(Palette.inkSoft)
+                .frame(width: 78, alignment: .leading)
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Palette.surfaceAlt)
+                    Capsule()
+                        .fill(tint)
+                        .frame(width: max(6, geo.size.width * (Double(value) / Double(widest))))
+                }
+            }
+            .frame(height: 10)
+
+            Text(minutes(value))
+                .font(ReppFont.caption(12))
+                .foregroundStyle(Palette.ink)
+                .frame(width: 56, alignment: .trailing)
+        }
+    }
+
+    private func minutes(_ value: Int) -> String {
+        let v = max(0, value)
+        return v >= 60 ? "\(v / 60)h \(v % 60)m" : "\(v)m"
+    }
+
     private var headlineCard: some View {
         VStack(spacing: 14) {
             HStack(spacing: 14) {
                 RexView(pose: model.streak > 2 ? .cheer : .idle, size: 92, isAlive: false)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("\(model.streak) day streak")
-                        .font(ReppFont.title(24))
-                        .foregroundStyle(Palette.ink)
+                    HStack(spacing: 8) {
+                        Text("\(model.streak) day streak")
+                            .font(ReppFont.title(24))
+                            .foregroundStyle(Palette.ink)
+                        if model.bestStreak > model.streak {
+                            Pill(
+                                text: "best \(model.bestStreak)",
+                                icon: "trophy.fill",
+                                tint: Palette.violet,
+                                background: Palette.surfaceAlt
+                            )
+                        }
+                    }
                     Text(streakLine)
                         .font(ReppFont.body(14))
                         .foregroundStyle(Palette.inkSoft)
