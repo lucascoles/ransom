@@ -1,18 +1,32 @@
 import FamilyControls
+import ManagedSettings
 import SwiftUI
 
 /// Wraps Apple's `FamilyActivityPicker` in Ransom's chrome. The picker itself is a
 /// system view we can't restyle, so the framing does the work.
 struct AppPickerView: View {
     @Environment(ScreenTimeManager.self) private var screenTime
+    @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
 
     @State private var draft = FamilyActivitySelection()
+    /// Read once on appear rather than on every redraw: it comes from the App
+    /// Group, and the row must not reshuffle itself under a finger mid-tap.
+    @State private var suggestions: [ApplicationToken] = []
+    @State private var measuredAt: Date?
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 header
+                SuggestedAppsRow(
+                    selection: $draft,
+                    tokens: suggestions,
+                    namedApps: DistractingApp.allCases.filter(model.profile.distractingApps.contains),
+                    measuredAt: measuredAt
+                )
+                .padding(.horizontal, 20)
+                .padding(.bottom, 14)
                 FamilyActivityPicker(selection: $draft)
             }
             .background(Palette.canvas)
@@ -33,7 +47,14 @@ struct AppPickerView: View {
                     .foregroundStyle(Palette.brand)
                 }
             }
-            .onAppear { draft = screenTime.selection }
+            .onAppear {
+                draft = screenTime.selection
+                let store = UsageSuggestionStore()
+                // A stale ranking recommends the app they already dealt with, so
+                // an old one is treated as no ranking at all.
+                suggestions = store.isFresh ? store.suggestions : []
+                measuredAt = store.measuredAt
+            }
         }
     }
 

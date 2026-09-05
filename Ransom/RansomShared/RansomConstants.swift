@@ -31,6 +31,12 @@ public enum RansomCore {
         public static let minutesPerUnlock = "ransom.config.minutesPerUnlock"
         public static let exerciseName = "ransom.config.exerciseName"
         public static let shieldHeadline = "ransom.shield.headline"
+        /// The user's most-used apps, as opaque tokens, ranked. Written by a
+        /// DeviceActivityReport extension - the only place usage can be read -
+        /// and read by the app to recommend what to block. See
+        /// `UsageSuggestionStore` for why this has to travel as tokens.
+        public static let suggestedTokens = "ransom.suggest.tokens"
+        public static let suggestedAt = "ransom.suggest.measuredAt"
 
         // The tariff counter. Both the app and the shield price from these, so
         // they can never quote the user two different numbers.
