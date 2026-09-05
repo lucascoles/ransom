@@ -502,6 +502,7 @@ struct HomeView: View {
                 Text("blocked: \(screenTime.blockedCount)  monitoring: \(screenTime.isMonitoring ? "yes" : "no")")
                 Text("unlocked: \(screenTime.isCurrentlyUnlocked ? "yes" : "no")  bank: \(model.bankedMinutes)")
                 Text("shielded now: \(ManagedSettingsStore(named: .ransom).shield.applications?.count.description ?? "nil")")
+                Text("shield ext calls: \(RansomCore.defaults.integer(forKey: RansomCore.Key.shieldCalls))  last: \(RansomCore.defaults.string(forKey: RansomCore.Key.shieldHeadline) ?? "-")")
             }
             .font(.system(size: 11, design: .monospaced))
             .foregroundStyle(Palette.inkSoft)

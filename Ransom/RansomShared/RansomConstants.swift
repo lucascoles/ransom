@@ -31,6 +31,11 @@ public enum RansomCore {
         public static let minutesPerUnlock = "ransom.config.minutesPerUnlock"
         public static let exerciseName = "ransom.config.exerciseName"
         public static let shieldHeadline = "ransom.shield.headline"
+        /// Incremented every time the shield configuration extension is asked for
+        /// a screen. The whole point is to tell "the extension never ran" apart
+        /// from "the extension ran and iOS ignored what it returned" - which look
+        /// identical from the outside, and need completely different fixes.
+        public static let shieldCalls = "ransom.shield.calls"
         /// The user's most-used apps, as opaque tokens, ranked. Written by a
         /// DeviceActivityReport extension - the only place usage can be read -
         /// and read by the app to recommend what to block. See
