@@ -40,30 +40,27 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
 
     private func makeConfiguration(appName: String?) -> ShieldConfiguration {
         let ledger = UnlockLedger()
-        let exercise = ledger.exerciseName
-        let minutes = ledger.minutesPerUnlock
-        let reps = ledger.repsPerUnlock
-        let banked = ledger.bankedMinutes
-
-        let title = appName.map { "\($0)? \(reps) \(exercise.lowercased()) first" }
-            ?? ShieldCopy.headline(reps: reps, exercise: exercise)
-
-        // A balance already earned is the most useful thing the shield can say:
-        // it turns "you're blocked" into "you're one tap from being unblocked".
-        let lead = banked > 0 ? "You've got \(banked) minutes banked." : ShieldCopy.taunt()
-        let subtitle = "\(lead)\nOne set banks you \(minutes) more."
 
         return ShieldConfiguration(
             backgroundBlurStyle: .systemUltraThinMaterialDark,
-            backgroundColor: RansomPalette.shieldBackground.withAlphaComponent(0.92),
-            icon: RexBadge.image(size: 180),
+            backgroundColor: RansomPalette.shieldBackground.withAlphaComponent(0.94),
+            // Rex is the whole point of this screen. The stock shield is an
+            // hourglass and the word "Restricted", which reads as a punishment
+            // handed down by the phone; the same block with Rex on it reads as
+            // the thing the user asked for.
+            icon: RexBadge.image(size: 200),
             title: ShieldConfiguration.Label(
-                text: title,
+                text: ShieldCopy.headline(appName: appName),
                 color: .white
             ),
             subtitle: ShieldConfiguration.Label(
-                text: subtitle,
-                color: UIColor(white: 1, alpha: 0.72)
+                text: ShieldCopy.subtitle(
+                    reps: ledger.repsPerUnlock,
+                    exercise: ledger.exerciseName,
+                    minutes: ledger.minutesPerUnlock,
+                    banked: ledger.bankedMinutes
+                ),
+                color: UIColor(white: 1, alpha: 0.75)
             ),
             primaryButtonLabel: ShieldConfiguration.Label(
                 text: ShieldCopy.primaryButton,
@@ -72,7 +69,7 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
             primaryButtonBackgroundColor: RansomPalette.brandDark,
             secondaryButtonLabel: ShieldConfiguration.Label(
                 text: ShieldCopy.secondaryButton,
-                color: UIColor(white: 1, alpha: 0.6)
+                color: UIColor(white: 1, alpha: 0.65)
             )
         )
     }
