@@ -59,15 +59,14 @@ struct TotalActivityReport: DeviceActivityReportScene {
             }
         }
 
-        // Three. Five was enough to recognise the day and too many to take in at
-        // a glance, which is all this card gets - the tail of a top five is
-        // usually a few minutes each and says nothing the top three did not.
+        // Five is enough to recognise the day. A full list is a Settings screen,
+        // and this is meant to be read at a glance on the way past.
         let apps = byApp
             .map { DayActivity.AppUsage(token: $0.value.token, name: $0.key,
                                         minutes: Int($0.value.seconds / 60)) }
             .filter { $0.minutes > 0 }
             .sorted { $0.minutes > $1.minutes }
-            .prefix(3)
+            .prefix(5)
 
         DeviceUsageStore().record(totalMinutes: Int(total / 60))
         return DayActivity(totalMinutes: Int(total / 60), apps: Array(apps))

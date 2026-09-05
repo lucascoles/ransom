@@ -50,7 +50,7 @@ struct ScreenTimeReportCard: View {
                     // The report brings its own intrinsic size and it is not
                     // always sensible, so the card decides how much room it gets
                     // rather than being pushed around by another process's view.
-                    .frame(height: hasRendered ? 232 : 76)
+                    .frame(height: hasRendered ? 318 : 76)
             } else {
                 Text("Turn on Screen Time and Rex can show you the whole picture, not just the apps he's guarding.")
                     .font(RansomFont.body(14))
