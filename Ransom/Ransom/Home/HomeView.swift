@@ -53,8 +53,11 @@ struct HomeView: View {
             VStack(spacing: 16) {
                 header
 
-                ScoreHero(pose: rexPose, line: rexLine)
-                    .padding(.bottom, 2)
+                // Rex, smaller than he was and without a score beside him. The
+                // scoring hero is in the history if it is ever wanted again.
+                RexScene(pose: rexPose, line: rexLine, size: 84)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 2)
 
                 // Earning and spending lead; the balance sits under them. The
                 // bank was on top because it is what you check, but checking it
