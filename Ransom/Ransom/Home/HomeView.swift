@@ -205,13 +205,40 @@ struct HomeView: View {
         if !screenTime.hasSelection {
             return "Pick a few apps just below and I'll keep an eye on them for you."
         }
-        if model.isOverAllowance {
-            return "Past today's target. It happens. Tomorrow resets, and anything you've banked carries over."
+        return workLine
+    }
+
+    /// What the user has done, rather than what they have left.
+    ///
+    /// Rex used to quote the minutes remaining on the day's allowance, which is a
+    /// budget reading in a speech bubble - the card below already carries it, and
+    /// hearing "you've got 89 minutes left" from a friend is a strange thing to
+    /// be told. He talks about the work now: the reps are the part the user did
+    /// on purpose, and the part nothing else on this screen congratulates them for.
+    private var workLine: String {
+        let reps = model.todayReps
+        let move = plan.exercise.title.lowercased()
+
+        guard reps > 0 else {
+            // Nothing done yet is not a scolding. It is the easiest moment of the
+            // day to start, and saying so is the whole job of this line.
+            return model.streak > 1
+                ? "\(model.streak) days running. Today's set is waiting whenever you are."
+                : "Nothing yet today. First set is the whole battle."
         }
-        if model.todayMinutesUnlocked == 0 {
-            return "Nothing used yet today. Best possible start."
+
+        // One line per milestone, biggest first, so the compliment grows with the
+        // work instead of repeating itself all day.
+        switch reps {
+        case 100...:
+            return "\(reps) \(move) today. That is a proper session, not a warm-up."
+        case 50..<100:
+            return "\(reps) \(move) today. Mirrors are going to notice before you do."
+        case 25..<50:
+            return "\(reps) \(move) today and it isn't even a workout day. That adds up."
+        default:
+            return "\(reps) \(move) down. More than you'd have done without me, and I'll take it."
         }
-        return "You've got \(model.todayMinutesLeft) minutes left today. Plenty of room."
     }
 
     // MARK: - Unlock
