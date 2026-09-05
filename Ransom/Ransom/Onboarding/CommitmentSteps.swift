@@ -60,11 +60,16 @@ struct FirstRepStep: View {
 
     private static let target = 5
     private var plan: RansomPlan { RansomPlan.make(from: profile) }
-    private var exercise: Exercise { profile.primaryExercise }
+    /// What the demo set will be. Starts at whatever they picked earlier and can
+    /// be changed here, because this is the first time the choice stops being
+    /// abstract - the floor is in front of them and they can feel which one they
+    /// are actually willing to do right now.
+    @State private var exercise: Exercise
 
     init(profile: UserProfile, onNext: @escaping () -> Void) {
         self.profile = profile
         self.onNext = onNext
+        _exercise = State(initialValue: profile.primaryExercise)
         _counter = State(initialValue: PoseRepCounter(exercise: profile.primaryExercise,
                                                       target: FirstRepStep.target))
     }
@@ -140,7 +145,10 @@ struct FirstRepStep: View {
             }
             // With the camera up the count lives on the video, so this block is
             // only the form hint and does not need the taller slot.
-            .frame(height: cameraIsLive && !finished ? 76 : 132, alignment: .top)
+            // Taller before the set starts: the intro now carries the movement
+            // picker under its two lines, and at 132 the subtitle was truncating
+            // mid-sentence to make room for it.
+            .frame(height: cameraIsLive && !finished ? 76 : 210, alignment: .top)
 
             Spacer()
 
@@ -170,8 +178,48 @@ struct FirstRepStep: View {
                 .foregroundStyle(Palette.inkSoft)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
+
+            movementPicker
+                .padding(.top, 4)
         }
         .padding(.top, 8)
+    }
+
+    /// Push-ups or squats, chosen here rather than only two screens back.
+    ///
+    /// Swapping rebuilds the counter, which is the whole reason this cannot just
+    /// set a variable: the detector is built for one movement - which joints it
+    /// reads and what counts as a rep differ completely - so a counter made for
+    /// push-ups would simply never see a squat.
+    private var movementPicker: some View {
+        HStack(spacing: 8) {
+            ForEach(Exercise.selectable) { option in
+                Button {
+                    guard option != exercise else { return }
+                    Haptics.select()
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                        exercise = option
+                    }
+                    counter = PoseRepCounter(exercise: option, target: Self.target)
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: option.symbol)
+                            .font(.system(size: 14, weight: .semibold))
+                        Text(option.shortTitle)
+                            .font(RansomFont.headline(15))
+                    }
+                    .foregroundStyle(option == exercise ? Palette.onBrand : Palette.inkSoft)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(option == exercise ? Palette.brand : Palette.surfaceAlt)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 8)
     }
 
     private var counterReadout: some View {
