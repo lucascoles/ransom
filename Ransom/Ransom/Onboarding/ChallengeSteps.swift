@@ -318,7 +318,6 @@ struct BankExplainerStep: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     bullet("\(plan.repsPerUnlock) \(exercise.title.lowercased()) fills it by \(plan.minutesPerUnlock) minutes.")
-                    bullet("Walk, and your steps top it up on their own.")
                     bullet("Open a blocked app and it spends from the bank.")
                 }
             }

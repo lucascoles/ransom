@@ -22,9 +22,23 @@ struct RootView: View {
         #endif
     }
 
+    /// `-RansomIntake 1` shows the intake again on a device that has finished it.
+    ///
+    /// `-RansomStartStep` only chooses a step *within* the flow, so on any phone
+    /// that has been past the paywall once it does nothing at all - the flow is
+    /// never built to read it. Reviewing intake copy otherwise meant deleting the
+    /// app and losing the bank, the app picks and the Screen Time grant with it.
+    private var forcesIntake: Bool {
+        #if DEBUG
+        return UserDefaults.standard.bool(forKey: "RansomIntake")
+        #else
+        return false
+        #endif
+    }
+
     var body: some View {
         Group {
-            if model.hasCompletedOnboarding {
+            if model.hasCompletedOnboarding && !forcesIntake {
                 mainTabs
             } else {
                 OnboardingFlow()
