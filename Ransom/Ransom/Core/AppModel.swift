@@ -31,8 +31,34 @@ final class AppModel {
     // MARK: Services
 
     let ledger = UnlockLedger()
+    let rules = FocusRuleStore()
 
-    var plan: RansomPlan { RansomPlan.make(from: profile) }
+    /// Bumped whenever the rules change or the clock crosses a window's edge, so
+    /// the views that quote a price redraw. `FocusRuleStore` reads the App Group
+    /// and is not observable on its own.
+    var ruleRevision = 0
+
+    /// The plan at today's price: doubled while one of the user's focus rules is
+    /// running, otherwise exactly what they signed up to.
+    ///
+    /// Everything downstream reads this - the set target, the shield's copy, the
+    /// home screen's exchange rate - so there is no path by which one screen can
+    /// quote a rule price and another the plain one.
+    var plan: RansomPlan {
+        _ = ruleRevision
+        return basePlan.scaled(by: rules.multiplier())
+    }
+
+    /// The plan as committed to, ignoring any rule. Projections and the intake's
+    /// promises are made against this: a temporary window must not appear to
+    /// change the deal.
+    var basePlan: RansomPlan { RansomPlan.make(from: profile) }
+
+    /// The rule making things expensive right now, if any.
+    var activeRule: FocusRule? {
+        _ = ruleRevision
+        return rules.activeRule()
+    }
 
     /// What a set costs. Flat, now that the bank is the economy.
     ///
@@ -42,6 +68,13 @@ final class AppModel {
     /// rate moving under the user while they were mid-set, which is the one thing
     /// a currency cannot do and stay trusted.
     var repsPerSet: Int { plan.repsPerUnlock }
+
+    /// Records a change to the rules and re-prices everything that depends on
+    /// them, including the copy the shield extension will render.
+    func rulesChanged() {
+        ruleRevision += 1
+        syncPlanToExtensions()
+    }
 
     var unlocksToday: Int { ledger.unlocksToday }
 

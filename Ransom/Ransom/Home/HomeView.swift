@@ -55,6 +55,8 @@ struct HomeView: View {
 
                 spendCard
 
+                RulesSection()
+
                 todayCard
 
                 if !screenTime.isAuthorized {

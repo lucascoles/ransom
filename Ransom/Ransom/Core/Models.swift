@@ -355,6 +355,19 @@ struct RansomPlan: Equatable {
         return options
     }
 
+    /// The same plan at a higher price, for a focus rule that is running.
+    ///
+    /// Only the cost moves. Minutes granted, the goal and every projection stay
+    /// exactly where they were, because a rule is meant to make the phone more
+    /// expensive for an hour, not to rewrite what the user signed up to.
+    func scaled(by multiplier: Int) -> RansomPlan {
+        guard multiplier > 1 else { return self }
+        var scaled = self
+        scaled.repsPerUnlock *= multiplier
+        scaled.stepsPerMinute *= multiplier
+        return scaled
+    }
+
     /// How many of a movement it takes to earn one minute. Quoted on the home
     /// screen so the exchange rate is never a mystery.
     func repsPerMinute(for exercise: Exercise) -> Int {

@@ -98,6 +98,20 @@ Three rules the bank has already been broken by once each, so do not undo them:
  * **The bank clears at midnight** (`bankedMinutes` checks `bankDay` on read). A
    balance that carries forever becomes a stockpile and the habit stops being daily.
 
+**Focus rules double the price, and that is all they do.** A `FocusRule` is a
+named window (`Workout`-adjacent only in spirit: `RansomShared/FocusRule.swift`)
+with a start, an end and a set of weekdays. While one is running,
+`AppModel.plan` returns `basePlan.scaled(by: 2)` - more reps per unlock, more
+steps per minute, and *nothing else moves*. Minutes granted, the goal and every
+projection stay put, because a rule makes the phone expensive for an hour rather
+than rewriting the deal. Two decisions worth keeping: there is no per-rule app
+list (Ransom has one guarded set, chosen once - two lists means the shield has to
+work out which it is enforcing), and there is no dial for how much harder it
+gets, because a control for how serious you are is one you turn down at the
+moment it starts working. The rules live in the App Group so the shield prices
+against them too; a rule the app knew about and the shield didn't would quote two
+prices for the same set.
+
 **The daily goal is screen time, not reps.** `profile.goalDailyMinutes` is set by
 the user on the "What's the target?" step and drives `AppModel.todayAllowance`.
 A rep-based daily goal sells the wrong thing: a big rep number means a lot of
@@ -275,6 +289,7 @@ by frame rather than guessing.
   paywall, which is the only way to reach the set screen on a real device.
   `-RansomBank <n>` seeds banked minutes so the spend UI is reachable,
   `-RansomDebugHUD 1` shows the rep-counter readout, `-RansomTab <0-2>` picks a
-  tab and `-RansomSeedName ""` captures the unnamed states.
+  tab, `-RansomRuleEditor 1` opens the focus-rule editor (which is otherwise
+  below the fold on Home) and `-RansomSeedName ""` captures the unnamed states.
 - Everything stays on device. No account, no server, no analytics. Pose
   detection runs through Vision locally and no video is recorded or uploaded.
