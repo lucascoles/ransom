@@ -147,7 +147,10 @@ private struct RuleCard: View {
     var isActive: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        // Top down, with the spare room left at the bottom for the art to fill.
+        // Pushing the name to the bottom with a spacer left the whole upper half
+        // of the card empty, which read as a card that had failed to load.
+        VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 5) {
                 Image(systemName: isActive ? "lock.fill" : "calendar")
                     .font(.system(size: 11, weight: .bold))
@@ -156,8 +159,7 @@ private struct RuleCard: View {
                     .lineLimit(1)
             }
             .foregroundStyle(isActive ? Palette.onBrand : Palette.inkFaint)
-
-            Spacer(minLength: 0)
+            .padding(.bottom, 2)
 
             Text(rule.name)
                 .font(RansomFont.headline(16))
@@ -169,6 +171,8 @@ private struct RuleCard: View {
                 .font(RansomFont.caption(12))
                 .foregroundStyle(isActive ? Palette.onBrand.opacity(0.85) : Palette.inkSoft)
                 .lineLimit(1)
+
+            Spacer(minLength: 0)
         }
         .padding(14)
         .frame(width: 150, height: 128, alignment: .leading)
@@ -276,16 +280,21 @@ private struct TemplateCard: View {
     var template: RuleTemplate
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Spacer()
+        VStack(alignment: .leading, spacing: 4) {
+            // The days earn the top-left rather than leaving it blank, and they
+            // are the one thing a starter has to say that its name does not.
+            HStack(spacing: 5) {
+                Text(FocusRuleFormat.days(template.days))
+                    .font(RansomFont.caption(11))
+                    .foregroundStyle(Palette.inkFaint)
+                    .lineLimit(1)
+                Spacer(minLength: 4)
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 17, weight: .bold))
                     .symbolRenderingMode(.palette)
                     .foregroundStyle(Palette.surface, Palette.brand)
             }
-
-            Spacer(minLength: 0)
+            .padding(.bottom, 2)
 
             Text(template.name)
                 .font(RansomFont.headline(16))
@@ -297,6 +306,8 @@ private struct TemplateCard: View {
                 .font(RansomFont.caption(12))
                 .foregroundStyle(Palette.inkFaint)
                 .lineLimit(1)
+
+            Spacer(minLength: 0)
         }
         .padding(14)
         .frame(width: 150, height: 128, alignment: .leading)
@@ -348,7 +359,7 @@ struct RuleArt: View {
             // being a texture and started being a picture the name was written
             // across - the name is the thing being read, and the illustration is
             // only there to say what kind of hour this is at a glance.
-            .offset(x: 30, y: 30)
+            .offset(x: 26, y: 24)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
         .clipShape(RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous))
