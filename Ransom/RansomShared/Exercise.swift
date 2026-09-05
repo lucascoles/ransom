@@ -92,7 +92,7 @@ public enum Exercise: String, CaseIterable, Codable, Identifiable, Sendable {
     /// camera can see nothing — so the camera path needs its own instructions.
     public var cameraCue: String {
         switch self {
-        case .pushUps: return "Stand the phone up facing you, just past your hands."
+        case .pushUps: return "Prop the phone against a wall to your side, a few feet away, so your whole body is in shot."
         case .squats:  return "Stand the phone up a few feet away, facing you."
         case .steps:   return "Nothing to set up. Your phone is already counting."
         }

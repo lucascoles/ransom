@@ -231,6 +231,14 @@ principles got several of them backwards first:
  * **The drop ratio shrinks on deep reps** because the shoulders come at the
    camera and widen: a full first rep read 0.36-0.38 against the old 0.35, so
    `strongDropTravel` is 0.30. Nothing that wasn't a rep came near it.
+ * **The knee gate only runs when the camera is side on.** `bodySpread` measures
+   hands-to-feet distance in shoulder widths; below 2.0 the gate stands down and
+   the rep counts. Filmed down the length of a plank the legs point at the lens,
+   a planted knee lands within a few pixels of a raised one, and there is no
+   signal to threshold - which is why four rounds of moving that threshold both
+   refused honest reps and passed knee push-ups. The camera cue now asks for a
+   side-on full-body shot, which is what every other counter in this category
+   asks for and the reason none of them have this problem.
  * **Knee push-ups are caught by knee *height*, never knee *angle*.** Head-on the
    leg points at the lens so hip, knee and ankle project to nearly one point and
    the angle is noise - the first version rejected perfect form and passed the

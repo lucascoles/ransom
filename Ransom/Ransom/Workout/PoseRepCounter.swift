@@ -153,6 +153,13 @@ final class PoseRepCounter: NSObject {
     /// barely changes during a set — so once seen it's remembered, and a single
     /// visible shoulder is enough to keep measuring.
     private var lastShoulderWidth: Double?
+    /// Hands-to-feet horizontal distance in shoulder widths, this frame. Large
+    /// means the camera is seeing the body side on; small means it is pointed
+    /// down the length of it and the legs are a smudge.
+    private var bodySpread: Double?
+    /// Spread values gathered during the rep, so the framing is judged over the
+    /// whole movement rather than off one frame at the bottom.
+    private var repSpreads: [Double] = []
     /// Where the person being counted was last seen, so the count stays with them
     /// when someone else walks into shot.
     private var lockedSubjectCentre: CGPoint?
@@ -380,27 +387,22 @@ final class PoseRepCounter: NSObject {
     /// the gate kept refusing honest push-ups on the phone even after both
     /// signals were made to agree. Everything between -0.02 and here now counts.
     private let kneelingLift: Double = 0.12
-    /// Knees above the wrists, in shoulder widths, *below* which the knees are on
+    /// Knees above the hands, in shoulder widths, *below* which the knees are on
     /// the floor.
     ///
-    /// The ankle test above needs ankles, and kneeling hides them: the shins lie
-    /// flat pointing away from the lens and the feet sit behind the thighs. In a
-    /// set of five knee push-ups the ankles were never seen once, and every cheat
-    /// rep counted. The knees, though, still show at the bottom of the frame,
-    /// and where they sit relative to the hands is the tell. Both are on the
-    /// floor when kneeling, so the knees read level with or below the wrists
-    /// (-0.26 to +0.13 in that footage); in a plank the knees are a foot off the
-    /// floor and read 0.30-0.44 above them.
+    /// The hands are on the floor for the whole rep, which makes them the one
+    /// fixed reference the frame has for floor level - and a knee at floor level
+    /// is a knee that is kneeling.
     ///
-    /// The line used to sit between the two ranges, and that is what was refusing
-    /// real reps. This measure is taken *against the wrists*, and on close grip
-    /// the wrists disappear behind the head at the bottom of the rep - which is
-    /// exactly when the leg samples are taken. A bad wrist read moves the
-    /// reference rather than the knees, and the rep is thrown out for a cheat
-    /// nobody committed. So the line now sits below the kneeling range's own
-    /// middle: knees *underneath* the hands, which a plank cannot produce
-    /// however badly the wrists are read.
-    private let kneelingKneeHeight: Double = -0.05
+    /// This number has been moved four times and every move was a guess dressed
+    /// as a measurement, because head on there is nothing to measure: the legs
+    /// point at the lens and a planted knee lands within a few pixels of a raised
+    /// one. Side on it is ordinary geometry. A plank holds the knee a
+    /// thigh-thickness clear of the floor - a good half a shoulder width - and
+    /// kneeling puts it on the floor beside the hands, at roughly zero. The line
+    /// sits between them, and `sawBodyLengthwise` is what stops it being applied
+    /// where it cannot mean anything.
+    private let kneelingKneeHeight: Double = 0.18
     /// How many bottom-of-rep readings a leg measure needs before it is allowed an
     /// opinion, and how much of that pile has to agree with its own median.
     /// Both are high on purpose: this gate's failure mode is refusing real work.
@@ -834,6 +836,26 @@ final class PoseRepCounter: NSObject {
                         kneeHeight = (kneeY - wristY) / width
                     }
                 }
+
+                // How side-on the body is, as the horizontal gap between the
+                // hands and the feet in shoulder widths.
+                //
+                // This is the measurement the knee gate was missing, and the
+                // reason it could never be made to work by moving thresholds.
+                // Filmed head-on, the legs point at the lens: hip, knee and ankle
+                // project to nearly one point, the knee sits a few pixels from the
+                // wrist whether it is planted or not, and there is simply no
+                // signal there to threshold. Side on, a plank stretches three or
+                // four shoulder widths across the frame and the knee is a hand's
+                // height above the floor line the hands and feet define. Same
+                // arithmetic, completely different amount of information.
+                let wristsX = [measured(.leftWrist)?.x, measured(.rightWrist)?.x].compactMap { $0 }
+                let anklesX = [measured(.leftAnkle)?.x, measured(.rightAnkle)?.x].compactMap { $0 }
+                if !wristsX.isEmpty, !anklesX.isEmpty {
+                    let handX = Double(wristsX.reduce(0, +)) / Double(wristsX.count)
+                    let footX = Double(anklesX.reduce(0, +)) / Double(anklesX.count)
+                    bodySpread = abs(handX - footX) / width
+                }
             }
 
         case .squat:
@@ -942,6 +964,7 @@ final class PoseRepCounter: NSObject {
             repKneeHeights.append(kneeHeight)
             if isDown { downKneeHeights.append(kneeHeight) }
         }
+        if let spread = bodySpread { repSpreads.append(spread) }
         if let pending = pendingRep {
             settle(pending, dropNow: drop)
         }
@@ -955,13 +978,14 @@ final class PoseRepCounter: NSObject {
         switch movement.kind {
         case .pushUp:
             diagnostics = String(
-                format: "e %@ · top %@ btm %@ · drop %@ · lift %@ · knee %@ · %@%@",
+                format: "e %@ · top %@ btm %@ · drop %@ · lift %@ · knee %@ · spread %@ · %@%@",
                 primary.map { String(format: "%.0f°", $0) } ?? "-",
                 repTop.map { String(format: "%.0f", $0) } ?? "-",
                 repBottom.map { String(format: "%.0f", $0) } ?? "-",
                 repWindow.dropTravel.map { String(format: "%.2f", $0) } ?? "-",
                 repAnkleLifts.last.map { String(format: "%+.2f", $0) } ?? "-",
                 repKneeHeights.last.map { String(format: "%+.2f", $0) } ?? "-",
+                bodySpread.map { String(format: "%.1f", $0) } ?? "-",
                 status,
                 rejectionSummary
             )
@@ -1109,11 +1133,21 @@ final class PoseRepCounter: NSObject {
         // Squats gather no leg samples, so both piles are empty and neither
         // verdict can fire. The squat's cheat is the half-rep, and that is judged
         // on depth below.
-        let anklesSayKneeling = kneelingVerdict(downAnkleLifts, says: { $0 > kneelingLift })
-        let kneesSayKneeling = kneelingVerdict(downKneeHeights, says: { $0 < kneelingKneeHeight })
-        if anklesSayKneeling || kneesSayKneeling {
-            reject("knees", "Knees are down - straighten your legs to count.")
-            return
+        // Only judge the legs when the camera could actually see them.
+        //
+        // Filmed down the length of the body there is no separation between a
+        // planted knee and a lifted one, and every version of this gate that
+        // tried anyway has both refused honest reps and passed knee push-ups -
+        // which is exactly what a threshold on noise does. With the body side on
+        // the same measurement separates cleanly, so the test now runs there and
+        // stands down everywhere else.
+        if sawBodyLengthwise {
+            let kneesDown = kneelingVerdict(downKneeHeights, says: { $0 < kneelingKneeHeight })
+            let anklesUp = kneelingVerdict(downAnkleLifts, says: { $0 > kneelingLift })
+            if kneesDown || anklesUp {
+                reject("knees", "Knees are down - straighten your legs to count.")
+                return
+            }
         }
 
         if duration < minimumRepDuration {
@@ -1194,7 +1228,26 @@ final class PoseRepCounter: NSObject {
         repKneeHeights = []
         downAnkleLifts = []
         downKneeHeights = []
+        repSpreads = []
     }
+
+    /// Whether the camera saw enough of the body's length for a leg judgement to
+    /// carry any information.
+    ///
+    /// Below this the hands and feet are nearly on top of each other in frame,
+    /// which is what filming down the length of a plank looks like - and in that
+    /// view a planted knee and a raised one land within a few pixels of each
+    /// other. Refusing to judge is the honest answer there. It is also why this
+    /// gate could never be fixed by moving a threshold: the number it was reading
+    /// did not contain the answer.
+    private var sawBodyLengthwise: Bool {
+        guard let spread = median(of: repSpreads) else { return false }
+        return spread >= minimumBodySpread
+    }
+
+    /// Two shoulder widths between hands and feet. A plank seen properly side on
+    /// spans three or four; seen head on it spans well under one.
+    private var minimumBodySpread: Double { 2.0 }
 
     /// Nil until there are enough samples for the middle one to mean anything -
     /// five, so that a couple of frames of a shin glimpsed mid-rep decide nothing.
