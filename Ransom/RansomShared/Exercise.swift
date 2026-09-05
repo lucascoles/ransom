@@ -98,6 +98,18 @@ public enum Exercise: String, CaseIterable, Codable, Identifiable, Sendable {
         }
     }
 
+    /// What the camera counter is waiting for before it arms. It arms on
+    /// stillness at the top of a rep, and "the top" is a different posture per
+    /// movement: a plank with straight arms, or standing tall. Telling a
+    /// squatter to straighten their arms would have them checking the wrong limb.
+    public var armingCue: String {
+        switch self {
+        case .pushUps: return "Hold still at the top, arms straight, and Rex will start counting."
+        case .squats:  return "Stand tall and still, facing the phone, and Rex will start counting."
+        case .steps:   return "Nothing to set up. Your phone is already counting."
+        }
+    }
+
     /// How the rep detector should read the sensors for this movement.
     public var sensing: SensingMode {
         switch self {

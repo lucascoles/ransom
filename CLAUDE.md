@@ -242,6 +242,48 @@ numbers off a screen recording is how all of the above was established; if the
 counter regresses, ask for a screen recording with known counts and read it frame
 by frame rather than guessing.
 
+## The squat counter, and why it is provisional
+
+Same file, same machinery. `PoseRepCounter` is one state machine over two
+signals - a body-internal measure that falls and returns, and a frame-position
+height that has to agree - and `Movement` (bottom of the file) is the only place
+that knows which joints and which thresholds belong to which exercise. A
+squat-specific branch anywhere else in the file is a smell.
+
+**None of the squat numbers have been checked against footage.** They come from
+the projection geometry worked through in `read()` and `Movement.squats`, and
+each constant's comment says whether it is reasoned or guessed. What was decided:
+
+ * **Hips-above-knees is mandatory, not knee angle.** The user faces the camera,
+   so at the bottom the thigh points at the lens and its projected length
+   collapses; the knee angle Vision would read is depth divided by *stance
+   width*, flat for the first half of the descent and set by how wide the feet
+   are at the bottom. The vertical component alone survives and *is* depth
+   (standing ~1.1 shoulder widths, parallel ~0). Same trap the knee-push-up gate
+   fell into, avoided the same way: heights, never angles, from a frontal camera.
+ * **Hip height in frame corroborates**, exactly as shoulders do for push-ups. It
+   is the better depth measure (it barely cares where the phone is) but it is a
+   frame position: stepping back from a floor-level phone reads as well over a
+   shoulder width of "drop" on straight legs, so it can never lead.
+ * **Both legs are averaged, not min'd.** Frontal, neither leg is seen end-on, so
+   there is no side the camera is systematically wrong about. If footage shows a
+   knee wandering, take the *deeper* leg, never the shallower.
+ * **The half-rep line sits between a quarter squat and a half squat**, not
+   between half and parallel. Those are fifteen degrees of thigh apart and a
+   single camera of unknown height cannot split them without refusing honest
+   just-above-parallel reps. A four-inch dip is refused by two gates from any
+   placement; a half squat gets through when the phone is on the floor. Parallel
+   clears every gate by 0.35+ shoulder widths. The one thin margin is
+   just-above-parallel filmed from a table (~0.14).
+ * **What the first recording will most likely disagree with:** the standing gap
+   (assumed 1.05-1.2 SW; depends on where Vision puts the shoulder joints), how
+   much perspective compresses the bottom reading for wherever people actually
+   prop the phone, and how much the shoulders widen as they lean in. The HUD
+   prints `gap`, `hip`, `drop` and `sw` for exactly this.
+
+The skeleton draws legs and the hip line for squats, arms and the shoulder line
+for push-ups: what the rep is judged on, and nothing else.
+
 ## Open, in rough priority order
 
 - **Blocking has still never been tested.** Family Controls needs a paid Apple

@@ -81,43 +81,65 @@ struct CameraPreview: UIViewRepresentable {
     }
 }
 
-/// The tracking skeleton: bones across the shoulders and down both arms, drawn
-/// over the user's own body.
+/// The tracking skeleton: the bones the rep is judged on, drawn over the user's
+/// own body. Arms and the line across the shoulders for push-ups; legs and the
+/// line across the hips for squats.
 ///
 /// This is the whole trust mechanism. A number counting up on its own could be
 /// counting anything; lines that stick to your shoulders and bend with your
-/// elbows are visible proof the app is watching *you*.
+/// elbows - or sit on your hips and fold with your knees - are visible proof the
+/// app is watching *you*.
 struct PoseSkeletonView: View {
     var frame: PoseFrame
+    var exercise: Exercise
     /// The preview is mirrored for the self-view, so the joints have to be too or
     /// the skeleton lands on the wrong side of the body.
     var mirrored: Bool = true
 
     /// What gets drawn, which is deliberately less than what gets measured.
     ///
-    /// The detector still tracks hips, knees and ankles - the legs are the only
-    /// way to tell a push-up from a knee push-up, so they matter enormously - but
-    /// drawing them turned the overlay into a full marionette over a body that is
-    /// mostly out of frame anyway. The arms and the line across the shoulders are
-    /// the parts a user can check at a glance, and they're the parts the rep is
-    /// actually judged on.
-    private static let drawnBones: [(PoseFrame.Joint, PoseFrame.Joint)] = [
-        (.leftShoulder, .rightShoulder),
-        (.leftShoulder, .leftElbow), (.leftElbow, .leftWrist),
-        (.rightShoulder, .rightElbow), (.rightElbow, .rightWrist),
-    ]
+    /// The detector tracks the whole body for both movements, but drawing all of
+    /// it turned the overlay into a full marionette. What earns a line is what
+    /// the rep is judged on, because that is what a user can check against their
+    /// own body at a glance. For push-ups that is the arms and the shoulder line
+    /// - the legs are measured for the kneeling gate but a body lying towards
+    /// the lens is mostly out of frame anyway. For squats it is the legs and the
+    /// hip line: the rep is hips falling towards knees, and a skeleton over the
+    /// arms would be showing the one part of the body the count ignores.
+    private static func drawnBones(for exercise: Exercise) -> [(PoseFrame.Joint, PoseFrame.Joint)] {
+        switch exercise {
+        case .squats:
+            return [
+                (.leftHip, .rightHip),
+                (.leftHip, .leftKnee), (.leftKnee, .leftAnkle),
+                (.rightHip, .rightKnee), (.rightKnee, .rightAnkle),
+            ]
+        case .pushUps, .steps:
+            return [
+                (.leftShoulder, .rightShoulder),
+                (.leftShoulder, .leftElbow), (.leftElbow, .leftWrist),
+                (.rightShoulder, .rightElbow), (.rightElbow, .rightWrist),
+            ]
+        }
+    }
 
-    private static let drawnJoints: Set<PoseFrame.Joint> = [
-        .leftShoulder, .rightShoulder,
-        .leftElbow, .rightElbow,
-        .leftWrist, .rightWrist,
-    ]
+    private static func drawnJoints(for exercise: Exercise) -> Set<PoseFrame.Joint> {
+        switch exercise {
+        case .squats:
+            return [.leftHip, .rightHip, .leftKnee, .rightKnee, .leftAnkle, .rightAnkle]
+        case .pushUps, .steps:
+            return [.leftShoulder, .rightShoulder, .leftElbow, .rightElbow, .leftWrist, .rightWrist]
+        }
+    }
 
     var body: some View {
+        let bones = Self.drawnBones(for: exercise)
+        let joints = Self.drawnJoints(for: exercise)
+
         Canvas { context, size in
             let placed = place(in: size)
 
-            for (a, b) in Self.drawnBones {
+            for (a, b) in bones {
                 guard let start = placed[a], let end = placed[b] else { continue }
                 var path = Path()
                 path.move(to: start)
@@ -130,7 +152,7 @@ struct PoseSkeletonView: View {
                                style: StrokeStyle(lineWidth: 4, lineCap: .round))
             }
 
-            for (joint, point) in placed where Self.drawnJoints.contains(joint) {
+            for (joint, point) in placed where joints.contains(joint) {
                 let dot = CGRect(x: point.x - 5.5, y: point.y - 5.5, width: 11, height: 11)
                 context.fill(Path(ellipseIn: dot), with: .color(.black.opacity(0.3)))
                 context.fill(Path(ellipseIn: dot.insetBy(dx: 1.5, dy: 1.5)),
@@ -163,6 +185,8 @@ struct PoseSkeletonView: View {
 /// Sized to sit in the layout rather than take the whole screen.
 struct CameraWindow: View {
     let session: AVCaptureSession
+    /// Decides which bones the skeleton draws.
+    let exercise: Exercise
     var pose: PoseFrame?
     var reps: Int
     var target: Int
@@ -174,7 +198,7 @@ struct CameraWindow: View {
             CameraPreview(session: session)
 
             if let pose {
-                PoseSkeletonView(frame: pose)
+                PoseSkeletonView(frame: pose, exercise: exercise)
                     .transition(.opacity)
             }
 

@@ -101,6 +101,7 @@ struct FirstRepStep: View {
                 if cameraIsLive && !finished {
                     CameraWindow(
                         session: counter.previewSession,
+                        exercise: exercise,
                         pose: counter.poseFrame,
                         reps: reps,
                         target: target,
@@ -217,7 +218,7 @@ struct FirstRepStep: View {
     private var cameraStatus: String? {
         switch counter.tracking {
         case .searching:   return "Looking for you…"
-        case .calibrating: return "Hold still at the top to start"
+        case .calibrating: return isFloorMovement ? "Hold still at the top to start" : "Stand tall and still to start"
         default:           return nil
         }
     }

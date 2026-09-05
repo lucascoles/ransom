@@ -2,9 +2,9 @@ import SwiftUI
 
 /// The set. Full screen, no chrome, one job: count reps and make it feel good.
 ///
-/// The camera counts push-ups, because a pose-checked rep is the only kind that
-/// can't be faked. Everything else — another movement, a refused camera, no camera
-/// at all — falls through to the sensor engine, so the user is never stuck.
+/// The camera counts push-ups and squats, because a pose-checked rep is the only
+/// kind that can't be faked. Everything else — a refused camera, no camera at
+/// all — falls through to the sensor engine, so the user is never stuck.
 ///
 /// There is deliberately **no tap-to-count**. It was there as a safety net, but a
 /// button that adds a rep for free undoes the entire point of watching the body:
@@ -160,6 +160,7 @@ struct WorkoutView: View {
 
             CameraWindow(
                 session: pose.previewSession,
+                exercise: exercise,
                 pose: pose.poseFrame,
                 reps: reps,
                 target: target,
@@ -223,7 +224,7 @@ struct WorkoutView: View {
     private var cameraStatus: String? {
         switch pose.tracking {
         case .searching:   return "Looking for you…"
-        case .calibrating: return "Hold still at the top, arms straight, and Rex will start counting."
+        case .calibrating: return exercise.armingCue
         default:           return nil
         }
     }
