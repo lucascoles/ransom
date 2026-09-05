@@ -63,8 +63,12 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
                 color: UIColor(white: 1, alpha: 0.75)
             ),
             primaryButtonLabel: ShieldConfiguration.Label(
-                text: ShieldCopy.primaryButton,
-                color: RansomPalette.onBrand
+                text: ShieldCopy.primaryButton(banked: ledger.bankedMinutes,
+                                               minutes: ledger.minutesPerUnlock),
+                // White, not the near-black `onBrand`. On the shield's dark
+                // background the tangerine button is much darker than it is on
+                // paper, and ink on it reads as a disabled control.
+                color: .white
             ),
             primaryButtonBackgroundColor: RansomPalette.brandDark,
             secondaryButtonLabel: ShieldConfiguration.Label(

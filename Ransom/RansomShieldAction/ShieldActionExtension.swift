@@ -47,7 +47,7 @@ final class ShieldActionExtension: ShieldActionDelegate {
             ledger.pendingAppName = RansomCore.defaults.string(forKey: RansomCore.Key.shieldHeadline)
 
             DarwinNotifications.post(RansomCore.unlockRequestedNotification)
-            notifyUserToOpenRansom(reps: ledger.repsPerUnlock, exercise: ledger.exerciseName)
+            notifyUserToOpenRansom(ledger: ledger)
 
             completionHandler(.close)
 
@@ -70,11 +70,23 @@ final class ShieldActionExtension: ShieldActionDelegate {
 
     /// The handoff. A tap on this notification opens Ransom, which then sees the
     /// pending request and starts the set automatically.
-    private func notifyUserToOpenRansom(reps: Int, exercise: String) {
+    private func notifyUserToOpenRansom(ledger: UnlockLedger) {
+        let banked = ledger.bankedMinutes
+        let minutes = ledger.minutesPerUnlock
+
         let content = UNMutableNotificationContent()
-        content.title = ShieldCopy.handoff
-        content.body = "\(reps) \(exercise.lowercased()) and you're back in."
+        content.title = ShieldCopy.handoff(banked: banked, minutes: minutes)
+        content.body = ShieldCopy.handoffBody(reps: ledger.repsPerUnlock,
+                                              exercise: ledger.exerciseName,
+                                              minutes: minutes,
+                                              banked: banked)
         content.sound = .default
+        // Time-sensitive so it breaks through a Focus. This notification is the
+        // only route back to Ransom that Apple actually supports - an extension
+        // cannot open its host app, `ShieldActionResponse` has no case for it,
+        // and `UIApplication.open` does not exist out here - so if it is
+        // silenced the primary button has done nothing at all.
+        content.interruptionLevel = .timeSensitive
 
         let request = UNNotificationRequest(
             identifier: "ransom.shield.handoff",

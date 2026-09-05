@@ -41,6 +41,14 @@ struct AppPickerView: View {
                     Button("Save") {
                         screenTime.selection = draft
                         Haptics.success()
+                        // Asked here rather than only in intake, because this is
+                        // the moment it starts mattering. The shield's primary
+                        // button hands off through a notification - the only
+                        // route back to Ransom that Apple supports - so without
+                        // permission that button silently does nothing, and
+                        // anyone who skipped or refused the intake prompt gets a
+                        // block screen they cannot act on.
+                        Task { await NotificationManager.requestPermission() }
                         dismiss()
                     }
                     .font(RansomFont.headline(16))

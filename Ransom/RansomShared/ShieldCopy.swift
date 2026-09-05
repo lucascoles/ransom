@@ -26,11 +26,27 @@ public enum ShieldCopy {
         return "You have \(banked) minutes banked. \(trade)"
     }
 
-    public static let primaryButton = "Do my reps"
+    /// The way out, named for the ones actually available.
+    ///
+    /// Offering "do my reps" to somebody with twenty minutes already banked
+    /// hides the easier answer behind a workout, and offering "spend" to
+    /// somebody with an empty bank is a button that cannot do anything. The
+    /// balance decides which sentence is true.
+    public static func primaryButton(banked: Int, minutes: Int) -> String {
+        banked >= minutes ? "Do reps or spend minutes" : "Do my reps"
+    }
+
     public static let secondaryButton = "Close"
 
     /// Tapping the primary button cannot open Ransom - iOS gives an extension no
     /// way to launch its host app - so the shield hands off through a
     /// notification, and the tap on that is what actually opens the camera.
-    public static let handoff = "Tap to start your set"
+    public static func handoff(banked: Int, minutes: Int) -> String {
+        banked >= minutes ? "Tap to spend or earn" : "Tap to start your set"
+    }
+
+    public static func handoffBody(reps: Int, exercise: String, minutes: Int, banked: Int) -> String {
+        guard banked >= minutes else { return "\(reps) \(exercise.lowercased()) and you're back in." }
+        return "You have \(banked) minutes banked, or do \(reps) \(exercise.lowercased()) for \(minutes) more."
+    }
 }
