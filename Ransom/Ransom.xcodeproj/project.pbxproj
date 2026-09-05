@@ -10,7 +10,7 @@
 		1A0000000000000000000060 /* RansomShield.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1A0000000000000000000021 /* RansomShield.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		1A0000000000000000000061 /* RansomShieldAction.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1A0000000000000000000022 /* RansomShieldAction.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		1A0000000000000000000062 /* RansomMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1A0000000000000000000023 /* RansomMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		1A0000000000000000000063 /* RansomReport.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1A0000000000000000000024 /* RansomReport.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		1A0000000000000000000A07 /* RansomReport.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 1A0000000000000000000A02 /* RansomReport.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -35,11 +35,11 @@
 			remoteGlobalIDString = 1A0000000000000000000043;
 			remoteInfo = RansomMonitor;
 		};
-		1A0000000000000000000077 /* PBXContainerItemProxy */ = {
+		1A0000000000000000000A0A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1A0000000000000000000001 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 1A0000000000000000000043;
+			remoteGlobalIDString = 1A0000000000000000000A06;
 			remoteInfo = RansomReport;
 		};
 /* End PBXContainerItemProxy section */
@@ -54,9 +54,19 @@
 				1A0000000000000000000060 /* RansomShield.appex in Embed Foundation Extensions */,
 				1A0000000000000000000061 /* RansomShieldAction.appex in Embed Foundation Extensions */,
 				1A0000000000000000000062 /* RansomMonitor.appex in Embed Foundation Extensions */,
-				1A0000000000000000000063 /* RansomReport.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1A0000000000000000000A08 /* Embed ExtensionKit Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
+			files = (
+				1A0000000000000000000A07 /* RansomReport.appex in Embed ExtensionKit Extensions */,
+			);
+			name = "Embed ExtensionKit Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -66,7 +76,6 @@
 		1A0000000000000000000021 /* RansomShield.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RansomShield.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A0000000000000000000022 /* RansomShieldAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RansomShieldAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A0000000000000000000023 /* RansomMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RansomMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		1A0000000000000000000024 /* RansomReport.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RansomReport.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A0000000000000000000030 /* Ransom.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ransom.entitlements; sourceTree = "<group>"; };
 		1A0000000000000000000031 /* RansomShield.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RansomShield.entitlements; sourceTree = "<group>"; };
 		1A0000000000000000000032 /* RansomShieldAction.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RansomShieldAction.entitlements; sourceTree = "<group>"; };
@@ -75,6 +84,7 @@
 		1A0000000000000000000035 /* RansomShieldAction-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "RansomShieldAction-Info.plist"; sourceTree = "<group>"; };
 		1A0000000000000000000036 /* RansomMonitor-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "RansomMonitor-Info.plist"; sourceTree = "<group>"; };
 		1A0000000000000000000037 /* Ransom.storekit */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Ransom.storekit; sourceTree = "<group>"; };
+		1A0000000000000000000A02 /* RansomReport.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RansomReport.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -103,7 +113,7 @@
 			path = RansomMonitor;
 			sourceTree = "<group>";
 		};
-		1A0000000000000000000015 /* RansomReport */ = {
+		1A0000000000000000000A01 /* RansomReport */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = RansomReport;
 			sourceTree = "<group>";
@@ -139,6 +149,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1A0000000000000000000A04 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -152,7 +169,6 @@
 				1A0000000000000000000014 /* RansomMonitor */,
 				1A0000000000000000000004 /* Config */,
 				1A0000000000000000000003 /* Products */,
-				398A0C27304C8313008E36E6 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -182,15 +198,6 @@
 			path = Config;
 			sourceTree = "<group>";
 		};
-		398A0C27304C8313008E36E6 /* Recovered References */ = {
-			isa = PBXGroup;
-			children = (
-				1A0000000000000000000024 /* RansomReport.appex */,
-				1A0000000000000000000015 /* RansomReport */,
-			);
-			name = "Recovered References";
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -202,6 +209,7 @@
 				1A0000000000000000000054 /* Frameworks */,
 				1A0000000000000000000058 /* Resources */,
 				1A000000000000000000005C /* Embed Foundation Extensions */,
+				1A0000000000000000000A08 /* Embed ExtensionKit Extensions */,
 			);
 			buildRules = (
 			);
@@ -209,7 +217,7 @@
 				1A0000000000000000000070 /* PBXTargetDependency */,
 				1A0000000000000000000071 /* PBXTargetDependency */,
 				1A0000000000000000000072 /* PBXTargetDependency */,
-				1A0000000000000000000076 /* PBXTargetDependency */,
+				1A0000000000000000000A09 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				1A0000000000000000000010 /* Ransom */,
@@ -262,9 +270,9 @@
 			productReference = 1A0000000000000000000022 /* RansomShieldAction.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		1A0000000000000000000043 /* RansomReport */ = {
+		1A0000000000000000000043 /* RansomMonitor */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 1A0000000000000000000084 /* Build configuration list for PBXNativeTarget "RansomReport" */;
+			buildConfigurationList = 1A0000000000000000000084 /* Build configuration list for PBXNativeTarget "RansomMonitor" */;
 			buildPhases = (
 				1A0000000000000000000053 /* Sources */,
 				1A0000000000000000000057 /* Frameworks */,
@@ -276,11 +284,32 @@
 			);
 			fileSystemSynchronizedGroups = (
 				1A0000000000000000000011 /* RansomShared */,
-				1A0000000000000000000015 /* RansomReport */,
+				1A0000000000000000000014 /* RansomMonitor */,
+			);
+			name = RansomMonitor;
+			productName = RansomMonitor;
+			productReference = 1A0000000000000000000023 /* RansomMonitor.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		1A0000000000000000000A06 /* RansomReport */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1A0000000000000000000A0B /* Build configuration list for PBXNativeTarget "RansomReport" */;
+			buildPhases = (
+				1A0000000000000000000A03 /* Sources */,
+				1A0000000000000000000A04 /* Frameworks */,
+				1A0000000000000000000A05 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				1A0000000000000000000011 /* RansomShared */,
+				1A0000000000000000000A01 /* RansomReport */,
 			);
 			name = RansomReport;
 			productName = RansomReport;
-			productReference = 1A0000000000000000000024 /* RansomReport.appex */;
+			productReference = 1A0000000000000000000A02 /* RansomReport.appex */;
 			productType = "com.apple.product-type.extensionkit-extension";
 		};
 /* End PBXNativeTarget section */
@@ -324,7 +353,8 @@
 				1A0000000000000000000040 /* Ransom */,
 				1A0000000000000000000041 /* RansomShield */,
 				1A0000000000000000000042 /* RansomShieldAction */,
-				1A0000000000000000000043 /* RansomReport */,
+				1A0000000000000000000A06 /* RansomReport */,
+				1A0000000000000000000043 /* RansomMonitor */,
 			);
 		};
 /* End PBXProject section */
@@ -352,6 +382,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		1A000000000000000000005B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1A0000000000000000000A05 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -389,6 +426,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1A0000000000000000000A03 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -404,13 +448,13 @@
 		};
 		1A0000000000000000000072 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 1A0000000000000000000043 /* RansomReport */;
+			target = 1A0000000000000000000043 /* RansomMonitor */;
 			targetProxy = 1A0000000000000000000075 /* PBXContainerItemProxy */;
 		};
-		1A0000000000000000000076 /* PBXTargetDependency */ = {
+		1A0000000000000000000A09 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 1A0000000000000000000043 /* RansomReport */;
-			targetProxy = 1A0000000000000000000077 /* PBXContainerItemProxy */;
+			target = 1A0000000000000000000A06 /* RansomReport */;
+			targetProxy = 1A0000000000000000000A0A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -418,6 +462,7 @@
 		1A0000000000000000000090 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ENABLE_DEBUG_DYLIB = NO;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -427,7 +472,6 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -454,6 +498,7 @@
 		1A0000000000000000000091 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ENABLE_DEBUG_DYLIB = NO;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -463,7 +508,6 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -483,12 +527,12 @@
 		1A0000000000000000000092 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ENABLE_DEBUG_DYLIB = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Config/Ransom.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Ransom;
@@ -514,12 +558,12 @@
 		1A0000000000000000000093 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ENABLE_DEBUG_DYLIB = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Config/Ransom.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Ransom;
@@ -545,10 +589,10 @@
 		1A0000000000000000000094 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ENABLE_DEBUG_DYLIB = NO;
 				CODE_SIGN_ENTITLEMENTS = Config/RansomShield.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/RansomShield-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Ransom Shield";
@@ -569,10 +613,10 @@
 		1A0000000000000000000095 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ENABLE_DEBUG_DYLIB = NO;
 				CODE_SIGN_ENTITLEMENTS = Config/RansomShield.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/RansomShield-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Ransom Shield";
@@ -593,10 +637,106 @@
 		1A0000000000000000000096 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ENABLE_DEBUG_DYLIB = NO;
+				CODE_SIGN_ENTITLEMENTS = Config/RansomShieldAction.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/RansomShieldAction-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Ransom Shield Action";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ransom.app.shieldaction;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		1A0000000000000000000097 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ENABLE_DEBUG_DYLIB = NO;
+				CODE_SIGN_ENTITLEMENTS = Config/RansomShieldAction.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/RansomShieldAction-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Ransom Shield Action";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ransom.app.shieldaction;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		1A0000000000000000000098 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ENABLE_DEBUG_DYLIB = NO;
+				CODE_SIGN_ENTITLEMENTS = Config/RansomMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/RansomMonitor-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Ransom Monitor";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ransom.app.monitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		1A0000000000000000000099 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ENABLE_DEBUG_DYLIB = NO;
+				CODE_SIGN_ENTITLEMENTS = Config/RansomMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/RansomMonitor-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Ransom Monitor";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ransom.app.monitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		1A0000000000000000000A0C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ENABLE_DEBUG_DYLIB = NO;
 				CODE_SIGN_ENTITLEMENTS = Config/RansomReport.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/RansomReport-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Ransom Report";
@@ -614,13 +754,13 @@
 			};
 			name = Debug;
 		};
-		1A0000000000000000000097 /* Release */ = {
+		1A0000000000000000000A0D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ENABLE_DEBUG_DYLIB = NO;
 				CODE_SIGN_ENTITLEMENTS = Config/RansomReport.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/RansomReport-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Ransom Report";
@@ -677,11 +817,20 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		1A0000000000000000000084 /* Build configuration list for PBXNativeTarget "RansomReport" */ = {
+		1A0000000000000000000084 /* Build configuration list for PBXNativeTarget "RansomMonitor" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				1A0000000000000000000096 /* Debug */,
-				1A0000000000000000000097 /* Release */,
+				1A0000000000000000000098 /* Debug */,
+				1A0000000000000000000099 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1A0000000000000000000A0B /* Build configuration list for PBXNativeTarget "RansomReport" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A0000000000000000000A0C /* Debug */,
+				1A0000000000000000000A0D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
