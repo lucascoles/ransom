@@ -119,7 +119,8 @@ final class ScreenTimeManager {
         ledger.grant(minutes: minutes)
         syncUnlockState()
         guard isAuthorized else { return }
-        restartMonitoring(thresholdMinutes: minutes)
+        restartMonitoring()
+        startUnlockWindow(minutes: minutes)
         store.removeShield()
         NotificationManager.scheduleTimeUpReminder(in: minutes)
     }
@@ -150,7 +151,7 @@ final class ScreenTimeManager {
         restartMonitoring()
     }
 
-    private func restartMonitoring(thresholdMinutes: Int? = nil) {
+    private func restartMonitoring() {
         guard isAuthorized, !store.isEmpty else {
             isMonitoring = false
             return
@@ -174,22 +175,51 @@ final class ScreenTimeManager {
                 )
         }
 
-        if let thresholdMinutes {
-            // Counts only while the gated apps are actually on screen.
-            events[.earnedTimeSpent] = DeviceActivityEvent(
-                applications: selection.applicationTokens,
-                categories: selection.categoryTokens,
-                webDomains: selection.webDomainTokens,
-                threshold: DateComponents(minute: max(1, thresholdMinutes))
-            )
-        }
-
         do {
             try center.startMonitoring(.daily, during: dailySchedule, events: events)
             isMonitoring = true
         } catch {
             isMonitoring = false
         }
+    }
+
+    /// The burn-down for time the user has just paid for.
+    ///
+    /// This has to be its own activity, and that is the whole point. A
+    /// `DeviceActivityEvent` threshold counts usage across *its schedule's
+    /// interval*, and the daily schedule starts at midnight - so an
+    /// "expire after 15 minutes of use" event registered there was measuring the
+    /// whole day. Anybody who had already spent a quarter of an hour in their own
+    /// apps had the event fire the instant monitoring restarted, revoking the
+    /// minutes they had just bought and putting the shield straight back up. The
+    /// bank emptied and nothing opened.
+    ///
+    /// A window that starts *now* measures only what happens inside it.
+    private func startUnlockWindow(minutes: Int) {
+        center.stopMonitoring([.unlockWindow])
+        guard !store.isEmpty else { return }
+
+        let calendar = Calendar.current
+        let now = Date()
+        // Apple refuses a schedule shorter than fifteen minutes. The event
+        // threshold still fires at the real figure and the ledger's wall-clock
+        // expiry is the other half of the enforcement, so a longer window costs
+        // nothing - it just gives the threshold somewhere to live.
+        let end = now.addingTimeInterval(TimeInterval(max(15, minutes) * 60))
+
+        let schedule = DeviceActivitySchedule(
+            intervalStart: calendar.dateComponents([.hour, .minute, .second], from: now),
+            intervalEnd: calendar.dateComponents([.hour, .minute, .second], from: end),
+            repeats: false
+        )
+        let event = DeviceActivityEvent(
+            applications: selection.applicationTokens,
+            categories: selection.categoryTokens,
+            webDomains: selection.webDomainTokens,
+            threshold: DateComponents(minute: max(1, minutes))
+        )
+        try? center.startMonitoring(.unlockWindow, during: schedule,
+                                    events: [.earnedTimeSpent: event])
     }
 
     func stopMonitoring() {

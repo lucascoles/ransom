@@ -14,10 +14,15 @@
 			<key>orderHint</key>
 			<integer>2</integer>
 		</dict>
-		<key>RansomShield.xcscheme_^#shared#^_</key>
+		<key>RansomReport.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
 			<integer>1</integer>
+		</dict>
+		<key>RansomShield.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>2</integer>
 		</dict>
 		<key>RansomShieldAction.xcscheme_^#shared#^_</key>
 		<dict>

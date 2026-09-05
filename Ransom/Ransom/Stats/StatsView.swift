@@ -39,6 +39,8 @@ struct StatsView: View {
                 lifetimeCard
                     .padding(.top, 4)
 
+                ScreenTimeReportCard()
+
                 SegmentPicker(
                     options: Window.allCases.map { (value: $0, label: $0.title) },
                     selection: $window

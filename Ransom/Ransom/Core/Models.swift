@@ -332,9 +332,30 @@ struct RansomPlan: Equatable {
             return reps / stepsPerMinute
         }
         guard repsPerUnlock > 0 else { return 0 }
-        let equivalents = Double(reps) * exercise.effortWeight
-        let minutes = equivalents / Double(repsPerUnlock) * Double(minutesPerUnlock)
+
+        // Against this exercise's own target, not against push-up equivalents.
+        //
+        // `effortWeight` was being applied twice: once in `make`, which divides
+        // the base reps by it to set `repsPerUnlock`, and again here, which
+        // multiplied the reps back up. For the plan's own movement the two
+        // almost cancel and the drift hides in the rounding - a standard squat
+        // set paid 16 minutes for a 15-minute plan - and for any other movement
+        // they do not cancel at all.
+        //
+        // One rule instead: a full set of whatever you are doing is worth
+        // exactly `minutesPerUnlock`, and a part of a set is worth its share.
+        let minutes = Double(reps) / Double(repsRequired(for: exercise)) * Double(minutesPerUnlock)
         return Int(minutes.rounded())
+    }
+
+    /// How many of `exercise` make one set, when the plan was priced for a
+    /// possibly different movement. Squats are easier than push-ups, so it takes
+    /// more of them; the ratio of the two weights is the whole conversion.
+    func repsRequired(for exercise: Exercise) -> Int {
+        guard exercise != .steps, exercise.effortWeight > 0 else { return max(1, repsPerUnlock) }
+        guard exercise != self.exercise else { return max(1, repsPerUnlock) }
+        let scaled = Double(repsPerUnlock) * self.exercise.effortWeight / exercise.effortWeight
+        return max(3, Int(scaled.rounded()))
     }
 
     /// The amounts offered when spending from the bank.

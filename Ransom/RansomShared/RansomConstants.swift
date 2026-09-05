@@ -40,6 +40,10 @@ public enum RansomCore {
         /// `shieldCalls` it separates "the screen never appeared" from "it
         /// appeared, was tapped, and the handoff went nowhere".
         public static let shieldTaps = "ransom.shield.taps"
+        /// Whole-device screen time today, written by the DeviceActivityReport
+        /// extension - the only process that can see it. See `DeviceUsageStore`.
+        public static let deviceUsageMinutes = "ransom.device.usageMinutes"
+        public static let deviceUsageDay = "ransom.device.usageDay"
         /// The user's most-used apps, as opaque tokens, ranked. Written by a
         /// DeviceActivityReport extension - the only place usage can be read -
         /// and read by the app to recommend what to block. See
