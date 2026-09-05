@@ -178,7 +178,6 @@ struct UserProfile: Codable, Equatable {
     var units: UnitSystem = .imperial
     var heightCm: Double = 175
     var weightKg: Double = 72
-    var fitnessLevel: FitnessLevel?
     var identity: Identity?
     var distractingApps: Set<DistractingApp> = []
     var scrollLoad: ScrollLoad?
@@ -235,14 +234,12 @@ struct UserProfile: Codable, Equatable {
         return max(0, days + 1)
     }
 
-    /// What one set costs at a given tier, for this user's movement and fitness
-    /// level. Shown on every tier including the locked ones: a difficulty someone
+    /// What one set costs at a given tier, in this user's movement. Shown on
+    /// every tier including the locked ones: a difficulty someone
     /// can't pick yet is exactly the one they most want the number for, since
     /// that's the decision they're weighing up.
     func setSize(at intensity: Intensity) -> Int {
-        let level = fitnessLevel ?? .sometimes
-        let equivalents = Double(intensity.baseReps) * level.multiplier
-        return max(3, Int((equivalents / primaryExercise.effortWeight).rounded()))
+        max(3, Int((Double(intensity.baseReps) / primaryExercise.effortWeight).rounded()))
     }
 
     /// "10 push-ups for 15 min", in the user's own movement.
@@ -272,7 +269,6 @@ struct UserProfile: Codable, Equatable {
         profile.goalDailyMinutes = 275
         profile.commitmentDays = 5
         profile.commitmentStartedAt = Date()
-        profile.fitnessLevel = .sometimes
         profile.exercises = [.pushUps, .squats]
         profile.peakTimes = [.evening, .lateNight]
         return profile
@@ -412,16 +408,19 @@ struct RansomPlan: Equatable {
 
     static func make(from profile: UserProfile) -> RansomPlan {
         let exercise = profile.primaryExercise
-        let level = profile.fitnessLevel ?? .sometimes
         // The exact figure when there is one. A bucket midpoint tops out at five
         // hours, so every projection for a ten-hour-a-day user was quietly wrong.
         let dailyHours = Double(profile.baselineDailyMinutes) / 60
 
-        // Base target is in push-up equivalents; divide by effort weight so easier
-        // movements ask for proportionally more reps.
-        let equivalents = Double(profile.intensity.baseReps) * level.multiplier
-        let raw = equivalents / exercise.effortWeight
-        let reps = max(3, Int((raw / 1).rounded()))
+        // The tier is the whole answer.
+        //
+        // A self-reported fitness level used to scale this, so "Standard" meant ten
+        // push-ups for one person and fourteen for another. It made the number
+        // unexplainable ("why does mine say 14?") and it was a guess made once, on
+        // day one, about something that changes as you get stronger - and the tier
+        // is already there to be moved up when it does.
+        let raw = Double(profile.intensity.baseReps) / exercise.effortWeight
+        let reps = max(3, Int(raw.rounded()))
 
         let minutes = profile.intensity.minutesGranted
         let expectedUnlocks = max(2, Int((dailyHours * 2.5).rounded()))

@@ -69,7 +69,15 @@ struct StepScaffold<Content: View>: View {
 
 /// Single-select steps advance on their own — one tap, one screen, no Continue.
 enum AutoAdvance {
+    // Isolated to the main actor and delaying with a main-actor Task, rather than
+    // hopping through `DispatchQueue.asyncAfter`. Every caller is already on the
+    // main actor, so nothing crosses an isolation boundary and the `onNext`
+    // closures stay ordinary non-Sendable ones.
+    @MainActor
     static func after(_ work: @escaping () -> Void) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: work)
+        Task { @MainActor in
+            do { try await Task.sleep(for: .milliseconds(300)) } catch { return }
+            work()
+        }
     }
 }

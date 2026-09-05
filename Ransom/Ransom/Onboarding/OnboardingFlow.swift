@@ -97,10 +97,8 @@ struct OnboardingFlow: View {
             AgeStep(profile: $draft, onNext: { advance(to: .body) })
 
         case .body:
-            BodyStep(profile: $draft, onNext: { advance(to: .fitness) })
+            BodyStep(profile: $draft, onNext: { advance(to: .exercises) })
 
-        case .fitness:
-            FitnessStep(profile: $draft, onNext: { advance(to: .exercises) })
 
         case .exercises:
             ExercisesStep(profile: $draft, onNext: { advance(to: .intensity) })
@@ -174,7 +172,6 @@ enum OnboardingStep: Int, CaseIterable, Hashable {
     // than filling in a form.
     case age
     case body
-    case fitness
     case exercises
     case intensity
     // The economy the pace buys into. The commitment itself now lives on the

@@ -376,7 +376,9 @@ struct BuildingPlanStep: View {
 private struct PercentLabel: View, Animatable {
     var fraction: Double
 
-    var animatableData: Double {
+    // `Animatable` is nonisolated while a `View`'s members are main-actor
+    // isolated, so the conformance has to opt out or it reads as a data race.
+    nonisolated var animatableData: Double {
         get { fraction }
         set { fraction = newValue }
     }

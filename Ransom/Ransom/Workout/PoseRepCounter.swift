@@ -1,4 +1,7 @@
-import AVFoundation
+// AVCaptureSession is not Sendable, but it is documented as safe to drive from
+// one serial queue, which is exactly what `queue` is and the only place the
+// session is ever started or stopped.
+@preconcurrency import AVFoundation
 import Foundation
 import Observation
 import UIKit

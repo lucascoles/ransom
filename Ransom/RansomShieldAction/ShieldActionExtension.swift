@@ -51,7 +51,15 @@ final class ShieldActionExtension: ShieldActionDelegate {
 
             completionHandler(.close)
 
-        case .secondaryButtonPressed:
+        // iOS 26.4 added a three-item secondary submenu to the shield. Ransom
+        // configures no submenu, so these cannot fire today, but they have to be
+        // named rather than left to `@unknown default`. All of them dismiss:
+        // whatever a submenu item might one day mean, it must never take the
+        // primary path, which is the one that spends from the bank.
+        case .secondaryButtonPressed,
+             .firstSecondarySubmenuItemPressed,
+             .secondSecondarySubmenuItemPressed,
+             .thirdSecondarySubmenuItemPressed:
             ledger.clearPendingRequest()
             completionHandler(.close)
 

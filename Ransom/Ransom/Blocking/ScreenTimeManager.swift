@@ -50,7 +50,13 @@ final class ScreenTimeManager {
 
     func refreshAuthorization() {
         switch AuthorizationCenter.shared.authorizationStatus {
-        case .approved:       authorization = .approved
+        // iOS 26.4 split approval in two: `.approvedWithDataAccess` is `.approved`
+        // plus access to usage data. It is still a yes, and it has to be named
+        // explicitly — left to `@unknown default` it read as `.unknown`, which
+        // makes `isAuthorized` false and silently disables blocking for anyone
+        // who granted the stronger permission.
+        case .approved, .approvedWithDataAccess:
+                              authorization = .approved
         case .denied:         authorization = .denied("Screen Time access was denied.")
         case .notDetermined:  authorization = .notDetermined
         @unknown default:     authorization = .unknown

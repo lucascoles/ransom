@@ -134,7 +134,13 @@ walking would fund an evening's scrolling. All the step code, pricing and the
 `StepTracker` still work; restoring it is one line, but it needs a daily cap or a
 baseline subtraction first.
 
-**The intake is 18 steps** and the order is deliberate: the user names their own
+**One set costs the same for everyone on a tier.** A self-reported fitness level
+used to scale the rep target, so "Standard" meant 10 push-ups for one person and
+14 for another, which made the number unexplainable and was a guess made on day
+one about something that changes as you get stronger. Moving up a tier is how
+that is handled now. `FitnessLevel` and its intake step were removed entirely.
+
+**The intake is 17 steps** and the order is deliberate: the user names their own
 apps and hours *before* the reality check, so the number is theirs, not ours.
 The identity step ("I'm someone who gets stronger without going to a gym") is
 echoed back on the plan screen and the paywall. The first-rep step asks for five

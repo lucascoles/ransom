@@ -359,7 +359,6 @@ extension AppModel {
         model.hasCompletedOnboarding = true
         model.isSubscribed = true
         model.profile.firstName = "Sam"
-        model.profile.fitnessLevel = .sometimes
         model.profile.scrollLoad = .heavy
         model.profile.exercises = [.pushUps, .squats]
         model.profile.distractingApps = [.instagram, .tiktok]

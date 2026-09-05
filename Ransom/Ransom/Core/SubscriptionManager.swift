@@ -145,8 +145,10 @@ final class SubscriptionManager {
     func loadProducts() async {
         await MainActor.run { isLoadingProducts = true }
         let loaded = try? await Product.products(for: Plan.allCases.map(\.productID))
-        var byPlan: [Plan: Product] = [:]
-        for product in loaded ?? [] {
+        // Built with reduce rather than a mutating loop so the dictionary handed to
+        // the main actor below is a `let`; capturing a `var` here is an error under
+        // the Swift 6 language mode.
+        let byPlan = (loaded ?? []).reduce(into: [Plan: Product]()) { byPlan, product in
             if let plan = Plan.allCases.first(where: { $0.productID == product.id }) {
                 byPlan[plan] = product
             }

@@ -13,12 +13,15 @@ public enum DarwinNotifications {
         )
     }
 
-    /// Observes a Darwin name for the lifetime of the process.
-    public static func observe(_ name: String, handler: @escaping () -> Void) {
+    /// Observes a Darwin name for the lifetime of the process. The handler is
+    /// always delivered on the main actor — the callback arrives on an arbitrary
+    /// thread and every caller wants to touch UI state, so the hop belongs here
+    /// rather than being repeated at each call site.
+    public static func observe(_ name: String, handler: @escaping @MainActor () -> Void) {
         let callback: CFNotificationCallback = { _, observer, _, _, _ in
             guard let observer else { return }
             let box = Unmanaged<Box>.fromOpaque(observer).takeUnretainedValue()
-            DispatchQueue.main.async { box.handler() }
+            Task { @MainActor in box.handler() }
         }
 
         let box = Box(handler: handler)
@@ -35,8 +38,8 @@ public enum DarwinNotifications {
         )
     }
 
-    private final class Box {
-        let handler: () -> Void
-        init(handler: @escaping () -> Void) { self.handler = handler }
+    private final class Box: Sendable {
+        let handler: @MainActor () -> Void
+        init(handler: @escaping @MainActor () -> Void) { self.handler = handler }
     }
 }

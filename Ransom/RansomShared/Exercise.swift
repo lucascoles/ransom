@@ -207,38 +207,6 @@ public enum Intensity: String, CaseIterable, Codable, Identifiable, Sendable {
     }
 }
 
-/// Self-reported baseline fitness, nudges the rep target up or down.
-public enum FitnessLevel: String, CaseIterable, Codable, Identifiable, Sendable {
-    case rarely
-    case sometimes
-    case often
-
-    public var id: String { rawValue }
-
-    public var title: String {
-        switch self {
-        case .rarely:    return "0-2 times a week"
-        case .sometimes: return "3-5 times a week"
-        case .often:     return "6+ times a week"
-        }
-    }
-
-    public var subtitle: String {
-        switch self {
-        case .rarely:    return "Rex will start you easy."
-        case .sometimes: return "You have a base to build on."
-        case .often:     return "Rex can ask for more."
-        }
-    }
-
-    public var multiplier: Double {
-        switch self {
-        case .rarely:    return 0.7
-        case .sometimes: return 1.0
-        case .often:     return 1.4
-        }
-    }
-}
 
 
 /// The one thing the user says they want back.

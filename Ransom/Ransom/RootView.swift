@@ -92,10 +92,8 @@ struct RootView: View {
         // Fires when the shield's "Earn my time" button is tapped while Ransom is
         // already running in the background.
         DarwinNotifications.observe(RansomCore.unlockRequestedNotification) {
-            Task { @MainActor in
-                model.consumePendingShieldRequest()
-                startPendingWorkoutIfNeeded()
-            }
+            model.consumePendingShieldRequest()
+            startPendingWorkoutIfNeeded()
         }
     }
 
