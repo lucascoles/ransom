@@ -216,8 +216,10 @@ struct HomeView: View {
     /// be told. He talks about the work now: the reps are the part the user did
     /// on purpose, and the part nothing else on this screen congratulates them for.
     private var workLine: String {
+        // Reps, not the movement's name. The count is the total across whatever
+        // was done today, and calling 36 of those "push-ups" is wrong the moment
+        // any of them were squats.
         let reps = model.todayReps
-        let move = plan.exercise.title.lowercased()
 
         guard reps > 0 else {
             // Nothing done yet is not a scolding. It is the easiest moment of the
@@ -231,13 +233,13 @@ struct HomeView: View {
         // work instead of repeating itself all day.
         switch reps {
         case 100...:
-            return "\(reps) \(move) today. That is a proper session, not a warm-up."
+            return "\(reps) reps today. That is a proper session, not a warm-up."
         case 50..<100:
-            return "\(reps) \(move) today. Mirrors are going to notice before you do."
+            return "\(reps) reps today. Mirrors are going to notice before you do."
         case 25..<50:
-            return "\(reps) \(move) today and it isn't even a workout day. That adds up."
+            return "\(reps) reps today and it isn't even a workout day. That adds up."
         default:
-            return "\(reps) \(move) down. More than you'd have done without me, and I'll take it."
+            return "\(reps) reps down. More than you'd have done without me, and I'll take it."
         }
     }
 
