@@ -53,33 +53,25 @@ struct HomeView: View {
             VStack(spacing: 16) {
                 header
 
-                RexScene(pose: rexPose, line: rexLine, size: 118)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 4)
+                ScoreHero(pose: rexPose, line: rexLine)
+                    .padding(.bottom, 2)
 
-                // The balance is what you open the app to check, so it leads —
-                // except while time is actually running, when the countdown is the
-                // only thing anyone is looking at.
+                // Earning and spending lead; the balance sits under them. The
+                // bank was on top because it is what you check, but checking it
+                // is a glance and the two things you might actually do were being
+                // pushed below the fold to make room for it.
                 if screenTime.isCurrentlyUnlocked {
-                    // The countdown leads, but earning stays on the screen. Time
-                    // running is the moment someone is most aware of how little
-                    // they have left, and hiding the way to get more turns a
-                    // deliberate top-up into a wait.
                     activeUnlockCard
-                    bankCard
-                    earnCard
-                } else {
-                    bankCard
-                    earnCard
                 }
-
+                earnCard
                 spendCard
+                bankCard
 
                 ReachesCard()
 
                 RulesSection()
 
-                todayCard
+                ScreenTimeReportCard()
 
                 if !screenTime.isAuthorized {
                     permissionCard
@@ -215,102 +207,6 @@ struct HomeView: View {
     /// wrong thing: a big rep number means a lot of unlocks were bought, and a
     /// user who hit it had scrolled all day. Reps are the price, so they stay on
     /// the card as a receipt line, but the goal is the time.
-    private var todayCard: some View {
-        let over = model.isOverAllowance
-        let tint = over ? Palette.danger : Palette.brand
-
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                // Named for what it actually counts. Screen Time reports usage
-                // of the apps Ransom guards and nothing else, so calling it
-                // "today's screen time" claimed a whole-device figure the app has
-                // no way of getting.
-                Text("Time in your apps")
-                    .font(RansomFont.headline(16))
-                    .foregroundStyle(Palette.ink)
-                Spacer()
-                Text("Goal \(model.todayAllowance) min")
-                    .font(RansomFont.caption(13))
-                    .foregroundStyle(Palette.inkSoft)
-            }
-
-            HStack(spacing: 18) {
-                ZStack {
-                    ProgressRing(
-                        progress: model.todayScreenUsage,
-                        lineWidth: 11,
-                        tint: tint,
-                        showsEmptyDot: false
-                    )
-                    .frame(width: 96, height: 96)
-
-                    VStack(spacing: -2) {
-                        Text("\(over ? model.todayScreenMinutes - model.todayAllowance : model.todayMinutesLeft)")
-                            .font(RansomFont.counter(28))
-                            .foregroundStyle(over ? Palette.danger : Palette.ink)
-                            .contentTransition(.numericText())
-                        Text(over ? "min over" : "min left")
-                            .font(RansomFont.caption(10))
-                            .foregroundStyle(Palette.inkSoft)
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(screenTimeLine)
-                        .font(RansomFont.body(14))
-                        .foregroundStyle(Palette.ink)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    // Against the benchmark, not against zero. "40 min used" means
-                    // nothing until you know it used to be two hours.
-                    Text(savingLine)
-                        .font(RansomFont.caption(12))
-                        .foregroundStyle(model.todaySavedMinutes >= 0 ? Palette.green : Palette.danger)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    if model.todayReps > 0 {
-                        Label("\(model.todayReps) reps done today", systemImage: "checkmark.circle.fill")
-                            .font(RansomFont.caption(12))
-                            .foregroundStyle(Palette.inkFaint)
-                    }
-                }
-
-                Spacer(minLength: 0)
-            }
-        }
-        .ransomCard()
-    }
-
-    private var screenTimeLine: String {
-        let used = model.todayScreenMinutes
-        // Measured usage arrives as rungs on a ladder - Screen Time says "they
-        // have passed 45 minutes", never "they are at 52" - so it is quoted as a
-        // floor. Writing the rung as an exact figure would be inventing precision
-        // iOS never offered.
-        let figure = model.isScreenTimeMeasured && used > 0 ? "\(used)+" : "\(used)"
-        if model.isOverAllowance {
-            return "\(figure) min used. Past today's goal, but every unlock still needs a set."
-        }
-        if used == 0 {
-            return model.isScreenTimeMeasured
-                ? "Under 15 min so far today."
-                : "0 min used so far."
-        }
-        return "\(figure) of \(model.todayAllowance) min used."
-    }
-
-    private var savingLine: String {
-        let saved = model.todaySavedMinutes
-        // Nothing spent isn't a saving yet, it's a day that hasn't happened. Saying
-        // "90 minutes saved" at breakfast spends the credit before it's earned.
-        guard model.todayScreenMinutes > 0 else {
-            return "Your old average was \(model.baselineMinutes) min a day"
-        }
-        if saved > 0 { return "\(saved) min under your old average" }
-        if saved == 0 { return "Level with your old average" }
-        return "\(-saved) min over your old average"
-    }
-
     // MARK: - Unlock
 
     private var earnCard: some View {

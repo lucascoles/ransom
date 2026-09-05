@@ -31,7 +31,7 @@ struct ScreenTimeReportCard: View {
                 Image(systemName: "hourglass")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Palette.brand)
-                Text("Your whole phone")
+                Text("Screen time")
                     .font(RansomFont.headline(16))
                     .foregroundStyle(Palette.ink)
             }
@@ -41,7 +41,8 @@ struct ScreenTimeReportCard: View {
                     // The report brings its own intrinsic size and it is not
                     // always sensible, so the card decides how much room it gets
                     // rather than being pushed around by another process's view.
-                    .frame(height: 78)
+                    // Tall enough for a total and five apps.
+                    .frame(height: 240)
             } else {
                 Text("Turn on Screen Time and Rex can show you the whole picture, not just the apps he's guarding.")
                     .font(RansomFont.body(14))

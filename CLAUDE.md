@@ -129,6 +129,15 @@ moment it starts working. The rules live in the App Group so the shield prices
 against them too; a rule the app knew about and the shield didn't would quote two
 prices for the same set.
 
+**Home leads with a score out of 100** (`Core/DailyScore.swift`): Focus, Reps
+and Restraint, an equal third each. Focus is how much of the screen-time goal is
+still unspent, Reps is movement against three sets, Restraint is the share of
+reaches for a guarded app that did not become an unlock. There is deliberately
+no Sleep factor - nothing on the phone can tell us when somebody slept without
+HealthKit, and a factor reading "no data" forever is worse than three that are
+real. Reaches come from `BlockCountStore`, written by the shield each time it is
+asked to build a screen.
+
 **The daily goal is screen time, not reps.** `profile.goalDailyMinutes` is set by
 the user on the "What's the target?" step and drives `AppModel.todayAllowance`.
 A rep-based daily goal sells the wrong thing: a big rep number means a lot of

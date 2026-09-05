@@ -15,15 +15,18 @@ public enum ShieldCopy {
         return "\(appName) needs a set first"
     }
 
-    /// The trade, stated plainly with the real numbers. No taunt: the line the
-    /// user reads twenty times a day has to still be readable the twentieth time,
-    /// and a joke that has worn out is worse than a fact.
-    public static func subtitle(reps: Int, exercise: String, minutes: Int, banked: Int) -> String {
-        let trade = "\(reps) \(exercise.lowercased()) banks you \(minutes) minutes."
-        // A balance already earned turns "you are blocked" into "you are one tap
-        // from not being blocked", which is a different screen entirely.
-        guard banked > 0 else { return trade }
-        return "You have \(banked) minutes banked. \(trade)"
+    /// What they have, and nothing else.
+    ///
+    /// This used to quote the exchange rate as well - "10 push-ups banks you 15
+    /// minutes" - which is a sentence about the app's rules, on a screen somebody
+    /// is reading in a moment of wanting something. The balance is the only part
+    /// of it that changes what they do next.
+    public static func subtitle(banked: Int) -> String {
+        switch banked {
+        case 0:  return "Nothing in the bank."
+        case 1:  return "1 minute banked."
+        default: return "\(banked) minutes banked."
+        }
     }
 
     /// The way out, named for the ones actually available.

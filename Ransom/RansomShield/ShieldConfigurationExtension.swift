@@ -56,12 +56,7 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
                 color: .white
             ),
             subtitle: ShieldConfiguration.Label(
-                text: ShieldCopy.subtitle(
-                    reps: ledger.repsPerUnlock,
-                    exercise: ledger.exerciseName,
-                    minutes: ledger.minutesPerUnlock,
-                    banked: ledger.bankedMinutes
-                ),
+                text: ShieldCopy.subtitle(banked: ledger.bankedMinutes),
                 color: UIColor(white: 1, alpha: 0.75)
             ),
             primaryButtonLabel: ShieldConfiguration.Label(
