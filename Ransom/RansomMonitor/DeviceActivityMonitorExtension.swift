@@ -12,11 +12,15 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     private let selection = BlockedSelectionStore()
     private let ledger = UnlockLedger()
+    private let usage = UsageMeter()
 
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
         // A new day, or monitoring restarted: match the shield to the ledger.
         selection.reconcile(ledger: ledger)
+        // The usage ladder starts again from the bottom, or the home screen shows
+        // yesterday's total all morning until the first rung fires.
+        usage.startDay()
     }
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
@@ -30,6 +34,17 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         activity: DeviceActivityName
     ) {
         super.eventDidReachThreshold(event, activity: activity)
+
+        // Which event this is matters enormously. Every threshold used to end the
+        // user's earned time, which was fine while there was only one of them -
+        // the moment a second kind of event exists, an unrelated callback would
+        // slam the shield down mid-session for no reason the user could see.
+        if let minutes = UsageMeter.minutes(fromEventName: event.rawValue) {
+            usage.record(minutes: minutes)
+            return
+        }
+
+        guard event == .earnedTimeSpent else { return }
 
         // The user has burned through the minutes they earned.
         ledger.revoke()

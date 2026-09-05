@@ -32,6 +32,12 @@ final class AppModel {
 
     let ledger = UnlockLedger()
     let rules = FocusRuleStore()
+    let usage = UsageMeter()
+
+    /// Bumped when the app comes back to the foreground. The meter is written by
+    /// the monitor extension in another process, so nothing here observes it -
+    /// re-reading on return is the only moment it can have changed.
+    var usageRevision = 0
 
     /// Bumped whenever the rules change or the clock crosses a window's edge, so
     /// the views that quote a price redraw. `FocusRuleStore` reads the App Group
@@ -180,6 +186,30 @@ final class AppModel {
     /// whether today went well.
     var todayMinutesUnlocked: Int { ledger.spentMinutesToday }
 
+    /// Measured minutes in the guarded apps today, when Screen Time is actually
+    /// reporting. Nil means nothing has ever been measured - a phone without
+    /// authorization and a genuinely quiet morning both read zero otherwise, and
+    /// the first would be shown a saving nobody earned.
+    ///
+    /// It is a floor, not a reading: the meter knows which rung has been passed,
+    /// not the minute. Anything quoted from it says "45+" and never interpolates.
+    var measuredScreenMinutes: Int? {
+        _ = usageRevision
+        return usage.isMeasuring ? usage.minutesToday : nil
+    }
+
+    /// What today has cost, measured where it can be and inferred where it can't.
+    ///
+    /// Minutes spent from the bank are a poor stand-in - they are what the user
+    /// *bought*, not what they used, and they miss every minute in an app that was
+    /// never guarded - but they are the only number available until Screen Time is
+    /// granted, and a screen with nothing on it teaches nobody anything.
+    var todayScreenMinutes: Int { measuredScreenMinutes ?? todayMinutesUnlocked }
+
+    /// Whether the figure above was measured or inferred. The copy has to say
+    /// which, or the app is quietly claiming to know something it doesn't.
+    var isScreenTimeMeasured: Bool { measuredScreenMinutes != nil }
+
     /// Minutes banked today, which is the opposite side of the ledger from the
     /// one above and must not be confused with it.
     var todayMinutesEarned: Int {
@@ -200,19 +230,19 @@ final class AppModel {
 
     /// Minutes saved today against that baseline. Negative when they've spent more
     /// than they used to — which has to be sayable, or the number is just flattery.
-    var todaySavedMinutes: Int { baselineMinutes - todayMinutesUnlocked }
+    var todaySavedMinutes: Int { baselineMinutes - todayScreenMinutes }
 
     /// Minutes of the allowance still unspent. Never negative — going over is
     /// reported separately rather than as a negative amount of time left.
-    var todayMinutesLeft: Int { max(0, todayAllowance - todayMinutesUnlocked) }
+    var todayMinutesLeft: Int { max(0, todayAllowance - todayScreenMinutes) }
 
-    var isOverAllowance: Bool { todayMinutesUnlocked > todayAllowance }
+    var isOverAllowance: Bool { todayScreenMinutes > todayAllowance }
 
     /// How much of today's allowance has been spent, 0-1. Unlike the rep goal this
     /// replaced, filling the ring is the *bad* outcome.
     var todayScreenUsage: Double {
         guard todayAllowance > 0 else { return 0 }
-        return min(1, Double(todayMinutesUnlocked) / Double(todayAllowance))
+        return min(1, Double(todayScreenMinutes) / Double(todayAllowance))
     }
 
     /// Minutes of scrolling the gate has displaced, all time.

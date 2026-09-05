@@ -19,3 +19,13 @@ public extension DeviceActivityName {
     /// A one-off window that ends exactly when earned scroll time runs out.
     nonisolated(unsafe) static let unlockWindow = Self("ransom.unlock-window")
 }
+
+public extension DeviceActivityEvent.Name {
+    /// Fires when the minutes the user bought have been used up.
+    ///
+    /// Lives here rather than beside the app's monitoring code because the
+    /// extension has to recognise it: once more than one kind of event exists,
+    /// a callback the extension cannot name is a callback it will treat as this
+    /// one and revoke somebody's time for no reason.
+    nonisolated(unsafe) static let earnedTimeSpent = Self("ransom.earned-time-spent")
+}

@@ -199,7 +199,11 @@ struct HomeView: View {
 
         return VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text("Today's screen time")
+                // Named for what it actually counts. Screen Time reports usage
+                // of the apps Ransom guards and nothing else, so calling it
+                // "today's screen time" claimed a whole-device figure the app has
+                // no way of getting.
+                Text("Time in your apps")
                     .font(RansomFont.headline(16))
                     .foregroundStyle(Palette.ink)
                 Spacer()
@@ -219,7 +223,7 @@ struct HomeView: View {
                     .frame(width: 96, height: 96)
 
                     VStack(spacing: -2) {
-                        Text("\(over ? model.todayMinutesUnlocked - model.todayAllowance : model.todayMinutesLeft)")
+                        Text("\(over ? model.todayScreenMinutes - model.todayAllowance : model.todayMinutesLeft)")
                             .font(RansomFont.counter(28))
                             .foregroundStyle(over ? Palette.danger : Palette.ink)
                             .contentTransition(.numericText())
@@ -256,21 +260,28 @@ struct HomeView: View {
     }
 
     private var screenTimeLine: String {
-        let used = model.todayMinutesUnlocked
+        let used = model.todayScreenMinutes
+        // Measured usage arrives as rungs on a ladder - Screen Time says "they
+        // have passed 45 minutes", never "they are at 52" - so it is quoted as a
+        // floor. Writing the rung as an exact figure would be inventing precision
+        // iOS never offered.
+        let figure = model.isScreenTimeMeasured && used > 0 ? "\(used)+" : "\(used)"
         if model.isOverAllowance {
-            return "\(used) min used. Past today's goal, but every unlock still needs a set."
+            return "\(figure) min used. Past today's goal, but every unlock still needs a set."
         }
         if used == 0 {
-            return "0 min used so far."
+            return model.isScreenTimeMeasured
+                ? "Under 15 min so far today."
+                : "0 min used so far."
         }
-        return "\(used) of \(model.todayAllowance) min used."
+        return "\(figure) of \(model.todayAllowance) min used."
     }
 
     private var savingLine: String {
         let saved = model.todaySavedMinutes
         // Nothing spent isn't a saving yet, it's a day that hasn't happened. Saying
         // "90 minutes saved" at breakfast spends the credit before it's earned.
-        guard model.todayMinutesUnlocked > 0 else {
+        guard model.todayScreenMinutes > 0 else {
             return "Your old average was \(model.baselineMinutes) min a day"
         }
         if saved > 0 { return "\(saved) min under your old average" }

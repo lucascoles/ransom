@@ -149,6 +149,21 @@ final class ScreenTimeManager {
         center.stopMonitoring([.daily])
 
         var events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [:]
+
+        // The usage ladder. iOS will not tell the app how long the user has been
+        // in these apps, but it will call the monitor extension each time they
+        // cross a threshold, so a rung per quarter hour turns an unanswerable
+        // question into a series of callbacks. See `UsageMeter`.
+        for minutes in UsageMeter.milestones {
+            events[DeviceActivityEvent.Name(UsageMeter.eventName(forMinutes: minutes))] =
+                DeviceActivityEvent(
+                    applications: selection.applicationTokens,
+                    categories: selection.categoryTokens,
+                    webDomains: selection.webDomainTokens,
+                    threshold: DateComponents(minute: minutes)
+                )
+        }
+
         if let thresholdMinutes {
             // Counts only while the gated apps are actually on screen.
             events[.earnedTimeSpent] = DeviceActivityEvent(
@@ -180,10 +195,4 @@ final class ScreenTimeManager {
         store.removeShield()
         ledger.revoke()
     }
-}
-
-extension DeviceActivityEvent.Name {
-    // Immutable string wrapper that Apple never marked Sendable, same as the
-    // names in `ScreenTimeNames.swift`.
-    nonisolated(unsafe) static let earnedTimeSpent = Self("ransom.earned-time-spent")
 }

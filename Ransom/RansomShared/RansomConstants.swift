@@ -40,6 +40,11 @@ public enum RansomCore {
         /// The user's named focus windows. In the App Group because the shield
         /// prices against them too - see `FocusRuleStore`.
         public static let focusRules = "ransom.rules.focus"
+        /// Highest usage rung reached today, and the day it belongs to. Written
+        /// by the monitor extension - see `UsageMeter` for why usage has to
+        /// arrive as callbacks rather than be read.
+        public static let usageMinutes = "ransom.usage.minutes"
+        public static let usageDay = "ransom.usage.day"
 
         // The tariff counter. Both the app and the shield price from these, so
         // they can never quote the user two different numbers.

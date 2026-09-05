@@ -102,6 +102,8 @@ struct RootView: View {
         // Earned time may have run out while the app was closed.
         screenTime.reconcile()
         screenTime.startMonitoring()
+        // Written by the monitor extension while we were away.
+        model.usageRevision += 1
         model.consumePendingShieldRequest()
         Task { await store.refreshEntitlement() }
         startPendingWorkoutIfNeeded()

@@ -260,6 +260,17 @@ by frame rather than guessing.
   crosses (Codable, and opaque enough to name an app without telling us which),
   so the extension writes tokens to the App Group and the app renders them with
   `Label(token)`. Until then the row falls back to the apps named in intake.
+- **Usage is measured as a ladder, not a reading.** iOS never tells an app how
+  long somebody has been in an app - `DeviceActivityReport` renders it and returns
+  nothing. It *will* call the monitor extension when usage crosses a
+  `DeviceActivityEvent` threshold, so `UsageMeter` registers a rung every quarter
+  hour (coarser after four hours, because iOS will not take unlimited events) and
+  the highest rung reached is the answer. It is a floor: the home screen quotes
+  "45+ min" and never interpolates. Unmeasured, the card falls back to minutes
+  spent from the bank and says so. Two traps already hit: every threshold callback
+  used to revoke earned time, which would slam the shield down on any unrelated
+  event, and the event name had to move to `RansomShared` so the extension can
+  recognise the one that means "time's up".
 - `RansomPlan.projectedReps` and `expectedUnlocksPerDay` still model unlocks.
 - **No app icon yet.** Four concepts generated (Rex silhouette, Rex head, padlock,
   spiked R); the two vector ones are real SVGs. None chosen or installed.
