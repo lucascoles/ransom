@@ -244,7 +244,13 @@ struct HomeView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
-                .gesture(setsDrag)
+                // Tap cycles, drag scrubs. Two ways in because the drag was the
+                // only one and it was losing to the page: a vertical drag inside
+                // a vertical ScrollView goes to the scroll view unless it is
+                // asked for at high priority, so the number needed a firm shove
+                // to move at all.
+                .onTapGesture { stepSets() }
+                .highPriorityGesture(setsDrag)
 
                 Image(systemName: "arrow.right")
                     .font(.system(size: 16, weight: .bold))
@@ -361,6 +367,18 @@ struct HomeView: View {
         plan.repsRequired(for: exercise)
     }
 
+    /// One tap up the ladder, wrapping back to a single set at the top.
+    ///
+    /// Three values is few enough that tapping through them is faster than
+    /// aiming, and it is the gesture people try first on a number that looks
+    /// adjustable.
+    private func stepSets() {
+        Haptics.tick()
+        withAnimation(.snappy(duration: 0.16)) {
+            earnSets = earnSets >= Self.maximumSets ? 1 : earnSets + 1
+        }
+    }
+
     /// Drag the rep count up or down to change how many sets.
     ///
     /// A slider was a whole row of chrome to move between three values, and it
@@ -373,9 +391,10 @@ struct HomeView: View {
                 let start = setsAtDragStart ?? earnSets
                 if setsAtDragStart == nil { setsAtDragStart = start }
                 // Up is more, which is the direction the number grows on screen.
-                // 44pt a step: short enough to reach three without a long haul,
-                // long enough that a scroll of the page does not change the set.
-                let steps = Int((-value.translation.height / 44).rounded())
+                // 32pt a step, tightened from 44 once the gesture stopped
+                // fighting the page for the drag: the whole range is one short
+                // pull rather than a haul across the card.
+                let steps = Int((-value.translation.height / 32).rounded())
                 let next = max(1, min(Self.maximumSets, start + steps))
                 guard next != earnSets else { return }
                 Haptics.tick()
