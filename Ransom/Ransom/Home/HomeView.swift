@@ -29,6 +29,9 @@ struct HomeView: View {
     /// The movement the Earn button will start. Nil follows the plan; tapping the
     /// other one in the swap row sets it, and only that.
     @State private var chosenExercise: Exercise?
+    /// Where `earnSets` was when the current drag began, so the number follows
+    /// the finger from wherever it started rather than jumping to it.
+    @State private var setsAtDragStart: Int?
 
     private var plan: RansomPlan { model.plan }
 
@@ -222,15 +225,26 @@ struct HomeView: View {
 
             HStack(spacing: 0) {
                 VStack(spacing: 2) {
-                    Text("\(earnReps)")
-                        .font(RansomFont.display(40))
-                        .foregroundStyle(Palette.ink)
-                        .contentTransition(.numericText(value: Double(earnReps)))
+                    HStack(spacing: 6) {
+                        Text("\(earnReps)")
+                            .font(RansomFont.display(40))
+                            .foregroundStyle(Palette.ink)
+                            .contentTransition(.numericText(value: Double(earnReps)))
+                        // The only sign that the number is a control. A slider
+                        // said so loudly and took a row to do it; this says so
+                        // quietly and takes none.
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(Palette.inkFaint)
+                            .opacity(earnSets < Self.maximumSets || earnSets > 1 ? 1 : 0.55)
+                    }
                     Text(activeExercise.title.lowercased())
                         .font(RansomFont.caption(12))
                         .foregroundStyle(Palette.inkSoft)
                 }
                 .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+                .gesture(setsDrag)
 
                 Image(systemName: "arrow.right")
                     .font(.system(size: 16, weight: .bold))
@@ -248,8 +262,6 @@ struct HomeView: View {
                 }
                 .frame(maxWidth: .infinity)
             }
-
-            if !plan.exercise.isPassive { setsSlider }
 
             // Spending comes first when there's anything to spend. Someone with a
             // full bank who is made to do another set has been told their earlier
@@ -349,39 +361,27 @@ struct HomeView: View {
         plan.repsRequired(for: exercise)
     }
 
-    /// How many sets to do in one go.
+    /// Drag the rep count up or down to change how many sets.
     ///
-    /// A slider rather than a stepper because the interesting number is the one
-    /// on the right - people decide how long they want, not how many push-ups -
-    /// and dragging keeps both figures moving together under the thumb.
-    private var setsSlider: some View {
-        VStack(spacing: 6) {
-            Slider(
-                value: Binding(
-                    get: { Double(earnSets) },
-                    set: { raw in
-                        let value = max(1, min(Self.maximumSets, Int(raw.rounded())))
-                        // Only on a real step change, or one drag fires a tap per
-                        // frame and the phone buzzes like a fault.
-                        guard value != earnSets else { return }
-                        Haptics.tick()
-                        withAnimation(.snappy(duration: 0.18)) { earnSets = value }
-                    }
-                ),
-                in: 1...Double(Self.maximumSets),
-                step: 1
-            )
-            .tint(Palette.brand)
-
-            HStack {
-                Text("1 set")
-                Spacer()
-                Text("\(Self.maximumSets) sets")
+    /// A slider was a whole row of chrome to move between three values, and it
+    /// sat away from the numbers it changed, so the thing being adjusted and the
+    /// thing being watched were in different places. Dragging the figure itself
+    /// puts them in the same place and costs no layout at all.
+    private var setsDrag: some Gesture {
+        DragGesture(minimumDistance: 6)
+            .onChanged { value in
+                let start = setsAtDragStart ?? earnSets
+                if setsAtDragStart == nil { setsAtDragStart = start }
+                // Up is more, which is the direction the number grows on screen.
+                // 44pt a step: short enough to reach three without a long haul,
+                // long enough that a scroll of the page does not change the set.
+                let steps = Int((-value.translation.height / 44).rounded())
+                let next = max(1, min(Self.maximumSets, start + steps))
+                guard next != earnSets else { return }
+                Haptics.tick()
+                withAnimation(.snappy(duration: 0.16)) { earnSets = next }
             }
-            .font(RansomFont.caption(11))
-            .foregroundStyle(Palette.inkFaint)
-        }
-        .padding(.horizontal, 2)
+            .onEnded { _ in setsAtDragStart = nil }
     }
 
     private var activeUnlockCard: some View {
