@@ -23,15 +23,20 @@ public struct FocusRule: Codable, Identifiable, Equatable, Hashable {
     /// `Calendar` weekday numbers, 1 = Sunday. Empty means every day.
     public var days: Set<Int>
     public var isEnabled: Bool
+    /// Asset name for the illustration behind the card, when the rule came from a
+    /// starter. Optional so rules saved before the artwork existed still decode,
+    /// and so a rule the user invented can simply have none.
+    public var art: String?
 
     public init(id: UUID = UUID(), name: String, startMinutes: Int, endMinutes: Int,
-                days: Set<Int> = [], isEnabled: Bool = true) {
+                days: Set<Int> = [], isEnabled: Bool = true, art: String? = nil) {
         self.id = id
         self.name = name
         self.startMinutes = startMinutes
         self.endMinutes = endMinutes
         self.days = days
         self.isEnabled = isEnabled
+        self.art = art
     }
 
     /// What a set costs while a rule is running. Double, and deliberately not

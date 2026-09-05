@@ -1,0 +1,26 @@
+{
+  "images": [
+    {
+      "filename": "rulegym.png",
+      "idiom": "universal",
+      "scale": "1x"
+    },
+    {
+      "filename": "rulegym@2x.png",
+      "idiom": "universal",
+      "scale": "2x"
+    },
+    {
+      "filename": "rulegym@3x.png",
+      "idiom": "universal",
+      "scale": "3x"
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  },
+  "properties": {
+    "template-rendering-intent": "original"
+  }
+}

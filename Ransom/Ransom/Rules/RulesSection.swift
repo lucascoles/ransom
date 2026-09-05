@@ -172,10 +172,18 @@ private struct RuleCard: View {
         }
         .padding(14)
         .frame(width: 150, height: 128, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
-                .fill(isActive ? Palette.brand : Palette.surface)
-        )
+        // Fill and art in one background stack. Two stacked `.background`
+        // modifiers put the second one *behind* the first, so the illustration
+        // was being drawn underneath an opaque card and never seen.
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
+                    .fill(isActive ? Palette.brand : Palette.surface)
+                if let art = rule.art {
+                    RuleArt(name: art, opacity: isActive ? 0.3 : 0.26, isOnBrand: isActive)
+                }
+            }
+        }
         .overlay(
             RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
                 .strokeBorder(Palette.hairline, lineWidth: isActive ? 0 : 1)
@@ -226,7 +234,11 @@ private extension Array {
 /// because the job of a template is to be recognised, not admired. Every one of
 /// them opens the editor prefilled and still has to be held to commit.
 struct RuleTemplate: Identifiable {
-    var emoji: String
+    /// Asset name of the illustration. Drawn rather than set in an emoji font:
+    /// the system emoji are somebody else's artwork, they change shape under the
+    /// user out from under us on an OS update, and five of them in a row next to
+    /// Rex look like placeholders that never got replaced.
+    var art: String
     var name: String
     var startMinutes: Int
     var endMinutes: Int
@@ -235,23 +247,24 @@ struct RuleTemplate: Identifiable {
     var id: String { name }
 
     var rule: FocusRule {
-        FocusRule(name: name, startMinutes: startMinutes, endMinutes: endMinutes, days: days)
+        FocusRule(name: name, startMinutes: startMinutes, endMinutes: endMinutes,
+                  days: days, art: art)
     }
 
     /// Five, and no more. A wall of suggestions is a menu to browse; a handful is
     /// a nudge to pick one.
     static let starters: [RuleTemplate] = [
-        RuleTemplate(emoji: "🏋️", name: "Gym time",
+        RuleTemplate(art: "RuleGym", name: "Gym time",
                      startMinutes: 17 * 60 + 30, endMinutes: 18 * 60 + 30,
                      days: [2, 4, 7]),
-        RuleTemplate(emoji: "📖", name: "Reading time",
+        RuleTemplate(art: "RuleReading", name: "Reading time",
                      startMinutes: 20 * 60, endMinutes: 20 * 60 + 45),
-        RuleTemplate(emoji: "🧠", name: "Deep work",
+        RuleTemplate(art: "RuleDeepWork", name: "Deep work",
                      startMinutes: 9 * 60, endMinutes: 11 * 60,
                      days: [2, 3, 4, 5, 6]),
-        RuleTemplate(emoji: "🍽️", name: "Dinner",
+        RuleTemplate(art: "RuleDinner", name: "Dinner",
                      startMinutes: 18 * 60, endMinutes: 19 * 60),
-        RuleTemplate(emoji: "🌙", name: "Wind down",
+        RuleTemplate(art: "RuleWindDown", name: "Wind down",
                      startMinutes: 22 * 60, endMinutes: 23 * 60 + 30),
     ]
 }
@@ -265,8 +278,6 @@ private struct TemplateCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(template.emoji)
-                    .font(.system(size: 20))
                 Spacer()
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 17, weight: .bold))
@@ -289,14 +300,58 @@ private struct TemplateCard: View {
         }
         .padding(14)
         .frame(width: 150, height: 128, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
-                .fill(Palette.surfaceAlt)
-        )
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
+                    .fill(Palette.surfaceAlt)
+                RuleArt(name: template.art, opacity: 0.3)
+            }
+        }
         .overlay(
             RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
                 .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
                 .foregroundStyle(Palette.hairline)
         )
+    }
+}
+
+/// The illustration behind a rule card.
+///
+/// Faded and running off the corner rather than sitting in the middle: it has to
+/// say what the rule is at a glance without competing with the name, which is the
+/// thing the user actually reads. On a running rule it becomes a white silhouette,
+/// because the card is already brand orange and orange-on-orange disappears.
+struct RuleArt: View {
+    var name: String
+    var opacity: Double
+    /// Drawn as a white silhouette instead of in its own colours.
+    var isOnBrand: Bool = false
+
+    var body: some View {
+        let art = Image(name)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 104, height: 104)
+
+        return ZStack {
+            Color.clear
+            Group {
+                if isOnBrand {
+                    Color.white.mask(art)
+                } else {
+                    art
+                }
+            }
+            .frame(width: 104, height: 104)
+            .opacity(opacity)
+            // Faint, and mostly off the corner. At anything bolder it stopped
+            // being a texture and started being a picture the name was written
+            // across - the name is the thing being read, and the illustration is
+            // only there to say what kind of hour this is at a glance.
+            .offset(x: 30, y: 30)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        .clipShape(RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous))
+        .allowsHitTesting(false)
     }
 }
