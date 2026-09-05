@@ -14,6 +14,8 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         // name here — it's the one place the system hands it to us.
         if let name = application.localizedDisplayName {
             RansomCore.defaults.set(name, forKey: RansomCore.Key.shieldHeadline)
+            // The one place that knows a blocked app was reached for.
+            BlockCountStore().record(app: name)
         }
         return makeConfiguration(appName: application.localizedDisplayName)
     }

@@ -75,6 +75,8 @@ struct HomeView: View {
 
                 spendCard
 
+                ReachesCard()
+
                 RulesSection()
 
                 todayCard

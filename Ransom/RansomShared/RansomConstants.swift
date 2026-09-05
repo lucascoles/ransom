@@ -40,6 +40,12 @@ public enum RansomCore {
         /// other trace - without this every question about what it did is a
         /// guess, and three separate bugs have already hidden in that gap.
         public static let monitorTrace = "ransom.debug.monitorTrace"
+        /// Times each app has been stopped at the door today, and the day the
+        /// tally belongs to. Written by the shield - see `BlockCountStore`.
+        public static let blockCounts = "ransom.block.counts"
+        public static let blockCountDay = "ransom.block.countDay"
+        public static let blockCountLastApp = "ransom.block.lastApp"
+        public static let blockCountLastAt = "ransom.block.lastAt"
         /// The user's most-used apps, as opaque tokens, ranked. Written by a
         /// DeviceActivityReport extension - the only place usage can be read -
         /// and read by the app to recommend what to block. See
