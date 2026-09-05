@@ -18,7 +18,7 @@ struct PrimaryButton: View {
                 if isLoading {
                     ProgressView()
                         .progressViewStyle(.circular)
-                        .tint(Palette.onGreen)
+                        .tint(Palette.onBrand)
                 } else {
                     if let icon {
                         Image(systemName: icon).font(.system(size: 17, weight: .bold))
@@ -26,15 +26,15 @@ struct PrimaryButton: View {
                     Text(title).font(RansomFont.headline(17))
                 }
             }
-            .foregroundStyle(Palette.onGreen)
+            .foregroundStyle(Palette.onBrand)
             .frame(maxWidth: .infinity)
             .frame(height: Metrics.buttonHeight)
             .background(
                 RoundedRectangle(cornerRadius: Metrics.controlRadius, style: .continuous)
-                    .fill(Palette.green)
+                    .fill(Palette.brand)
             )
             .opacity(isEnabled ? 1 : 0.35)
-            .shadow(color: Palette.green.opacity(isEnabled ? 0.3 : 0), radius: 14, y: 6)
+            .shadow(color: Palette.brand.opacity(isEnabled ? 0.3 : 0), radius: 14, y: 6)
         }
         .pressable()
         .disabled(!isEnabled || isLoading)
@@ -93,8 +93,8 @@ struct TextButton: View {
 struct Pill: View {
     var text: String
     var icon: String?
-    var tint: Color = Palette.green
-    var background: Color = Palette.greenSoft
+    var tint: Color = Palette.brand
+    var background: Color = Palette.brandSoft
 
     var body: some View {
         HStack(spacing: 5) {

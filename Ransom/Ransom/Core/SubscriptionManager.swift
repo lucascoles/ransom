@@ -34,10 +34,14 @@ final class SubscriptionManager {
         /// Fallback copy for when StoreKit can't be reached.
         var fallbackPrice: String {
             switch self {
-            case .weekly: return "$5.99"
-            case .annual: return "$39.99"
+            case .weekly: return "$4.99"
+            case .annual: return "$49.99"
             }
         }
+
+        /// Mirrors the 3-day introductory offer configured on both products. Used
+        /// only when StoreKit hasn't answered, alongside `fallbackPrice`.
+        var fallbackTrial: String { "3 days free" }
 
         var periodLabel: String {
             switch self {
@@ -84,27 +88,29 @@ final class SubscriptionManager {
         products[plan]?.displayPrice ?? plan.fallbackPrice
     }
 
-    /// "$0.77" — the annual rate expressed per week, which is the only fair way to
+    /// "$0.96" — the annual rate expressed per week, which is the only fair way to
     /// compare it to the weekly plan.
     var annualPerWeek: String? {
-        guard let annual = products[.annual] else { return "$0.77" }
+        guard let annual = products[.annual] else { return "$0.96" }
         return (annual.price / 52).formatted(annual.priceFormatStyle)
     }
 
     /// How much less the annual costs than 52 weeks of the weekly rate. Computed
     /// from live StoreKit prices so it can't drift out of date if pricing changes.
     var annualSavingsPercent: Int? {
-        let weeklyPrice = products[.weekly]?.price ?? 5.99
-        let annualPrice = products[.annual]?.price ?? 39.99
+        let weeklyPrice = products[.weekly]?.price ?? 4.99
+        let annualPrice = products[.annual]?.price ?? 49.99
         let yearOfWeekly = weeklyPrice * 52
         guard yearOfWeekly > 0, annualPrice < yearOfWeekly else { return nil }
         let ratio = (yearOfWeekly - annualPrice) / yearOfWeekly
         return Int((NSDecimalNumber(decimal: ratio).doubleValue * 100).rounded())
     }
 
-    /// Only mentions a trial when the product actually carries an introductory offer.
+    /// Mentions a trial only when the loaded product actually carries one; falls back
+    /// to the configured 3-day offer when StoreKit hasn't answered yet.
     func trialDescription(for plan: Plan) -> String? {
-        guard let offer = products[plan]?.subscription?.introductoryOffer,
+        guard let product = products[plan] else { return plan.fallbackTrial }
+        guard let offer = product.subscription?.introductoryOffer,
               offer.paymentMode == .freeTrial else { return nil }
         let count = offer.period.value
         let unit: String

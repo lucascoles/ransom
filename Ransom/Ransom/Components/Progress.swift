@@ -9,7 +9,7 @@ struct StepProgressBar: View {
             ZStack(alignment: .leading) {
                 Capsule().fill(Palette.hairline)
                 Capsule()
-                    .fill(Palette.green)
+                    .fill(Palette.brand)
                     .frame(width: max(8, geo.size.width * min(max(progress, 0), 1)))
             }
         }
@@ -22,15 +22,18 @@ struct StepProgressBar: View {
 struct ProgressRing: View {
     var progress: Double
     var lineWidth: CGFloat = 16
-    var tint: Color = Palette.green
+    var tint: Color = Palette.brand
     var track: Color = Palette.hairline
+    /// The round cap leaves a dot at zero, which reads as "a little bit used" on a
+    /// ring where empty is the good outcome. Off for rings where zero means zero.
+    var showsEmptyDot: Bool = true
 
     var body: some View {
         ZStack {
             Circle()
                 .stroke(track, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
             Circle()
-                .trim(from: 0, to: min(max(progress, 0.001), 1))
+                .trim(from: 0, to: min(max(progress, showsEmptyDot ? 0.001 : 0), 1))
                 .stroke(
                     AngularGradient(
                         colors: [tint.opacity(0.75), tint],
@@ -82,7 +85,7 @@ struct CountingNumber: View {
 struct WeekBars: View {
     /// Sunday-first values paired with their day initial.
     var values: [(label: String, value: Double, isToday: Bool)]
-    var tint: Color = Palette.green
+    var tint: Color = Palette.brand
 
     private var maxValue: Double { max(values.map(\.value).max() ?? 1, 1) }
 

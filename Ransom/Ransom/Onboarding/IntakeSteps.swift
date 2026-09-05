@@ -11,7 +11,7 @@ struct WelcomeStep: View {
         VStack(spacing: 0) {
             Spacer()
 
-            RexImage(pose: appeared ? .flex : .idle, size: 210)
+            RexIntroVideo(size: 320)
                 .scaleEffect(appeared ? 1 : 0.85)
                 .opacity(appeared ? 1 : 0)
 
@@ -20,15 +20,15 @@ struct WelcomeStep: View {
                     .font(RansomFont.display(46))
                     .foregroundStyle(Palette.ink)
 
-                Text("Earn your scroll.")
+                Text("Move a little. Scroll a little.")
                     .font(RansomFont.title(21))
-                    .foregroundStyle(Palette.green)
+                    .foregroundStyle(Palette.brand)
 
-                Text("Instagram, TikTok and the rest stay locked until you move. Rex is the doorman.")
+                Text("A quick set of push-ups unlocks your apps. That's the whole idea - and you get stronger without ever planning a workout.")
                     .font(RansomFont.body(16))
                     .foregroundStyle(Palette.inkSoft)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 34)
+                    .padding(.horizontal, 30)
                     .padding(.top, 4)
             }
             .padding(.top, 10)
@@ -38,8 +38,8 @@ struct WelcomeStep: View {
             Spacer()
 
             VStack(spacing: 12) {
-                PrimaryButton(title: "Get started", action: onStart)
-                Text("Takes about 60 seconds.")
+                PrimaryButton(title: "Let's go", action: onStart)
+                Text("Takes about a minute.")
                     .font(RansomFont.caption(12))
                     .foregroundStyle(Palette.inkFaint)
             }
@@ -60,10 +60,14 @@ struct NameStep: View {
 
     @FocusState private var isFocused: Bool
 
+    private var trimmedName: String {
+        profile.firstName.trimmingCharacters(in: .whitespaces)
+    }
+
     var body: some View {
         StepScaffold(
             title: "What should Rex call you?",
-            subtitle: "Optional. It makes the nagging personal.",
+            subtitle: "Optional. Rex just likes cheering people on by name.",
             buttonTitle: "Continue",
             onNext: onNext
         ) {
@@ -79,13 +83,28 @@ struct NameStep: View {
                     .padding(.vertical, 6)
                     .ransomCard()
 
-                RexScene(
-                    pose: .idle,
-                    line: profile.firstName.isEmpty
-                        ? "Or stay anonymous. I'll still block Instagram."
-                        : "Nice to meet you, \(profile.firstName).",
-                    size: 96
-                )
+                // Two scenes in a fixed slot rather than one with a swapped pose:
+                // the wave and the cheer are different views, and letting the
+                // swap resize the row would nudge the text field mid-typing.
+                ZStack(alignment: .topLeading) {
+                    if trimmedName.isEmpty {
+                        IntakeRexScene(
+                            pose: .wave,
+                            line: "Hi there! No name is fine too. I'll cheer either way.",
+                            size: 96
+                        )
+                        .transition(.opacity)
+                    } else {
+                        RexScene(
+                            pose: .cheer,
+                            line: "\(trimmedName)! Great to have you here.",
+                            size: 96
+                        )
+                        .transition(.opacity)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .animation(.easeInOut(duration: 0.25), value: trimmedName.isEmpty)
             }
             .onAppear { isFocused = true }
         }
@@ -101,7 +120,7 @@ struct GenderStep: View {
     var body: some View {
         StepScaffold(
             title: "Let's start simple",
-            subtitle: "This calibrates your rep targets. Nothing else.",
+            subtitle: "This sets your rep target. Nothing else.",
             showsButton: false,
             onNext: onNext
         ) {
@@ -129,7 +148,7 @@ struct AgeStep: View {
     var body: some View {
         StepScaffold(
             title: "How old are you?",
-            subtitle: "Rex adjusts how hard he pushes.",
+            subtitle: "Rex uses this to size your sets. That's all.",
             onNext: onNext
         ) {
             VStack(spacing: 18) {
@@ -149,10 +168,10 @@ struct AgeStep: View {
 
     private var ageQuip: String {
         switch profile.age {
-        case ..<20:  return "Young joints. No excuses."
-        case 20..<30: return "Prime rep-earning years."
-        case 30..<45: return "Perfect age to start banking reps."
-        default:      return "Consistency beats intensity. Always."
+        case ..<20:   return "Starting early. Future you says thanks."
+        case 20..<30: return "Perfect time to build a habit that sticks."
+        case 30..<45: return "Great time to start. I mean that."
+        default:      return "Steady beats hard. We'll go at your pace."
         }
     }
 }
@@ -166,7 +185,7 @@ struct BodyStep: View {
     var body: some View {
         StepScaffold(
             title: "Height and weight",
-            subtitle: "Used to estimate the calories you burn earning your scroll.",
+            subtitle: "So Rex can tell you what your sets really burn.",
             onNext: onNext
         ) {
             VStack(spacing: 16) {
@@ -274,8 +293,8 @@ struct FitnessStep: View {
 
     var body: some View {
         StepScaffold(
-            title: "How often do you work out right now?",
-            subtitle: "Be honest. Rex doesn't judge, he calibrates.",
+            title: "How often do you work out?",
+            subtitle: "No wrong answer. Rex sizes your sets from this, so honest is easiest.",
             showsButton: false,
             onNext: onNext
         ) {

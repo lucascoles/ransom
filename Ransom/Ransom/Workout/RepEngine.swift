@@ -10,9 +10,9 @@ import UIKit
 ///  • Push-ups use the proximity sensor — the phone lies face-up under your chest
 ///    and your torso covers it at the bottom of every rep. It's the most reliable
 ///    signal on the device and needs no calibration.
-///  • Jumping jacks and high knees use accelerometer impact peaks with a refractory
+///  • Impact peaks with a refractory window are kept for any future movement
 ///    window, so a single landing can't register twice.
-///  • Squats and sit-ups use device attitude, calibrated against whatever position
+///  • Squats use device attitude, calibrated against whatever position
 ///    the phone starts in, then counting full down-and-back-up sweeps.
 ///
 /// Every mode also accepts taps, so a rep is never lost to a bad sensor reading.
@@ -76,10 +76,23 @@ final class RepEngine {
         lastRepAt = .distantPast
         phase = .counting
 
+        #if DEBUG
+        // `-RansomAutoReps 1` ticks a rep every half second. A simulator has no
+        // camera, no proximity sensor and no motion, so this is the only way to
+        // reach the completion screen there and look at it. Never ships.
+        if UserDefaults.standard.bool(forKey: "RansomAutoReps") {
+            startAutoReps()
+            return
+        }
+        #endif
+
         switch exercise.sensing {
         case .proximity: startProximity()
         case .impact:    startImpact()
         case .tilt:      startTilt()
+        // Steps are counted by the phone all day; there is no set to run and
+        // nothing for this engine to watch.
+        case .pedometer: sensorAvailable = false
         }
     }
 
@@ -110,12 +123,12 @@ final class RepEngine {
             // iPads and some states have no proximity sensor — fall back to tilt,
             // which still reads a push-up as the phone rocks under your chest.
             sensorAvailable = false
-            formHint = "No proximity sensor here — tap the screen for each rep."
+            formHint = "No proximity sensor on this device. Try a different move."
             startTilt()
             return
         }
 
-        formHint = "Phone on the floor, screen up, under your chest."
+        formHint = "Phone on the floor, screen up, right under your chest."
 
         proximityObserver = NotificationCenter.default.addObserver(
             forName: UIDevice.proximityStateDidChangeNotification,
@@ -138,12 +151,12 @@ final class RepEngine {
         }
     }
 
-    // MARK: - Impact (jumping jacks, high knees)
+    // MARK: - Impact (unused since the movement list shrank to three)
 
     private func startImpact() {
         guard motion.isDeviceMotionAvailable else {
             sensorAvailable = false
-            formHint = "Motion unavailable — tap the screen for each rep."
+            formHint = "No motion sensor on this device. Try a different move."
             return
         }
 
@@ -174,12 +187,12 @@ final class RepEngine {
         }
     }
 
-    // MARK: - Tilt (squats, sit-ups)
+    // MARK: - Tilt (squats)
 
     private func startTilt() {
         guard motion.isDeviceMotionAvailable else {
             sensorAvailable = false
-            formHint = "Motion unavailable — tap the screen for each rep."
+            formHint = "No motion sensor on this device. Try a different move."
             return
         }
 
@@ -208,6 +221,18 @@ final class RepEngine {
             }
         }
     }
+
+    #if DEBUG
+    private func startAutoReps() {
+        formHint = nil
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
+            guard let self, self.phase == .counting else { timer.invalidate(); return }
+            withAnimation(.easeOut(duration: 0.18)) { self.depth = self.isDown ? 0 : 1 }
+            self.isDown.toggle()
+            if !self.isDown { self.commitRep(minimumGap: 0) }
+        }
+    }
+    #endif
 
     // MARK: - Shared
 

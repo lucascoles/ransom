@@ -34,17 +34,16 @@ final class AppModel {
 
     var plan: RansomPlan { RansomPlan.make(from: profile) }
 
-    /// What the next unlock costs under the tariff — base price for the first
-    /// couple of the day, climbing after that.
-    var quote: Tariff.Quote { ledger.currentQuote() }
+    /// What a set costs. Flat, now that the bank is the economy.
+    ///
+    /// The escalating tariff priced an unlock, and there are no unlocks to price
+    /// any more — minutes are earned at a rate and spent from a balance. Charging
+    /// more for the fourth top-up than the first would have meant the exchange
+    /// rate moving under the user while they were mid-set, which is the one thing
+    /// a currency cannot do and stay trusted.
+    var repsPerSet: Int { plan.repsPerUnlock }
 
     var unlocksToday: Int { ledger.unlocksToday }
-
-    /// The full ladder, for the rates card. Users have to be able to see what's
-    /// coming or the escalation reads as arbitrary.
-    var tariffSchedule: [(unlock: Int, reps: Int, multiplier: Double)] {
-        Tariff.schedule(base: plan.repsPerUnlock)
-    }
 
     // MARK: Lifecycle
 
@@ -54,6 +53,27 @@ final class AppModel {
         history = snapshot.history
         hasCompletedOnboarding = snapshot.hasCompletedOnboarding
         isSubscribed = snapshot.isSubscribed
+
+        // `-RansomPro 1` drops straight into the unlocked app, skipping intake and
+        // the paywall. On a real device the paywall is otherwise impassable during
+        // testing: it only finishes on a completed purchase, and StoreKit has no
+        // products to sell unless the app was launched from Xcode's scheme.
+        //
+        //     xcrun devicectl device process launch --device UDID com.ransom.app -- -RansomPro 1
+        //
+        // Debug builds only, so it can never ship as a way around the paywall.
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "RansomPro") {
+            hasCompletedOnboarding = true
+            isSubscribed = true
+        }
+        // `-RansomBank 60` seeds the balance. The bank starts empty on a fresh
+        // profile, so without this every screen that only appears when there is
+        // something to spend is unreachable in a screenshot run.
+        let seededBank = UserDefaults.standard.integer(forKey: "RansomBank")
+        if seededBank > 0 { ledger.bankedMinutes = seededBank }
+        #endif
+
         syncPlanToExtensions()
     }
 
@@ -116,9 +136,50 @@ final class AppModel {
     /// Calendar days Ransom has been installed, at least one.
     var daysSinceStart: Int {
         let calendar = Calendar.current
-        let start = calendar.startOfDay(for: history.first?.date ?? profile.createdAt)
+        // The earliest record, not the first one in the array: history is appended
+        // in order, but nothing guarantees it (the preview seed isn't).
+        let start = calendar.startOfDay(for: history.map(\.date).min() ?? profile.createdAt)
         let days = calendar.dateComponents([.day], from: start, to: calendar.startOfDay(for: Date())).day ?? 0
         return max(1, days + 1)
+    }
+
+    /// Minutes of gated-app time bought back today. The number that decides
+    /// whether today went well.
+    var todayMinutesUnlocked: Int { ledger.spentMinutesToday }
+
+    /// Minutes banked today, which is the opposite side of the ledger from the
+    /// one above and must not be confused with it.
+    var todayMinutesEarned: Int {
+        let calendar = Calendar.current
+        return history
+            .filter { calendar.isDateInToday($0.date) }
+            .reduce(0) { $0 + $1.minutesGranted }
+    }
+
+    /// Today's ceiling. The user's own goal when they set one; otherwise the
+    /// plan's curve, so a profile from before goals existed still works.
+    var todayAllowance: Int {
+        profile.goalDailyMinutes ?? plan.dailyMinuteAllowance(onDay: daysSinceStart)
+    }
+
+    /// What a day used to cost them, and what every saving is measured against.
+    var baselineMinutes: Int { profile.baselineDailyMinutes }
+
+    /// Minutes saved today against that baseline. Negative when they've spent more
+    /// than they used to — which has to be sayable, or the number is just flattery.
+    var todaySavedMinutes: Int { baselineMinutes - todayMinutesUnlocked }
+
+    /// Minutes of the allowance still unspent. Never negative — going over is
+    /// reported separately rather than as a negative amount of time left.
+    var todayMinutesLeft: Int { max(0, todayAllowance - todayMinutesUnlocked) }
+
+    var isOverAllowance: Bool { todayMinutesUnlocked > todayAllowance }
+
+    /// How much of today's allowance has been spent, 0-1. Unlike the rep goal this
+    /// replaced, filling the ring is the *bad* outcome.
+    var todayScreenUsage: Double {
+        guard todayAllowance > 0 else { return 0 }
+        return min(1, Double(todayMinutesUnlocked) / Double(todayAllowance))
     }
 
     /// Minutes of scrolling the gate has displaced, all time.
@@ -129,8 +190,7 @@ final class AppModel {
     /// more time than their old baseline, Ransom hasn't saved them anything and
     /// shouldn't claim it has.
     var lifetimeMinutesSaved: Int {
-        let baselinePerDay = (profile.scrollLoad ?? .medium).hoursPerDay * 60
-        let wouldHaveScrolled = baselinePerDay * Double(daysSinceStart)
+        let wouldHaveScrolled = Double(baselineMinutes) * Double(daysSinceStart)
         return max(0, Int(wouldHaveScrolled) - totalMinutesEarned)
     }
 
@@ -184,10 +244,18 @@ final class AppModel {
 
     // MARK: Mutations
 
-    /// Records a finished set and grants the earned scroll time.
+    /// Records a finished set and pays what it earned into the bank.
+    ///
+    /// Pays for what was actually done rather than a flat rate per set: someone who
+    /// pushes out fifteen when ten were asked banks the extra five, where a flat
+    /// rate would quietly teach them to stop the moment the counter hits its target.
+    ///
+    /// It deliberately does *not* start the clock. Banking and spending are separate
+    /// now — minutes earned sit there until the user chooses to spend them, which is
+    /// the whole point of a bank.
     @discardableResult
     func completeSet(exercise: Exercise, reps: Int, duration: Int, trigger: String? = nil) -> Int {
-        let minutes = plan.minutesPerUnlock
+        let minutes = plan.minutesEarned(reps: reps, exercise: exercise)
         let record = WorkoutRecord(
             exercise: exercise,
             reps: reps,
@@ -196,10 +264,22 @@ final class AppModel {
             trigger: trigger
         )
         history.append(record)
-        ledger.grant(minutes: minutes)
-        ledger.recordUnlock()
+        ledger.bank(minutes: minutes)
         pendingUnlockAppName = nil
         return minutes
+    }
+
+    /// Minutes sitting in the bank, unspent.
+    var bankedMinutes: Int { ledger.bankedMinutes }
+
+    /// Spends from the bank to open the apps. Returns what it actually spent —
+    /// less than asked for when the bank is short, and zero when it's empty.
+    @discardableResult
+    func spendFromBank(minutes: Int) -> Int {
+        let spent = ledger.spend(minutes: minutes)
+        if spent > 0 { ledger.recordUnlock() }
+        pendingUnlockAppName = nil
+        return spent
     }
 
     func resetEverything() {
@@ -281,7 +361,7 @@ extension AppModel {
         model.profile.firstName = "Sam"
         model.profile.fitnessLevel = .sometimes
         model.profile.scrollLoad = .heavy
-        model.profile.exercises = [.pushUps, .jumpingJacks]
+        model.profile.exercises = [.pushUps, .squats]
         model.profile.distractingApps = [.instagram, .tiktok]
         let calendar = Calendar.current
         model.history = (0..<6).flatMap { offset -> [WorkoutRecord] in

@@ -40,6 +40,7 @@ final class ScreenTimeManager {
     init() {
         selection = BlockedSelectionStore().selection
         refreshAuthorization()
+        syncUnlockState()
     }
 
     var blockedCount: Int { store.count }
@@ -71,11 +72,28 @@ final class ScreenTimeManager {
 
     // MARK: - Shield state
 
-    var isCurrentlyUnlocked: Bool { ledger.isUnlocked }
+    /// Mirrors the ledger so SwiftUI redraws when time is granted or revoked.
+    ///
+    /// The ledger itself lives in the App Group, because the shield extensions read
+    /// it too — which means it's UserDefaults-backed and completely invisible to
+    /// observation. Reading it through a computed property registered no
+    /// dependency at all, so "Lock it back up" revoked the time and the button sat
+    /// there unchanged until something unrelated forced a redraw. Same reason
+    /// `selection` above is mirrored rather than read straight through.
+    private(set) var isCurrentlyUnlocked: Bool = false
     var remainingUnlock: TimeInterval { ledger.remaining }
+
+    /// Pulls the observable mirror back in line with the shared ledger. Cheap;
+    /// call it after anything that grants or revokes, and on a tick so time
+    /// running out on its own lands too.
+    func syncUnlockState() {
+        let unlocked = ledger.isUnlocked
+        if unlocked != isCurrentlyUnlocked { isCurrentlyUnlocked = unlocked }
+    }
 
     /// Brings the shield in line with the ledger. Cheap, idempotent, call freely.
     func reconcile() {
+        syncUnlockState()
         guard isAuthorized else { return }
         store.reconcile(ledger: ledger)
     }
@@ -83,6 +101,7 @@ final class ScreenTimeManager {
     /// Called after a completed set: lifts the shield and starts the burn-down.
     func grantEarnedTime(minutes: Int) {
         ledger.grant(minutes: minutes)
+        syncUnlockState()
         guard isAuthorized else { return }
         store.removeShield()
         restartMonitoring(thresholdMinutes: minutes)
@@ -92,6 +111,7 @@ final class ScreenTimeManager {
     /// Ends earned time early — used by the "Lock it back up" button.
     func endEarnedTimeNow() {
         ledger.revoke()
+        syncUnlockState()
         guard isAuthorized else { return }
         store.applyShield()
         restartMonitoring()

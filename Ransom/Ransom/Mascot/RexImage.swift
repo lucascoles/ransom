@@ -71,6 +71,7 @@ struct RexImage: View {
         case .blocked: return "RexBlocked"
         case .flex:    return "RexFlex"
         case .sad:     return "RexSad"
+        case .relax:   return "RexRelax"
         // No artwork for sleep yet, and nothing in the app asks for it.
         case .sleep:   return "RexIdle"
         case .pushUp(let down): return down ? "RexPushUpBottom" : "RexPushUpTop"
@@ -85,6 +86,7 @@ struct RexImage: View {
         case .blocked: return "Rex, blocking the way"
         case .flex:    return "Rex, flexing"
         case .sad:     return "Rex, disappointed"
+        case .relax:   return "Rex, relaxing"
         case .sleep:   return "Rex, asleep"
         case .pushUp:  return "Rex, doing a push-up"
         }
@@ -94,7 +96,7 @@ struct RexImage: View {
 #Preview("Every pose") {
     ScrollView {
         VStack(spacing: 24) {
-            ForEach([RexPose.idle, .coach, .cheer, .blocked, .flex, .sad], id: \.self) { pose in
+            ForEach([RexPose.idle, .coach, .cheer, .blocked, .flex, .sad, .relax], id: \.self) { pose in
                 RexImage(pose: pose, size: 120)
             }
             HStack {

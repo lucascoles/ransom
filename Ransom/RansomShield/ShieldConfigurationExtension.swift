@@ -40,20 +40,22 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
 
     private func makeConfiguration(appName: String?) -> ShieldConfiguration {
         let ledger = UnlockLedger()
-        let quote = ledger.currentQuote()
         let exercise = ledger.exerciseName
         let minutes = ledger.minutesPerUnlock
+        let reps = ledger.repsPerUnlock
+        let banked = ledger.bankedMinutes
 
-        let title = appName.map { "\($0) costs \(quote.reps) \(exercise.lowercased())" }
-            ?? ShieldCopy.headline(reps: quote.reps, exercise: exercise)
+        let title = appName.map { "\($0)? \(reps) \(exercise.lowercased()) first" }
+            ?? ShieldCopy.headline(reps: reps, exercise: exercise)
 
-        // When the tariff is up, say why. An unexplained price rise reads as a bug.
-        let lead = quote.explanation ?? ShieldCopy.taunt()
-        let subtitle = "\(lead)\nOne set buys you \(minutes) minutes."
+        // A balance already earned is the most useful thing the shield can say:
+        // it turns "you're blocked" into "you're one tap from being unblocked".
+        let lead = banked > 0 ? "You've got \(banked) minutes banked." : ShieldCopy.taunt()
+        let subtitle = "\(lead)\nOne set banks you \(minutes) more."
 
         return ShieldConfiguration(
             backgroundBlurStyle: .systemUltraThinMaterialDark,
-            backgroundColor: UIColor(red: 0.05, green: 0.07, blue: 0.05, alpha: 0.92),
+            backgroundColor: RansomPalette.shieldBackground.withAlphaComponent(0.92),
             icon: RexBadge.image(size: 180),
             title: ShieldConfiguration.Label(
                 text: title,
@@ -65,9 +67,9 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
             ),
             primaryButtonLabel: ShieldConfiguration.Label(
                 text: ShieldCopy.primaryButton,
-                color: UIColor(red: 0.03, green: 0.09, blue: 0.04, alpha: 1)
+                color: RansomPalette.onBrand
             ),
-            primaryButtonBackgroundColor: UIColor(red: 0.42, green: 0.87, blue: 0.42, alpha: 1),
+            primaryButtonBackgroundColor: RansomPalette.brandDark,
             secondaryButtonLabel: ShieldConfiguration.Label(
                 text: ShieldCopy.secondaryButton,
                 color: UIColor(white: 1, alpha: 0.6)

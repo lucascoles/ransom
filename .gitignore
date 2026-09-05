@@ -1,0 +1,4 @@
+
+# Raw Claude Code session transcripts. Local only.
+# Large, and contain account IDs and signed asset URLs.
+.session-archive/

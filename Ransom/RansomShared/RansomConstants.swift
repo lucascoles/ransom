@@ -15,6 +15,15 @@ public enum RansomCore {
 
     public enum Key {
         public static let unlockExpiry = "ransom.unlock.expiry"
+        /// Minutes earned and not yet spent. Lives here rather than in the app
+        /// because the shield extension has to be able to spend from it.
+        public static let bankedMinutes = "ransom.bank.minutes"
+        /// Start of the day the bank was last touched, for the daily rollover.
+        public static let bankDay = "ransom.bank.day"
+        /// Minutes actually spent today. Earning and spending stopped being the
+        /// same event when the bank arrived, so they need separate counters.
+        public static let spentMinutes = "ransom.bank.spentMinutes"
+        public static let spentDay = "ransom.bank.spentDay"
         public static let unlockedTokens = "ransom.unlock.tokens"
         public static let pendingUnlockRequest = "ransom.unlock.pendingRequest"
         public static let pendingUnlockAppName = "ransom.unlock.pendingAppName"

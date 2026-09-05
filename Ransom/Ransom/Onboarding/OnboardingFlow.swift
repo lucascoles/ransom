@@ -7,8 +7,12 @@ struct OnboardingFlow: View {
     @Environment(ScreenTimeManager.self) private var screenTime
 
     @State private var draft = UserProfile.launchSeed ?? UserProfile()
-    @State private var step: OnboardingStep = OnboardingStep.launchStep ?? .welcome
+    @State private var step: OnboardingStep = OnboardingStep.launchStep ?? .coldOpen
     @State private var history: [OnboardingStep] = []
+    /// Lives here, not in the step, so stepping back and forward doesn't wipe a
+    /// "no" and re-ask the bedtime question. Only "yes" is recoverable from the
+    /// profile, since a "no" writes nothing to `peakTimes`.
+    @State private var scrollsInBed: Bool?
     @State private var isMovingForward = true
 
     var body: some View {
@@ -62,6 +66,9 @@ struct OnboardingFlow: View {
     @ViewBuilder
     private var content: some View {
         switch step {
+        case .coldOpen:
+            ColdOpenStep(onFinish: { advance(to: .welcome) })
+
         case .welcome:
             WelcomeStep(onStart: { advance(to: .name) })
 
@@ -72,10 +79,16 @@ struct OnboardingFlow: View {
             AppsStep(profile: $draft, onNext: { advance(to: .scrollLoad) })
 
         case .scrollLoad:
-            ScrollLoadStep(profile: $draft, onNext: { advance(to: .reality) })
+            ScrollLoadStep(profile: $draft, scrollsInBed: $scrollsInBed, onNext: { advance(to: .reality) })
 
         case .reality:
-            RealityCheckStep(profile: draft, onNext: { advance(to: .identity) })
+            RealityCheckStep(profile: draft, onNext: { advance(to: .projection) })
+
+        case .projection:
+            ProjectionStep(profile: draft, onNext: { advance(to: .screenGoal) })
+
+        case .screenGoal:
+            ScreenGoalStep(profile: $draft, onNext: { advance(to: .identity) })
 
         case .identity:
             IdentityStep(profile: $draft, onNext: { advance(to: .age) })
@@ -93,7 +106,10 @@ struct OnboardingFlow: View {
             ExercisesStep(profile: $draft, onNext: { advance(to: .intensity) })
 
         case .intensity:
-            IntensityStep(profile: $draft, onNext: { advance(to: .firstRep) })
+            IntensityStep(profile: $draft, onNext: { advance(to: .bank) })
+
+        case .bank:
+            BankExplainerStep(profile: draft, onNext: { advance(to: .firstRep) })
 
         case .firstRep:
             FirstRepStep(profile: draft, onNext: { advance(to: .notifications) })
@@ -140,6 +156,8 @@ struct OnboardingFlow: View {
 
 /// Each screen in the intake, in order. `progress` drives the top bar.
 enum OnboardingStep: Int, CaseIterable, Hashable {
+    // Three taps naming the problem, before anything is asked for.
+    case coldOpen
     case welcome
     case name
     // The confession comes first: the reality check only lands because the user
@@ -147,6 +165,10 @@ enum OnboardingStep: Int, CaseIterable, Hashable {
     case apps
     case scrollLoad
     case reality
+    // The number that changes the room, straight after they've named their hours.
+    case projection
+    // The goal lands while the cost of the current habit is still on screen.
+    case screenGoal
     case identity
     // Calibration sits after the hook, so it reads as building the fix rather
     // than filling in a form.
@@ -155,6 +177,9 @@ enum OnboardingStep: Int, CaseIterable, Hashable {
     case fitness
     case exercises
     case intensity
+    // The economy the pace buys into. The commitment itself now lives on the
+    // pace step, since a tier and its run are one decision.
+    case bank
     case firstRep
     // Asking here, right after they've earned something, is the one moment the
     // permission reads as Rex keeping his side of the deal rather than a tax.
@@ -165,15 +190,26 @@ enum OnboardingStep: Int, CaseIterable, Hashable {
 
     var showsChrome: Bool {
         switch self {
-        case .welcome, .building, .paywall, .firstRep: return false
+        case .coldOpen, .welcome, .building, .paywall, .firstRep: return false
         default: return true
         }
     }
 
+    /// Work already done before the bar appears.
+    ///
+    /// The cold open is three taps the user has genuinely made, and the welcome
+    /// screen a fourth — but neither shows chrome, so without this the bar surfaces
+    /// at the first question sitting near zero and the flow reads as though nothing
+    /// has happened yet. Crediting what they've actually done is both truer and
+    /// kinder: the first bar lands around a sixth of the way along instead of a
+    /// tenth. Raise it to flatter harder; the bar still reaches exactly 100% at the
+    /// paywall either way, because the credit is added to both halves.
+    private static let creditBeforeChrome = 1.0
+
     var progress: Double {
-        let total = Double(OnboardingStep.paywall.rawValue)
+        let total = Double(OnboardingStep.paywall.rawValue) + Self.creditBeforeChrome
         guard total > 0 else { return 0 }
-        return Double(rawValue) / total
+        return (Double(rawValue) + Self.creditBeforeChrome) / total
     }
 
     /// Opens the app on one named screen instead of the welcome step, so a

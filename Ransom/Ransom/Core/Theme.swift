@@ -28,7 +28,8 @@ extension Color {
     }
 }
 
-/// Ransom's palette. Warm paper, near-black ink, one loud green.
+/// Ransom's palette. Warm paper, near-black ink, and Rex's tangerine doing the
+/// brand's work. Green is a state, not a colour scheme.
 enum Palette {
     static let canvas     = Color.adaptive(light: 0xFBFAF6, dark: 0x0C0E0B)
     static let surface    = Color.adaptive(light: 0xFFFFFF, dark: 0x161A15)
@@ -66,6 +67,8 @@ enum Palette {
         static let gold      = Color(hex: 0xF7A83B)
     }
 
+    /// A fourth hue nothing in the post-purchase app should need: tangerine is the
+    /// brand, gold is the streak, green is earned time. Kept for the confetti mix.
     static let violet     = Color.adaptive(light: 0x6C5CE7, dark: 0x8B7CFF)
     static let danger     = Color.adaptive(light: 0xE23D3D, dark: 0xFF6B6B)
 
@@ -123,6 +126,22 @@ extension View {
     /// Scales a view down slightly while pressed. Applied to every tappable surface.
     func pressable(scale: CGFloat = 0.97) -> some View {
         buttonStyle(PressableButtonStyle(scale: scale))
+    }
+
+    /// `-RansomScrollBottom 1` opens a tab's scroll view already at the bottom, so a
+    /// screenshot run can see the cards below the fold without a UI-test target to
+    /// swipe for it. Debug builds only; a no-op everywhere else.
+    @ViewBuilder
+    func debugScrollAnchor() -> some View {
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "RansomScrollBottom") {
+            defaultScrollAnchor(.bottom)
+        } else {
+            self
+        }
+        #else
+        self
+        #endif
     }
 }
 

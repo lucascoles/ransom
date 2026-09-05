@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The receipts. Everything the user has paid, and what it bought them.
+/// The progress tab. Everything the user has done, and what it got them back.
 struct StatsView: View {
     @Environment(AppModel.self) private var model
 
@@ -50,33 +50,24 @@ struct StatsView: View {
                     columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
                     spacing: 12
                 ) {
-                    stat(value: "\(totalReps)", label: "reps paid", icon: "figure.strengthtraining.functional", tint: Palette.green)
+                    stat(value: "\(totalReps)", label: "reps done", icon: model.profile.primaryExercise.symbol, tint: Palette.brand)
                     stat(value: "\(Int(totalCalories))", label: "calories", icon: "flame.fill", tint: Palette.flame)
-                    stat(value: "\(records.count)", label: "sets", icon: "checkmark.seal.fill", tint: Palette.violet)
-                    stat(value: hoursEarned, label: "scroll earned", icon: "hourglass", tint: Palette.ink)
+                    stat(value: "\(records.count)", label: "sets", icon: "checkmark.seal.fill", tint: Palette.brand)
+                    stat(value: hoursEarned, label: "unlocked", icon: "lock.open.fill", tint: Palette.green)
                 }
 
-                breakdownCard
-
+                // An empty history already has a Rex line and a streak card saying
+                // so; two more empty boxes underneath would just be scolding.
                 if !model.history.isEmpty {
+                    breakdownCard
                     recentCard
                 }
             }
             .padding(.horizontal, Metrics.screenPadding)
             .padding(.bottom, 28)
         }
+        .debugScrollAnchor()
         .ransomScreenBackground()
-        .overlay {
-            if model.history.isEmpty {
-                ContentUnavailableView {
-                    Label("Nothing here yet", systemImage: "chart.bar.fill")
-                        .font(RansomFont.headline(18))
-                } description: {
-                    Text("Do one set and this fills up.")
-                        .font(RansomFont.body(15))
-                }
-            }
-        }
     }
 
     // MARK: - Derived
@@ -98,7 +89,7 @@ struct StatsView: View {
 
     // MARK: - Sections
 
-    /// The two numbers people actually stay subscribed for.
+    /// The two numbers people actually stay subscribed for: reps done, time back.
     private var lifetimeCard: some View {
         VStack(spacing: 16) {
             Text("LIFETIME")
@@ -123,10 +114,10 @@ struct StatsView: View {
                     .frame(width: 1, height: 46)
 
                 VStack(spacing: 2) {
-                    Text(model.lifetimeDaysSaved, format: .number.precision(.fractionLength(1)))
+                    Text(savedValue)
                         .font(RansomFont.display(42))
-                        .foregroundStyle(Palette.flame)
-                    Text("days saved")
+                        .foregroundStyle(Palette.green)
+                    Text(savedLabel)
                         .font(RansomFont.caption(13))
                         .foregroundStyle(Palette.inkSoft)
                 }
@@ -149,15 +140,27 @@ struct StatsView: View {
     private var lifetimeLine: String {
         let pushUps = model.lifetimePushUps
         if pushUps == 0 {
-            return "Nothing banked yet. First set changes that."
+            return "No sets yet. The first one is the hard one, and it's a short one."
         }
         return "\(pushUps.formatted()) push-ups you wouldn't have done otherwise. I counted every one."
+    }
+
+    /// "0.1 days" is technically right and means nothing. Under a day it reads
+    /// as hours and minutes; from a day on, days to one decimal.
+    private var savedValue: String {
+        let saved = model.lifetimeMinutesSaved
+        guard saved >= 24 * 60 else { return minutes(saved) }
+        return model.lifetimeDaysSaved.formatted(.number.precision(.fractionLength(1)))
+    }
+
+    private var savedLabel: String {
+        model.lifetimeMinutesSaved >= 24 * 60 ? "days back" : "back in your day"
     }
 
     /// Shows the arithmetic rather than asking for trust: what you used to scroll,
     /// what you actually scroll now, and the gap between them.
     private var savedDerivation: some View {
-        let baseline = Int((model.profile.scrollLoad ?? .medium).hoursPerDay * 60)
+        let baseline = model.baselineMinutes
         let now = model.averageEarnedMinutesPerDay
         let widest = max(baseline, 1)
 
@@ -165,7 +168,7 @@ struct StatsView: View {
             derivationBar(label: "Before Ransom", minutes: baseline, widest: widest, tint: Palette.inkFaint)
             derivationBar(label: "Now", minutes: now, widest: widest, tint: Palette.green)
 
-            Text("\(model.daysSinceStart) days × \(minutes(baseline - now)) saved a day")
+            Text("\(model.daysSinceStart) day\(model.daysSinceStart == 1 ? "" : "s") × \(minutes(baseline - now)) back a day")
                 .font(RansomFont.caption(12))
                 .foregroundStyle(Palette.inkSoft)
         }
@@ -182,9 +185,11 @@ struct StatsView: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Palette.surfaceAlt)
+                    // Clamped: on a day that beat the old baseline the bar
+                    // would otherwise run past its own track.
                     Capsule()
                         .fill(tint)
-                        .frame(width: max(6, geo.size.width * (Double(value) / Double(widest))))
+                        .frame(width: max(6, geo.size.width * min(1, Double(value) / Double(widest))))
                 }
             }
             .frame(height: 10)
@@ -207,15 +212,15 @@ struct StatsView: View {
                 RexImage(pose: model.streak > 2 ? .cheer : .idle, size: 92, isAlive: false)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 8) {
-                        Text("\(model.streak) day streak")
+                        Text(model.streak == 0 ? "No streak yet" : "\(model.streak) day streak")
                             .font(RansomFont.title(24))
                             .foregroundStyle(Palette.ink)
                         if model.bestStreak > model.streak {
                             Pill(
                                 text: "best \(model.bestStreak)",
                                 icon: "trophy.fill",
-                                tint: Palette.violet,
-                                background: Palette.surfaceAlt
+                                tint: Palette.flame,
+                                background: Palette.flameSoft
                             )
                         }
                     }
@@ -234,10 +239,10 @@ struct StatsView: View {
 
     private var streakLine: String {
         switch model.streak {
-        case 0:  return "Do one set today to start it."
+        case 0:  return "One set today starts it."
         case 1:  return "Day one. Come back tomorrow and it's a streak."
-        case 2...6: return "Rex is impressed. Barely."
-        default: return "\(model.totalReps) reps paid all time. That's real."
+        case 2...6: return "\(model.streak) days in a row. This is how habits start."
+        default: return "\(model.streak) days straight and \(model.totalReps.formatted()) reps all time. That's real."
         }
     }
 
@@ -258,7 +263,7 @@ struct StatsView: View {
 
     private var breakdownCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Where the reps went")
+            Text("By move")
                 .font(RansomFont.headline(16))
                 .foregroundStyle(Palette.ink)
 
@@ -271,9 +276,9 @@ struct StatsView: View {
                     HStack(spacing: 12) {
                         Image(systemName: item.exercise.symbol)
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Palette.green)
+                            .foregroundStyle(Palette.brand)
                             .frame(width: 30, height: 30)
-                            .background(Circle().fill(Palette.greenSoft))
+                            .background(Circle().fill(Palette.brandSoft))
 
                         Text(item.exercise.title)
                             .font(RansomFont.body(15))
@@ -313,7 +318,7 @@ struct StatsView: View {
                     if record.minutesGranted > 0 {
                         Pill(text: "+\(record.minutesGranted)m")
                     } else {
-                        Pill(text: "no unlock", tint: Palette.inkSoft, background: Palette.surfaceAlt)
+                        Pill(text: "stopped early", tint: Palette.inkSoft, background: Palette.surfaceAlt)
                     }
                 }
             }

@@ -10,10 +10,10 @@ public enum RexBadge {
         let bounds = CGRect(x: 0, y: 0, width: size, height: size)
         let renderer = UIGraphicsImageRenderer(size: bounds.size)
 
-        let skin = UIColor(red: 0.42, green: 0.82, blue: 0.35, alpha: 1)
-        let skinDark = UIColor(red: 0.12, green: 0.48, blue: 0.20, alpha: 1)
-        let crest = UIColor(red: 0.78, green: 0.95, blue: 0.31, alpha: 1)
-        let ink = UIColor(red: 0.08, green: 0.13, blue: 0.06, alpha: 1)
+        let skin = RansomPalette.Rex.body
+        let skinDark = RansomPalette.Rex.shadow
+        let crest = RansomPalette.Rex.gold
+        let ink = RansomPalette.onBrand
 
         return renderer.image { _ in
             let unit = size / 100
@@ -44,7 +44,7 @@ public enum RexBadge {
             head.stroke()
 
             // Snout highlight
-            UIColor(red: 0.91, green: 0.98, blue: 0.75, alpha: 1).setFill()
+            RansomPalette.Rex.belly.setFill()
             UIBezierPath(ovalIn: CGRect(
                 x: 28 * unit, y: 56 * unit, width: 44 * unit, height: 30 * unit
             )).fill()

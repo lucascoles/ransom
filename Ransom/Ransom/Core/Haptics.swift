@@ -10,6 +10,12 @@ enum Haptics {
         UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.6)
     }
 
+    /// The lightest tap there is, for a value ticking past under a finger — a
+    /// slider or a stepper. Anything heavier turns a drag into a drum roll.
+    static func tick() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.3)
+    }
+
     static func select() {
         UISelectionFeedbackGenerator().selectionChanged()
     }

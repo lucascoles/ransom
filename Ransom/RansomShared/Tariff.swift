@@ -72,16 +72,19 @@ public struct Tariff: Sendable {
         /// One short line explaining the price, or nil when it's just the base rate.
         public var explanation: String? {
             if earnedCoolDown && isSurcharged {
-                return "\(ordinal(unlockNumber)) today — the break earned you a tier back."
+                return "\(ordinal(unlockNumber)) unlock today. Your break knocked a step off."
             }
             guard isSurcharged else { return nil }
+            if isAtCap {
+                return "\(ordinal(unlockNumber)) unlock today. Top of the ladder, it goes no higher."
+            }
             if isLateNight && unlockNumber >= 3 {
-                return "\(ordinal(unlockNumber)) today, and it's late."
+                return "\(ordinal(unlockNumber)) unlock today, and it's late. A few extra reps."
             }
             if isLateNight {
-                return "Late-night rate."
+                return "Late-night set. A few extra reps this time."
             }
-            return "\(ordinal(unlockNumber)) today. Price went up."
+            return "\(ordinal(unlockNumber)) unlock today. A few extra reps this time."
         }
 
         private func ordinal(_ value: Int) -> String {

@@ -16,7 +16,7 @@ struct AppPickerView: View {
                 FamilyActivityPicker(selection: $draft)
             }
             .background(Palette.canvas)
-            .navigationTitle("Choose apps")
+            .navigationTitle("Your apps")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -30,7 +30,7 @@ struct AppPickerView: View {
                         dismiss()
                     }
                     .font(RansomFont.headline(16))
-                    .foregroundStyle(Palette.green)
+                    .foregroundStyle(Palette.brand)
                 }
             }
             .onAppear { draft = screenTime.selection }
@@ -40,7 +40,7 @@ struct AppPickerView: View {
     private var header: some View {
         HStack(alignment: .top, spacing: 12) {
             RexImage(pose: .coach, size: 76, isAlive: false)
-            Text("Pick the apps you want to have to earn. Rex will guard every one of them.")
+            Text("Pick the apps that should take a set to open. Everything else stays exactly as it is.")
                 .font(RansomFont.body(14))
                 .foregroundStyle(Palette.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)

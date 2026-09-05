@@ -68,11 +68,31 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		1A0000000000000000000010 /* Ransom */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Ransom; sourceTree = "<group>"; };
-		1A0000000000000000000011 /* RansomShared */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = RansomShared; sourceTree = "<group>"; };
-		1A0000000000000000000012 /* RansomShield */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = RansomShield; sourceTree = "<group>"; };
-		1A0000000000000000000013 /* RansomShieldAction */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = RansomShieldAction; sourceTree = "<group>"; };
-		1A0000000000000000000014 /* RansomMonitor */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = RansomMonitor; sourceTree = "<group>"; };
+		1A0000000000000000000010 /* Ransom */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Ransom;
+			sourceTree = "<group>";
+		};
+		1A0000000000000000000011 /* RansomShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = RansomShared;
+			sourceTree = "<group>";
+		};
+		1A0000000000000000000012 /* RansomShield */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = RansomShield;
+			sourceTree = "<group>";
+		};
+		1A0000000000000000000013 /* RansomShieldAction */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = RansomShieldAction;
+			sourceTree = "<group>";
+		};
+		1A0000000000000000000014 /* RansomMonitor */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = RansomMonitor;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -187,8 +207,8 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				1A0000000000000000000012 /* RansomShield */,
 				1A0000000000000000000011 /* RansomShared */,
+				1A0000000000000000000012 /* RansomShield */,
 			);
 			name = RansomShield;
 			productName = RansomShield;
@@ -208,8 +228,8 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				1A0000000000000000000013 /* RansomShieldAction */,
 				1A0000000000000000000011 /* RansomShared */,
+				1A0000000000000000000013 /* RansomShieldAction */,
 			);
 			name = RansomShieldAction;
 			productName = RansomShieldAction;
@@ -229,8 +249,8 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				1A0000000000000000000014 /* RansomMonitor */,
 				1A0000000000000000000011 /* RansomShared */,
+				1A0000000000000000000014 /* RansomMonitor */,
 			);
 			name = RansomMonitor;
 			productName = RansomMonitor;

@@ -53,6 +53,79 @@ public struct UnlockLedger {
         expiry = nil
     }
 
+    // MARK: - The minute bank
+
+    /// Minutes earned and not yet spent.
+    ///
+    /// The bank is what separates earning from spending. Under the old model a set
+    /// bought one unlock right now, so exercising was only ever worth doing at the
+    /// moment you were already blocked and already annoyed. Banking means a walk at
+    /// lunchtime is worth something at nine in the evening, which is the only way
+    /// the exercise becomes a habit rather than a toll.
+    /// Cleared at midnight, deliberately.
+    ///
+    /// A balance that carries forever turns into a stockpile: a keen first week
+    /// funds a month of scrolling, and the exercise stops being a daily habit and
+    /// becomes a chore you front-load and then coast on. Use it or lose it keeps
+    /// the deal the same every morning.
+    ///
+    /// The rollover is read on access rather than run by a timer, so a phone that
+    /// slept through midnight still wakes to an empty bank.
+    public var bankedMinutes: Int {
+        get {
+            guard let day = defaults.object(forKey: RansomCore.Key.bankDay) as? Date,
+                  Calendar.current.isDateInToday(day) else { return 0 }
+            return defaults.integer(forKey: RansomCore.Key.bankedMinutes)
+        }
+        nonmutating set {
+            defaults.set(max(0, newValue), forKey: RansomCore.Key.bankedMinutes)
+            defaults.set(Date(), forKey: RansomCore.Key.bankDay)
+        }
+    }
+
+    /// Minutes spent from the bank today.
+    ///
+    /// Read by the daily screen-time target, which is about consumption. Before
+    /// the bank existed a set granted its own minutes immediately, so "earned
+    /// today" and "spent today" were the same number and one counter did both
+    /// jobs. They are now entirely different quantities: someone can bank two
+    /// hours on a long walk and spend none of it.
+    public var spentMinutesToday: Int {
+        get {
+            guard let day = defaults.object(forKey: RansomCore.Key.spentDay) as? Date,
+                  Calendar.current.isDateInToday(day) else { return 0 }
+            return defaults.integer(forKey: RansomCore.Key.spentMinutes)
+        }
+        nonmutating set {
+            defaults.set(max(0, newValue), forKey: RansomCore.Key.spentMinutes)
+            defaults.set(Date(), forKey: RansomCore.Key.spentDay)
+        }
+    }
+
+    /// Minutes earned go here rather than straight into an unlock.
+    public func bank(minutes: Int) {
+        guard minutes > 0 else { return }
+        bankedMinutes += minutes
+    }
+
+    /// Debits the bank and reports what it actually took, which is less than
+    /// asked for when the balance is short.
+    ///
+    /// It deliberately does **not** start the clock. Granting belongs to
+    /// `ScreenTimeManager.grantEarnedTime`, which also lifts the shield, restarts
+    /// monitoring and schedules the reminder — and callers have to invoke that
+    /// anyway. When this granted as well, the two stacked and a fifteen-minute
+    /// spend opened the apps for thirty. The same mistake was made once before
+    /// with `completeSet`; the comment there records it too.
+    @discardableResult
+    public func spend(minutes: Int) -> Int {
+        let spent = min(max(0, minutes), bankedMinutes)
+        guard spent > 0 else { return 0 }
+        bankedMinutes -= spent
+        spentMinutesToday += spent
+        return spent
+    }
+
     // MARK: - Unlock requests from the shield
 
     /// Set by the shield action extension when the user taps "Earn Time" on a blocked
@@ -128,17 +201,6 @@ public struct UnlockLedger {
         nonmutating set { defaults.set(newValue, forKey: RansomCore.Key.nightSurcharge) }
     }
 
-    /// What the next unlock costs right now. The shield and the app both price
-    /// from here, so they can never disagree.
-    public func currentQuote(now: Date = Date()) -> Tariff.Quote {
-        Tariff.quote(
-            base: repsPerUnlock,
-            unlocksToday: unlocksToday,
-            lastUnlockAt: lastUnlockAt,
-            nightSurchargeEnabled: nightSurchargeEnabled,
-            now: now
-        )
-    }
 
     /// Days since the epoch — a cheap, timezone-local day identity.
     private static func dayStamp(_ date: Date = Date(), calendar: Calendar = .current) -> Int {

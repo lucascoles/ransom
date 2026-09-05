@@ -21,15 +21,15 @@ struct FlowChips<Option: Hashable & Identifiable>: View {
                 } label: {
                     Text(label(option))
                         .font(RansomFont.caption(14))
-                        .foregroundStyle(isSelected ? Palette.green : Palette.inkSoft)
+                        .foregroundStyle(isSelected ? Palette.brand : Palette.inkSoft)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
                         .background(
-                            Capsule().fill(isSelected ? Palette.greenSoft : Palette.surfaceAlt)
+                            Capsule().fill(isSelected ? Palette.brandSoft : Palette.surfaceAlt)
                         )
                         .overlay(
                             Capsule().strokeBorder(
-                                isSelected ? Palette.green : Color.clear,
+                                isSelected ? Palette.brand : Color.clear,
                                 lineWidth: 1.5
                             )
                         )

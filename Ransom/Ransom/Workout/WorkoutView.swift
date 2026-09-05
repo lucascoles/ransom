@@ -1,6 +1,15 @@
 import SwiftUI
 
 /// The set. Full screen, no chrome, one job: count reps and make it feel good.
+///
+/// The camera counts push-ups, because a pose-checked rep is the only kind that
+/// can't be faked. Everything else — another movement, a refused camera, no camera
+/// at all — falls through to the sensor engine, so the user is never stuck.
+///
+/// There is deliberately **no tap-to-count**. It was there as a safety net, but a
+/// button that adds a rep for free undoes the entire point of watching the body:
+/// the honest count and the free one sit on the same screen, and the free one
+/// always wins.
 struct WorkoutView: View {
     var exercise: Exercise
     var target: Int
@@ -11,16 +20,45 @@ struct WorkoutView: View {
     @Environment(ScreenTimeManager.self) private var screenTime
     @Environment(\.dismiss) private var dismiss
 
-    @State private var engine: RepEngine
+    @State private var pose: PoseRepCounter
+    /// Created only once the camera has been ruled out.
+    @State private var fallback: RepEngine?
     @State private var countdown: Int? = 3
     @State private var showCompletion = false
     @State private var grantedMinutes = 0
+
+    /// `-RansomDebugHUD 1` shows the detector readout under the camera.
+    private var showsDiagnostics: Bool {
+        #if DEBUG
+        return UserDefaults.standard.bool(forKey: "RansomDebugHUD")
+        #else
+        return false
+        #endif
+    }
 
     init(exercise: Exercise, target: Int, trigger: String? = nil) {
         self.exercise = exercise
         self.target = target
         self.trigger = trigger
-        _engine = State(initialValue: RepEngine(exercise: exercise, target: target))
+        _pose = State(initialValue: PoseRepCounter(exercise: exercise, target: target))
+    }
+
+    // MARK: - Unified counter surface
+    //
+    // The screen shouldn't care which counter is running. These read from the
+    // fallback when it exists and the camera otherwise.
+
+    private var usingCamera: Bool { fallback == nil }
+    private var reps: Int { fallback?.reps ?? pose.reps }
+    private var depth: Double { fallback?.depth ?? pose.depth }
+    private var progress: Double { fallback?.progress ?? pose.progress }
+    private var elapsedSeconds: Int { fallback?.elapsedSeconds ?? pose.elapsedSeconds }
+    private var formHint: String? { fallback?.formHint ?? pose.formHint }
+
+    /// True once the camera session is up, which is when the self-view has
+    /// something to show.
+    private var cameraIsLive: Bool {
+        usingCamera && pose.tracking != .idle && !pose.isBlocked
     }
 
     var body: some View {
@@ -30,9 +68,14 @@ struct WorkoutView: View {
             if showCompletion {
                 WorkoutCompleteView(
                     exercise: exercise,
-                    reps: engine.reps,
+                    reps: reps,
                     minutes: grantedMinutes,
                     trigger: trigger,
+                    onUseNow: {
+                        let spent = model.spendFromBank(minutes: grantedMinutes)
+                        if spent > 0 { screenTime.grantEarnedTime(minutes: spent) }
+                        dismiss()
+                    },
                     onDone: { dismiss() }
                 )
                 .transition(.asymmetric(
@@ -44,12 +87,23 @@ struct WorkoutView: View {
             }
 
             if let countdown {
-                CountdownOverlay(value: countdown)
+                CountdownOverlay(value: countdown, exercise: exercise)
             }
         }
         .statusBarHidden(!showCompletion)
+        .animation(.easeInOut(duration: 0.3), value: cameraIsLive)
         .onAppear(perform: runCountdown)
-        .onChange(of: engine.phase) { _, phase in
+        .onDisappear { pose.cancel() }
+        // The camera ruling itself out is what promotes the sensor engine. Doing
+        // it here rather than up front means the user is never asked to choose,
+        // and never sees a permission prompt they can't act on.
+        .onChange(of: pose.isBlocked) { _, blocked in
+            if blocked, fallback == nil { startFallback() }
+        }
+        .onChange(of: pose.phase) { _, phase in
+            if phase == .finished { finish() }
+        }
+        .onChange(of: fallback?.phase) { _, phase in
             if phase == .finished { finish() }
         }
     }
@@ -62,16 +116,93 @@ struct WorkoutView: View {
 
             Spacer(minLength: 0)
 
+            if cameraIsLive {
+                cameraLayout
+            } else {
+                sensorLayout
+            }
+
+            Text(hintText)
+                .font(RansomFont.body(14))
+                .foregroundStyle(Palette.inkSoft)
+                .multilineTextAlignment(.center)
+                .frame(height: 42)
+                .padding(.horizontal, 36)
+                .padding(.top, 12)
+                .animation(.easeInOut, value: hintText)
+
+            Spacer(minLength: 0)
+
+            footer
+        }
+    }
+
+    /// The camera layout puts the count on the video, where the user is already
+    /// looking, and leaves the progress to a thin bar underneath.
+    private var cameraLayout: some View {
+        VStack(spacing: 16) {
+            // Feedback takes the headline whenever there is any.
+            //
+            // Read from the floor, mid-push-up, at arm's length and often upside
+            // down in the eyeline: small grey text under the video is invisible
+            // exactly when it matters. "Go!" is decoration by comparison, and the
+            // reason a rep didn't count is the most important thing on the screen
+            // the moment it exists.
+            Text(headline)
+                .font(RansomFont.title(hasFeedback ? 30 : 26))
+                .foregroundStyle(hasFeedback ? Palette.danger : Palette.ink)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 24)
+                .frame(minHeight: 74)
+                .contentTransition(.opacity)
+                .animation(.easeInOut(duration: 0.15), value: headline)
+
+            CameraWindow(
+                session: pose.previewSession,
+                pose: pose.poseFrame,
+                reps: reps,
+                target: target,
+                status: cameraStatus
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .strokeBorder(borderColour ?? .clear, lineWidth: borderColour == nil ? 0 : 4)
+            )
+            .animation(.easeInOut(duration: 0.2), value: borderColour)
+            .padding(.horizontal, Metrics.screenPadding)
+
+            StepProgressBar(progress: progress)
+                .padding(.horizontal, Metrics.screenPadding + 6)
+
+            #if DEBUG
+            // What the detector is actually seeing. Off by default - it's noise
+            // under the camera for anyone not debugging - but one launch flag
+            // away, because tuning rep detection without it is guesswork, and
+            // reading these numbers off a screen recording is how the counter got
+            // fixed. Never ships either way.
+            if showsDiagnostics, let diagnostics = pose.diagnostics {
+                Text(diagnostics)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Palette.inkFaint)
+            }
+            #endif
+        }
+    }
+
+    /// No camera: the original ring, counter and Rex.
+    private var sensorLayout: some View {
+        VStack(spacing: 0) {
             ZStack {
-                ProgressRing(progress: engine.progress, lineWidth: 14)
+                ProgressRing(progress: progress, lineWidth: 14)
                     .frame(width: 300, height: 300)
 
                 VStack(spacing: -6) {
-                    Text("\(engine.reps)")
+                    Text("\(reps)")
                         .font(RansomFont.counter(110))
                         .foregroundStyle(Palette.ink)
-                        .contentTransition(.numericText(value: Double(engine.reps)))
-                        .animation(.snappy(duration: 0.2), value: engine.reps)
+                        .contentTransition(.numericText(value: Double(reps)))
+                        .animation(.snappy(duration: 0.2), value: reps)
                     Text("of \(target)")
                         .font(RansomFont.headline(19))
                         .foregroundStyle(Palette.inkSoft)
@@ -79,33 +210,61 @@ struct WorkoutView: View {
             }
             .padding(.bottom, 4)
 
-            RexImage(pose: .pushUp(down: engine.depth > 0.5), size: 168, depth: engine.depth)
-                .padding(.top, -8)
-
-            Text(engine.formHint ?? exercise.coachingCue)
-                .font(RansomFont.body(14))
-                .foregroundStyle(Palette.inkSoft)
-                .multilineTextAlignment(.center)
-                .frame(height: 40)
-                .padding(.horizontal, 40)
-                .animation(.easeInOut, value: engine.formHint)
-
-            Spacer(minLength: 0)
-
-            footer
+            // The push-up frames share the standing poses' portrait canvas, so
+            // Rex lies in the bottom third of it and the top is empty. Pulling
+            // him up closes what otherwise reads as a hole under the ring.
+            RexImage(pose: .pushUp(down: depth > 0.5), size: 168, depth: depth)
+                .padding(.top, -72)
         }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            // Tap anywhere is always a valid rep — sensors assist, they don't gate.
-            engine.registerManualRep()
+    }
+
+    /// Only the states the user can act on. "Tracking" needs no label — the
+    /// skeleton on their body already says it.
+    private var cameraStatus: String? {
+        switch pose.tracking {
+        case .searching:   return "Looking for you…"
+        case .calibrating: return "Hold still at the top, arms straight, and Rex will start counting."
+        default:           return nil
         }
+    }
+
+    /// True while there is something to say about the last rep.
+    private var hasFeedback: Bool { usingCamera && formHint != nil }
+
+    /// The frame's own status light: green while it is counting cleanly, red the
+    /// moment a rep is refused, nothing while it is still looking for you.
+    ///
+    /// The green matters as much as the red. Without it the border only ever
+    /// appears to deliver bad news, so its absence has to carry "everything is
+    /// fine" - and absence is not something anyone reads mid-rep. A colour that
+    /// is always saying something is legible at a glance from the floor.
+    private var borderColour: Color? {
+        guard usingCamera else { return nil }
+        if hasFeedback { return Palette.danger }
+        return pose.tracking == .tracking ? Palette.green : nil
+    }
+
+    private var headline: String {
+        if let formHint { return formHint }
+        return pose.tracking == .tracking ? "Go!" : "Get set"
+    }
+
+    /// Form correction first, then whatever the user most needs to hear: how to
+    /// set the phone up, or the movement cue for the sensor path.
+    private var hintText: String {
+        // Deliberately not the form hint: that has the headline now, and printing
+        // it twice on one screen reads as a stutter.
+        guard usingCamera else { return formHint ?? exercise.coachingCue }
+        if case let .blocked(reason) = pose.tracking { return reason }
+        return exercise.cameraCue
     }
 
     private var header: some View {
         HStack {
             Button {
                 Haptics.tap()
-                engine.cancel()
+                pose.cancel()
+                fallback?.cancel()
                 dismiss()
             } label: {
                 Image(systemName: "xmark")
@@ -136,16 +295,25 @@ struct WorkoutView: View {
 
     private var footer: some View {
         VStack(spacing: 10) {
-            Text("Tap the screen if a rep doesn't register")
+            Text(footerNote)
                 .font(RansomFont.caption(12))
                 .foregroundStyle(Palette.inkFaint)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, Metrics.screenPadding)
 
-            SecondaryButton(title: "Stop the set", icon: "stop.fill") {
-                engine.stop()
+            SecondaryButton(title: "Stop here", icon: "stop.fill") {
+                if let fallback { fallback.stop() } else { pose.stop() }
             }
             .padding(.horizontal, Metrics.screenPadding)
         }
         .padding(.bottom, 24)
+    }
+
+    /// Says what's counting. Users forgive a missed rep; they don't forgive not
+    /// knowing whether the thing is even watching.
+    private var footerNote: String {
+        guard usingCamera else { return "Counting with the phone's sensors" }
+        return pose.tracking == .tracking ? "Rex is counting. Nothing is recorded." : "Nothing is recorded or uploaded"
     }
 
     // MARK: - Flow
@@ -160,34 +328,43 @@ struct WorkoutView: View {
                     } else {
                         countdown = nil
                         Haptics.select()
-                        engine.start()
+                        Task { await pose.start() }
                     }
                 }
             }
         }
     }
 
+    /// Promotes the sensor engine when the camera can't run.
+    private func startFallback() {
+        let engine = RepEngine(exercise: exercise, target: target)
+        fallback = engine
+        engine.start()
+    }
+
     private func finish() {
         guard !showCompletion else { return }
         // A stopped-early set still counts — partial credit beats a rage quit,
         // but no time is granted unless the target was met.
-        let earnedFullSet = engine.reps >= target
+        let earnedFullSet = reps >= target
 
         if earnedFullSet {
             grantedMinutes = model.completeSet(
                 exercise: exercise,
-                reps: engine.reps,
-                duration: engine.elapsedSeconds,
+                reps: reps,
+                duration: elapsedSeconds,
                 trigger: trigger
             )
-            screenTime.grantEarnedTime(minutes: grantedMinutes)
+            // Banked, not spent. Granting here was what made finishing a set open
+            // the apps whether or not that was wanted, and turned every set into a
+            // countdown the user hadn't asked to start.
             Haptics.celebrate()
-        } else if engine.reps > 0 {
+        } else if reps > 0 {
             model.history.append(
                 WorkoutRecord(
                     exercise: exercise,
-                    reps: engine.reps,
-                    durationSeconds: engine.elapsedSeconds,
+                    reps: reps,
+                    durationSeconds: elapsedSeconds,
                     minutesGranted: 0,
                     trigger: trigger
                 )
@@ -205,6 +382,7 @@ struct WorkoutView: View {
 /// The 3–2–1 that gets you into position.
 private struct CountdownOverlay: View {
     var value: Int
+    var exercise: Exercise
 
     var body: some View {
         ZStack {
@@ -213,12 +391,16 @@ private struct CountdownOverlay: View {
                 RexImage(pose: .coach, size: 150)
                 Text("\(value)")
                     .font(RansomFont.counter(96))
-                    .foregroundStyle(Palette.green)
+                    .foregroundStyle(Palette.brand)
                     .id(value)
                     .transition(.scale(scale: 0.5).combined(with: .opacity))
-                Text("Get into position")
+                // The setup instruction belongs here, before the set starts —
+                // once you're mid-push-up it's too late to move the phone.
+                Text(exercise.cameraCue)
                     .font(RansomFont.headline(17))
                     .foregroundStyle(Palette.inkSoft)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 44)
             }
         }
         .transition(.opacity)

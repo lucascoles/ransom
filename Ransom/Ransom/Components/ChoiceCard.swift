@@ -21,13 +21,13 @@ struct ChoiceCard: View {
                 if let emoji {
                     Text(emoji).font(.system(size: 26))
                         .frame(width: 44, height: 44)
-                        .background(Circle().fill(isSelected ? Palette.greenSoft : Palette.surfaceAlt))
+                        .background(Circle().fill(isSelected ? Palette.brandSoft : Palette.surfaceAlt))
                 } else if let icon {
                     Image(systemName: icon)
                         .font(.system(size: 19, weight: .semibold))
-                        .foregroundStyle(isSelected ? Palette.green : Palette.inkSoft)
+                        .foregroundStyle(isSelected ? Palette.brand : Palette.inkSoft)
                         .frame(width: 44, height: 44)
-                        .background(Circle().fill(isSelected ? Palette.greenSoft : Palette.surfaceAlt))
+                        .background(Circle().fill(isSelected ? Palette.brandSoft : Palette.surfaceAlt))
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
@@ -48,11 +48,11 @@ struct ChoiceCard: View {
                 if allowsMultiple {
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 22))
-                        .foregroundStyle(isSelected ? Palette.green : Palette.hairline)
+                        .foregroundStyle(isSelected ? Palette.brand : Palette.hairline)
                 } else if isSelected {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 22))
-                        .foregroundStyle(Palette.green)
+                        .foregroundStyle(Palette.brand)
                 }
             }
             .padding(.horizontal, 16)
@@ -60,11 +60,11 @@ struct ChoiceCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
-                    .fill(isSelected ? Palette.greenSoft : Palette.surface)
+                    .fill(isSelected ? Palette.brandSoft : Palette.surface)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
-                    .strokeBorder(isSelected ? Palette.green : Palette.hairline, lineWidth: isSelected ? 2 : 1)
+                    .strokeBorder(isSelected ? Palette.brand : Palette.hairline, lineWidth: isSelected ? 2 : 1)
             )
         }
         .pressable(scale: 0.98)

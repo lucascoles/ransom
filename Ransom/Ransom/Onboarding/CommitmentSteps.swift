@@ -4,18 +4,19 @@ import SwiftUI
 
 /// Replaces the old goals checklist.
 ///
-/// Six checkboxes generated data nobody used and no feeling. One first-person
-/// sentence the user has to agree is about them is a different object entirely —
-/// and unlike the checklist, this one is quoted back on the plan screen and the
-/// paywall, which is the only thing that makes it worth a screen.
+/// Six checkboxes generated data nobody used and no feeling. One short goal in the
+/// user's own words is a different object: it is quoted back on the plan screen and
+/// on the paywall, which is the only thing that makes it worth a screen. Keep the
+/// options one line each. The long version of this screen read like a personality
+/// quiz and nobody finished the sentences.
 struct IdentityStep: View {
     @Binding var profile: UserProfile
     var onNext: () -> Void
 
     var body: some View {
         StepScaffold(
-            title: "Finish the sentence",
-            subtitle: "Pick the one that's most true. Rex will hold you to it.",
+            title: "What are we going for?",
+            subtitle: "Pick the one that matters most. Rex keeps it in mind.",
             showsButton: false,
             onNext: onNext
         ) {
@@ -40,9 +41,12 @@ struct IdentityStep: View {
 /// The only screen in the funnel where the user moves.
 ///
 /// Everything before this is a form; the plan that follows is a forecast. Doing
-/// five push-ups on the floor turns it into an extrapolation of something they
-/// actually did, and it surfaces a broken sensor before the charge rather than
-/// after it.
+/// five reps on the spot turns it into an extrapolation of something they actually
+/// did, and it surfaces a broken sensor before the charge rather than after it.
+///
+/// The movement is whatever they picked on the exercises step, so the coaching cue,
+/// the pose and the button all read off `profile.primaryExercise`. Quoting push-ups
+/// at someone who chose squats is the fastest way to look like a template.
 ///
 /// Deliberately not gated: the skip path is one line, no scolding. A funnel that
 /// punishes you for not doing push-ups in a shop doorway deserves the uninstall.
@@ -50,26 +54,74 @@ struct FirstRepStep: View {
     var profile: UserProfile
     var onNext: () -> Void
 
-    @State private var reps = 0
-    @State private var isCounting = false
+    @State private var counter: PoseRepCounter
     @State private var finished = false
+    @State private var isCounting = false
 
-    private let target = 5
+    private static let target = 5
     private var plan: RansomPlan { RansomPlan.make(from: profile) }
+    private var exercise: Exercise { profile.primaryExercise }
+
+    init(profile: UserProfile, onNext: @escaping () -> Void) {
+        self.profile = profile
+        self.onNext = onNext
+        _counter = State(initialValue: PoseRepCounter(exercise: profile.primaryExercise,
+                                                      target: FirstRepStep.target))
+    }
+
+    private var target: Int { FirstRepStep.target }
+    private var reps: Int { counter.reps }
+
+    /// The camera is up and has something to show. When it isn't — permission
+    /// refused, or no camera — the screen falls back to Rex and taps, exactly as
+    /// the set screen does, so the intake never dead-ends.
+    private var cameraIsLive: Bool {
+        isCounting && !counter.isBlocked && counter.tracking != .idle
+    }
+
+    /// Rex only has push-up frames, so he mimes along for push-ups and coaches for
+    /// everything else rather than doing the wrong movement on screen.
+    private var pose: RexPose {
+        if finished { return .cheer }
+        guard isCounting else { return .coach }
+        return exercise == .pushUps ? .pushUp(down: counter.depth > 0.5) : .flex
+    }
+
+    private var isFloorMovement: Bool { exercise == .pushUps }
 
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
 
-            RexImage(pose: finished ? .cheer : (isCounting ? .pushUp(down: reps % 2 == 1) : .coach), size: 150)
-
-            if !isCounting && !finished {
-                intro
-            } else if finished {
-                payoff
-            } else {
-                counter
+            // Fixed slot on purpose. The camera window and Rex are different
+            // heights, and this view has springs on it — without a reserved height
+            // the swap animates the whole column and the preview appears to lurch.
+            ZStack {
+                if cameraIsLive && !finished {
+                    CameraWindow(
+                        session: counter.previewSession,
+                        pose: counter.poseFrame,
+                        reps: reps,
+                        target: target,
+                        status: cameraStatus
+                    )
+                    .frame(maxWidth: 240)
+                } else {
+                    RexImage(pose: pose, size: 150)
+                }
             }
+            .frame(height: 320)
+
+            Group {
+                if !isCounting && !finished {
+                    intro
+                } else if finished {
+                    payoff
+                } else {
+                    counterReadout
+                }
+            }
+            .frame(height: 132, alignment: .top)
 
             Spacer()
 
@@ -78,14 +130,23 @@ struct FirstRepStep: View {
         .padding(.horizontal, Metrics.screenPadding)
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isCounting)
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: finished)
+        .animation(.easeInOut(duration: 0.25), value: cameraIsLive)
+        .onDisappear { counter.cancel() }
+        .onChange(of: counter.reps) { _, count in
+            guard count >= target, !finished else { return }
+            finished = true
+            counter.stop()
+            Haptics.celebrate()
+        }
     }
 
     private var intro: some View {
         VStack(spacing: 10) {
-            Text("Five. Right now.")
+            Text("Let's try \(target) \(exercise.title.lowercased()).")
                 .font(RansomFont.title(28))
                 .foregroundStyle(Palette.ink)
-            Text("Not for scroll time. Just so we both know you can.")
+                .multilineTextAlignment(.center)
+            Text("Nothing to unlock yet. Just a warm-up, so you can feel how it works.")
                 .font(RansomFont.body(16))
                 .foregroundStyle(Palette.inkSoft)
                 .multilineTextAlignment(.center)
@@ -94,29 +155,54 @@ struct FirstRepStep: View {
         .padding(.top, 8)
     }
 
-    private var counter: some View {
+    private var counterReadout: some View {
         VStack(spacing: 6) {
-            Text("\(reps)")
-                .font(RansomFont.counter(84))
-                .foregroundStyle(Palette.ink)
-                .contentTransition(.numericText(value: Double(reps)))
-            Text("of \(target)")
-                .font(RansomFont.headline(18))
-                .foregroundStyle(Palette.inkSoft)
-            Text("Phone on the floor. We'll wait.")
+            // With the camera up the count is drawn on the video itself; without
+            // it there's no self-view to put it on, so it goes here.
+            if !cameraIsLive {
+                Text("\(reps)")
+                    .font(RansomFont.counter(84))
+                    .foregroundStyle(Palette.ink)
+                    .contentTransition(.numericText(value: Double(reps)))
+                    .animation(.snappy(duration: 0.2), value: reps)
+                Text("of \(target)")
+                    .font(RansomFont.headline(18))
+                    .foregroundStyle(Palette.inkSoft)
+            }
+            Text(hintText)
                 .font(RansomFont.body(14))
                 .foregroundStyle(Palette.inkFaint)
-                .padding(.top, 6)
+                .multilineTextAlignment(.center)
+                .frame(height: 40)
+                .padding(.horizontal, 12)
+                .animation(.easeInOut, value: hintText)
         }
         .padding(.top, 8)
     }
 
+    /// Form correction first, then the setup instruction for whichever counter is
+    /// actually running. The sensor cue tells you to put the phone under your
+    /// chest, which is the wrong advice entirely when the camera is watching.
+    private var cameraStatus: String? {
+        switch counter.tracking {
+        case .searching:   return "Looking for you…"
+        case .calibrating: return "Hold still at the top to start"
+        default:           return nil
+        }
+    }
+
+    private var hintText: String {
+        if let hint = counter.formHint { return hint }
+        if case let .blocked(reason) = counter.tracking { return reason }
+        return counter.isBlocked ? exercise.coachingCue : exercise.cameraCue
+    }
+
     private var payoff: some View {
         VStack(spacing: 10) {
-            Text("That's one.")
+            Text("First set done!")
                 .font(RansomFont.title(28))
                 .foregroundStyle(Palette.ink)
-            Text("There's about \(plan.firstMonthReps.formatted()) more in your first month.")
+            Text("Nice work. Month one is about \(plan.firstMonthReps.formatted()) more, \(plan.repsPerUnlock) at a time. You just did the hardest ones.")
                 .font(RansomFont.body(16))
                 .foregroundStyle(Palette.inkSoft)
                 .multilineTextAlignment(.center)
@@ -131,26 +217,17 @@ struct FirstRepStep: View {
             if finished {
                 PrimaryButton(title: "Build my plan", action: onNext)
             } else if isCounting {
-                PrimaryButton(title: reps >= target ? "Done" : "Count a rep") {
-                    if reps >= target {
-                        finished = true
-                        Haptics.celebrate()
-                    } else {
-                        reps += 1
-                        Haptics.rep()
-                        if reps >= target {
-                            finished = true
-                            Haptics.celebrate()
-                        }
-                    }
-                }
+                // Nothing to press: the camera is the counter. The skip stays,
+                // so a camera that can't see you never traps anyone in intake.
+                TextButton(title: "Skip for now") { onNext() }
             } else {
-                PrimaryButton(title: "I'm on the floor") {
+                PrimaryButton(title: isFloorMovement ? "I'm on the floor" : "I'm up, let's go") {
                     isCounting = true
                     Haptics.tap()
+                    Task { await counter.start() }
                 }
                 // No scolding on the way past. The floor is still there later.
-                TextButton(title: "Not here") { onNext() }
+                TextButton(title: "Maybe later") { onNext() }
             }
         }
         .padding(.bottom, 28)

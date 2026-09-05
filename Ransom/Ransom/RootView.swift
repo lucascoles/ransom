@@ -9,8 +9,18 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var workoutRequest: WorkoutRequest?
-    @State private var selectedTab = 0
+    @State private var selectedTab = RootView.startingTab()
     @State private var hasWiredDarwinObserver = false
+
+    /// `-RansomTab 1` opens straight onto Progress, `2` onto Settings. Lets a
+    /// screenshot run reach every tab without a UI-test target. Debug builds only.
+    private static func startingTab() -> Int {
+        #if DEBUG
+        return UserDefaults.standard.integer(forKey: "RansomTab")
+        #else
+        return 0
+        #endif
+    }
 
     var body: some View {
         Group {
@@ -40,7 +50,13 @@ struct RootView: View {
     }
 
     private var mainTabs: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: Binding(
+            get: { selectedTab },
+            set: {
+                if $0 != selectedTab { Haptics.select() }
+                selectedTab = $0
+            }
+        )) {
             NavigationStack {
                 HomeView(workoutRequest: $workoutRequest)
                     .navigationTitle("Ransom")
@@ -102,7 +118,7 @@ struct RootView: View {
         selectedTab = 0
         workoutRequest = WorkoutRequest(
             exercise: model.plan.exercise,
-            target: model.quote.reps,
+            target: model.repsPerSet,
             trigger: model.pendingUnlockAppName
         )
     }

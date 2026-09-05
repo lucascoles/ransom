@@ -44,8 +44,11 @@ struct PaywallView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    RexImage(pose: .flex, size: 104)
-                        .padding(.top, context == .standalone ? 2 : 10)
+                    // Sized so both plan rows sit above the footer on a 6.1" screen
+                    // without scrolling: a price you have to scroll to find reads as
+                    // a price being hidden.
+                    RexImage(pose: .flex, size: 84)
+                        .padding(.top, context == .standalone ? 0 : 4)
 
                     Text("Ransom Pro")
                         .font(RansomFont.display(30))
@@ -59,28 +62,32 @@ struct PaywallView: View {
                     VStack(spacing: 10) {
                         feature(
                             icon: "lock.shield.fill",
-                            title: "Block any app you choose",
-                            detail: "Instagram, TikTok, games — as many as you like."
+                            title: "Your apps, your rules",
+                            detail: "Instagram, TikTok, games. Pick any app, as many as you like."
                         )
                         feature(
-                            icon: "figure.strengthtraining.functional",
-                            title: "\(plan.repsPerUnlock) reps buys \(plan.minutesPerUnlock) minutes",
-                            detail: "The price rises the more you come back."
+                            icon: plan.exercise.symbol,
+                            title: "\(plan.repsPerUnlock) \(plan.exercise.shortTitle.lowercased()) unlocks \(plan.minutesPerUnlock) minutes",
+                            detail: "Bank minutes whenever you like, spend them when you want them."
                         )
                         feature(
                             icon: "chart.line.uptrend.xyaxis",
-                            title: "Every rep you've ever paid",
-                            detail: "Lifetime totals, streaks and hours saved."
+                            title: "Every rep counts",
+                            detail: "Streaks, lifetime totals, and the hours you got back."
                         )
                     }
                     .padding(.horizontal, Metrics.screenPadding)
-                    .padding(.top, 16)
+                    .padding(.top, 14)
+
+                    firstMonthStrip
+                        .padding(.horizontal, Metrics.screenPadding)
+                        .padding(.top, 12)
 
                     planPicker
                         .padding(.horizontal, Metrics.screenPadding)
-                        .padding(.top, 16)
+                        .padding(.top, 12)
                 }
-                .padding(.bottom, 20)
+                .padding(.bottom, 12)
             }
 
             footer
@@ -96,17 +103,56 @@ struct PaywallView: View {
     /// Echoes back the sentence they chose in the intake. The paywall is the last
     /// place that promise is worth repeating before it costs money.
     private var subtitle: String {
-        guard let identity = plan.identity else { return "The whole point of the app." }
-        return "Keep being \(identity.shortForm)."
+        guard let identity = plan.identity else { return "Move a little. Scroll a little." }
+        return "This is how you \(identity.shortForm)."
+    }
+
+    /// The plan screen's first-month figures, repeated here in one line. It is the
+    /// concrete thing being bought, and the same curve produced both numbers, so
+    /// the paywall can't promise anything the plan didn't.
+    private var firstMonthStrip: some View {
+        HStack(spacing: 0) {
+            stat(
+                value: "\(Int(plan.firstMonthHoursSaved.rounded()))h",
+                label: "back in month one",
+                tint: Palette.green
+            )
+            Rectangle()
+                .fill(Palette.hairline)
+                .frame(width: 1, height: 30)
+            stat(
+                value: plan.firstMonthReps.formatted(),
+                label: "\(plan.exercise.shortTitle.lowercased()) along the way",
+                tint: Palette.brand
+            )
+        }
+        .padding(.vertical, 11)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
+                .fill(Palette.surfaceAlt)
+        )
+    }
+
+    private func stat(value: String, label: String, tint: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(RansomFont.title(22))
+                .foregroundStyle(tint)
+            Text(label)
+                .font(RansomFont.caption(12))
+                .foregroundStyle(Palette.inkSoft)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private func feature(icon: String, title: String, detail: String) -> some View {
         HStack(alignment: .center, spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Palette.green)
+                .foregroundStyle(Palette.brand)
                 .frame(width: 32, height: 32)
-                .background(Circle().fill(Palette.greenSoft))
+                .background(Circle().fill(Palette.brandSoft))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -144,7 +190,7 @@ struct PaywallView: View {
             HStack(spacing: 14) {
                 Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
                     .font(.system(size: 21))
-                    .foregroundStyle(isSelected ? Palette.green : Palette.hairline)
+                    .foregroundStyle(isSelected ? Palette.brand : Palette.hairline)
 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 8) {
@@ -153,7 +199,7 @@ struct PaywallView: View {
                             .foregroundStyle(Palette.ink)
 
                         if isAnnual, let saving = store.annualSavingsPercent {
-                            Pill(text: "SAVE \(saving)%", tint: Palette.onGreen, background: Palette.green)
+                            Pill(text: "SAVE \(saving)%", tint: Palette.onBrand, background: Palette.brand)
                         }
                     }
 
@@ -174,24 +220,30 @@ struct PaywallView: View {
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 15)
+            .padding(.vertical, 13)
             .background(
                 RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
-                    .fill(isSelected ? Palette.greenSoft : Palette.surface)
+                    .fill(isSelected ? Palette.brandSoft : Palette.surface)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
-                    .strokeBorder(isSelected ? Palette.green : Palette.hairline, lineWidth: isSelected ? 2 : 1)
+                    .strokeBorder(isSelected ? Palette.brand : Palette.hairline, lineWidth: isSelected ? 2 : 1)
             )
         }
         .pressable(scale: 0.985)
     }
 
     private var annualSubtitle: String {
-        if let perWeek = store.annualPerWeek {
-            return "Works out at \(perWeek) a week"
+        // The trial leads, because it is the part that decides whether anyone
+        // taps at all. Both products carry the same three days free, but only the
+        // weekly row ever said so - so the annual plan looked like the one where
+        // you pay up front, which is the opposite of the truth and was quietly
+        // pushing people onto the worse-value option.
+        let trial = store.trialDescription(for: .annual)
+        guard let perWeek = store.annualPerWeek else {
+            return trial.map { "\($0), then billed once a year" } ?? "Billed once a year"
         }
-        return "Billed once a year"
+        return trial.map { "\($0), then just \(perWeek) a week" } ?? "Just \(perWeek) a week"
     }
 
     private var weeklySubtitle: String {

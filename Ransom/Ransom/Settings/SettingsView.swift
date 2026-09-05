@@ -9,6 +9,60 @@ struct SettingsView: View {
     @State private var showAppPicker = false
     @State private var showPaywall = false
     @State private var showResetConfirm = false
+    /// A tier being considered, not yet applied. Changing difficulty is the
+    /// single most consequential thing in this screen - it locks the user out of
+    /// anything easier for days - so it takes a deliberate second action rather
+    /// than landing on the first tap of a row.
+    @State private var pendingIntensity: Intensity?
+    @State private var pendingDays: Int?
+    @State private var showCommitConfirm = false
+
+    private var commitTitle: String {
+        guard let pendingIntensity else { return "Lock it in?" }
+        if pendingIntensity == model.profile.intensity {
+            return model.profile.isCommitted ? "Extend your run?" : "Commit to \(pendingIntensity.title)?"
+        }
+        return "Move to \(pendingIntensity.title)?"
+    }
+
+    /// Spells out the consequence with the real date, because "you can't go back"
+    /// means very little next to "you can't go back until the 19th".
+    private var commitMessage: String {
+        let days = pendingDays ?? CommitmentLength.five.days
+        let until = Calendar.current.date(byAdding: .day, value: days, to: Date()) ?? Date()
+        let formatted = until.formatted(.dateTime.weekday(.wide).day().month(.wide))
+        guard let pendingIntensity else { return "" }
+        return "\(pendingIntensity.baseReps) push-up sets for \(days) days. You can move up again whenever you like, but you won't be able to drop back until \(formatted)."
+    }
+
+    /// Reads the state of the current run in one line. When it has run out it
+    /// says so plainly: the tier stays, the lock doesn't, and everything is
+    /// changeable again including going easier.
+    private var commitmentSummary: String {
+        guard model.profile.isCommitted else {
+            return "No commitment - change this freely"
+        }
+        let left = model.profile.commitmentDaysLeft
+        return "Locked in for \(left) more day\(left == 1 ? "" : "s")"
+    }
+
+    private func applyPendingCommitment() {
+        guard let pendingIntensity else { return }
+        // Shortening a live run would be the same escape hatch by another name.
+        if model.profile.isCommitted,
+           pendingIntensity == model.profile.intensity,
+           let days = pendingDays, days < (model.profile.commitmentDays ?? 0) {
+            Haptics.warning()
+            return
+        }
+        Haptics.success()
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+            model.profile.intensity = pendingIntensity
+            model.profile.commitmentDays = pendingDays ?? CommitmentLength.five.days
+            model.profile.commitmentStartedAt = Date()
+            self.pendingIntensity = nil
+        }
+    }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -22,10 +76,21 @@ struct SettingsView: View {
             .padding(.horizontal, Metrics.screenPadding)
             .padding(.bottom, 28)
         }
+        .debugScrollAnchor()
         .ransomScreenBackground()
         .sheet(isPresented: $showAppPicker) { AppPickerView() }
         .sheet(isPresented: $showPaywall) {
             PaywallView(plan: model.plan, context: .standalone, onFinish: {})
+        }
+        .confirmationDialog(
+            commitTitle,
+            isPresented: $showCommitConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Lock it in") { applyPendingCommitment() }
+            Button("Not yet", role: .cancel) {}
+        } message: {
+            Text(commitMessage)
         }
         .confirmationDialog(
             "Erase everything?",
@@ -38,7 +103,7 @@ struct SettingsView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Your profile, history and blocking settings will be removed from this device.")
+            Text("Your profile, history and app picks will be removed from this phone.")
         }
     }
 
@@ -52,9 +117,7 @@ struct SettingsView: View {
                     Text(store.isSubscribed || model.isSubscribed ? "Ransom Pro" : "Ransom Free")
                         .font(RansomFont.headline(17))
                         .foregroundStyle(Palette.ink)
-                    Text(store.isSubscribed || model.isSubscribed
-                         ? store.activePlanLine
-                         : "Blocking needs Pro.")
+                    Text(subscriptionLine)
                         .font(RansomFont.body(13))
                         .foregroundStyle(Palette.inkSoft)
                 }
@@ -74,31 +137,118 @@ struct SettingsView: View {
         .ransomCard()
     }
 
+    /// The store only knows a plan once StoreKit has loaded one. A subscription
+    /// the app already trusts shouldn't read as "needs Pro" while that happens.
+    private var subscriptionLine: String {
+        if store.isSubscribed { return store.activePlanLine }
+        if model.isSubscribed { return "Active on this phone." }
+        return "Blocking needs Pro."
+    }
+
     private var difficultyCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Difficulty")
                 .font(RansomFont.headline(16))
                 .foregroundStyle(Palette.ink)
 
+            // Harder is always allowed; easier is not, while the commitment runs.
+            //
+            // This is the one place the app deliberately refuses the user, and it
+            // refuses them on purpose: the moment someone can drop to the easiest
+            // setting from inside a craving, the setting they chose calmly stops
+            // meaning anything at all. Locking only the downward direction keeps
+            // that honest without making the app a jailer.
+            if model.profile.isCommitted {
+                HStack(spacing: 8) {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Palette.brand)
+                    Text("Locked for \(model.profile.commitmentDaysLeft) more day\(model.profile.commitmentDaysLeft == 1 ? "" : "s"). You can still make it harder.")
+                        .font(RansomFont.caption(12))
+                        .foregroundStyle(Palette.inkSoft)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.bottom, 2)
+            }
+
             ForEach(Intensity.allCases) { intensity in
-                ChoiceCard(
-                    title: intensity.title,
-                    subtitle: intensity.blurb,
-                    icon: intensity.symbol,
-                    isSelected: model.profile.intensity == intensity
-                ) {
-                    model.profile.intensity = intensity
+                let isEasier = intensity.baseReps < model.profile.intensity.baseReps
+                let isLocked = model.profile.isCommitted && isEasier
+                let isCurrent = model.profile.intensity == intensity
+
+                VStack(spacing: 10) {
+                    ChoiceCard(
+                        title: intensity.title,
+                        subtitle: isLocked
+                            ? "\(model.profile.setSummary(at: intensity))\nLocked until your run is up."
+                            : "\(intensity.blurb)\n\(model.profile.setSummary(at: intensity))",
+                        icon: isLocked ? "lock.fill" : intensity.symbol,
+                        isSelected: isCurrent
+                    ) {
+                        guard !isLocked else {
+                            Haptics.warning()
+                            return
+                        }
+                        Haptics.select()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            // Selected, not applied. Nothing reaches the account
+                            // until it has been confirmed twice - including a
+                            // change to the current tier's own run.
+                            if pendingIntensity == intensity {
+                                pendingIntensity = nil
+                            } else {
+                                pendingIntensity = intensity
+                                pendingDays = model.profile.commitmentDays ?? CommitmentLength.five.days
+                            }
+                        }
+                    }
+                    .opacity(isLocked ? 0.5 : 1)
+
+                    if pendingIntensity == intensity {
+                        VStack(spacing: 10) {
+                            Text(isCurrent && model.profile.isCommitted ? "Extend your run" : "Locked in for")
+                                .font(RansomFont.caption(12))
+                                .foregroundStyle(Palette.inkSoft)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                            CommitmentPicker(days: $pendingDays)
+
+                            PrimaryButton(
+                                title: isCurrent && model.profile.isCommitted ? "Extend commitment" : "I'm committed",
+                                icon: "lock.fill"
+                            ) {
+                                showCommitConfirm = true
+                            }
+                        }
+                        .padding(.horizontal, 4)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    } else if isCurrent {
+                        // A summary only. Every change, including a longer run on
+                        // the tier already running, goes through the same two taps.
+                        HStack(spacing: 6) {
+                            Image(systemName: model.profile.isCommitted ? "lock.fill" : "lock.open.fill")
+                                .font(.system(size: 11, weight: .bold))
+                            Text(commitmentSummary)
+                                .font(RansomFont.caption(12))
+                            Spacer()
+                            Text("Change")
+                                .font(RansomFont.caption(12))
+                                .foregroundStyle(Palette.brand)
+                        }
+                        .foregroundStyle(Palette.inkSoft)
+                        .padding(.horizontal, 8)
+                    }
                 }
             }
 
             HStack {
-                Text("Current price")
+                Text("Each unlock")
                     .font(RansomFont.body(14))
                     .foregroundStyle(Palette.inkSoft)
                 Spacer()
                 Text("\(model.plan.repsPerUnlock) \(model.plan.exercise.shortTitle.lowercased()) → \(model.plan.minutesPerUnlock) min")
                     .font(RansomFont.caption(13))
-                    .foregroundStyle(Palette.green)
+                    .foregroundStyle(Palette.brand)
             }
             .padding(.top, 2)
         }
@@ -107,11 +257,11 @@ struct SettingsView: View {
 
     private var exercisesCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Movements")
+            Text("Your moves")
                 .font(RansomFont.headline(16))
                 .foregroundStyle(Palette.ink)
 
-            ForEach(Exercise.allCases) { exercise in
+            ForEach(Exercise.selectable) { exercise in
                 ChoiceCard(
                     title: exercise.title,
                     icon: exercise.symbol,
@@ -133,20 +283,20 @@ struct SettingsView: View {
 
     private var blockingCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Blocking")
+            Text("Your apps")
                 .font(RansomFont.headline(16))
                 .foregroundStyle(Palette.ink)
 
             row(
-                title: "Guarded apps",
-                detail: screenTime.hasSelection ? "\(screenTime.blockedCount) selected" : "None yet"
+                title: "Apps with Rex",
+                detail: screenTime.hasSelection ? "\(screenTime.blockedCount) picked" : "None yet"
             ) {
                 showAppPicker = true
             }
 
             row(
                 title: "Screen Time access",
-                detail: screenTime.isAuthorized ? "Granted" : "Not granted"
+                detail: screenTime.isAuthorized ? "On" : "Off"
             ) {
                 Task {
                     await screenTime.requestAuthorization()
@@ -155,7 +305,7 @@ struct SettingsView: View {
             }
 
             if screenTime.isCurrentlyUnlocked {
-                SecondaryButton(title: "Lock everything now", icon: "lock.fill") {
+                SecondaryButton(title: "Lock my apps now", icon: "lock.fill") {
                     screenTime.endEarnedTimeNow()
                 }
             }
@@ -179,7 +329,7 @@ struct SettingsView: View {
                     .foregroundStyle(Palette.ink)
             }
 
-            Text("Ransom keeps everything on your device. No account, no analytics, no upload.")
+            Text("Everything stays on your phone. No account, no analytics, no upload.")
                 .font(RansomFont.body(13))
                 .foregroundStyle(Palette.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)

@@ -13,5 +13,7 @@ enum RexPose: Hashable {
     case blocked
     case sad
     case sleep
+    /// Lounging, eyes closed. The "go enjoy it" beat while earned time runs.
+    case relax
     case pushUp(down: Bool)
 }

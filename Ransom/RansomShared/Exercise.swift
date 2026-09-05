@@ -1,84 +1,130 @@
 import Foundation
 
 /// The movements Rex can ask for. Each one knows how it is measured on device.
+/// Three, deliberately. Push-ups and squats are the two movements the pose
+/// counter measures reliably — both are a single joint angle sweeping through a
+/// wide arc, square to the camera. Steps need no camera at all: the phone has
+/// been counting them all day anyway. Jumping jacks, sit-ups and high knees were
+/// dropped because none of them could be counted honestly, and a rep that can be
+/// faked is worse than a movement that isn't offered.
 public enum Exercise: String, CaseIterable, Codable, Identifiable, Sendable {
     case pushUps
-    case jumpingJacks
     case squats
-    case sitUps
-    case highKnees
+    case steps
 
     public var id: String { rawValue }
 
+    /// What the pickers offer. Steps are built and priced but withheld for now:
+    /// the phone counts them whether or not anyone is trying, so an ordinary day's
+    /// walking funds an evening's scrolling and the habit never has to change.
+    /// Everything behind it still works, so putting it back is one line.
+    public static var selectable: [Exercise] { [.pushUps, .squats] }
+
     public var title: String {
         switch self {
-        case .pushUps:      return "Push-ups"
-        case .jumpingJacks: return "Jumping jacks"
-        case .squats:       return "Squats"
-        case .sitUps:       return "Sit-ups"
-        case .highKnees:    return "High knees"
+        case .pushUps: return "Push-ups"
+        case .squats:  return "Squats"
+        case .steps:   return "Steps"
         }
     }
 
     public var shortTitle: String {
         switch self {
-        case .pushUps:      return "Push-ups"
-        case .jumpingJacks: return "Jacks"
-        case .squats:       return "Squats"
-        case .sitUps:       return "Sit-ups"
-        case .highKnees:    return "Knees"
+        case .pushUps: return "Push-ups"
+        case .squats:  return "Squats"
+        case .steps:   return "Steps"
+        }
+    }
+
+    /// What one of them is called. Steps are counted, never "done in a set".
+    public var unitLabel: String {
+        switch self {
+        case .pushUps, .squats: return "reps"
+        case .steps:            return "steps"
+        }
+    }
+
+    /// Steps accumulate in the background from the phone's own pedometer; the
+    /// other two are earned in a set in front of the camera. Nearly every screen
+    /// that behaves differently for steps branches on this.
+    public var isPassive: Bool { self == .steps }
+
+    /// The challenge name, matching how these read as programmes rather than
+    /// exercises: "Push-up to Scroll".
+    public var challengeTitle: String {
+        switch self {
+        case .pushUps: return "Push-up to Scroll"
+        case .squats:  return "Squat to Scroll"
+        case .steps:   return "Step to Scroll"
         }
     }
 
     public var symbol: String {
         switch self {
-        case .pushUps:      return "figure.strengthtraining.functional"
-        case .jumpingJacks: return "figure.mixed.cardio"
-        case .squats:       return "figure.cross.training"
-        case .sitUps:       return "figure.core.training"
-        case .highKnees:    return "figure.highintensity.intervaltraining"
+        case .pushUps: return "figure.strengthtraining.functional"
+        case .squats:  return "figure.cross.training"
+        case .steps:   return "figure.walk"
+        }
+    }
+
+    /// What the movement is for, in one line, for the picker. The setup cues
+    /// below tell you where to put the phone, which is the wrong thing to read
+    /// while you're still deciding whether you want to do squats at all.
+    public var pitch: String {
+        switch self {
+        case .pushUps: return "The classic. Chest, arms and core."
+        case .squats:  return "Legs and glutes. No floor needed."
+        case .steps:   return "Your phone counts them already. Just walk."
         }
     }
 
     /// Copy shown while the movement is being counted.
     public var coachingCue: String {
         switch self {
-        case .pushUps:      return "Phone on the floor. Chest to the screen, then all the way up."
-        case .jumpingJacks: return "Phone in your hand or pocket. Big arms, light feet."
-        case .squats:       return "Phone in your pocket. Hips back, chest tall."
-        case .sitUps:       return "Phone on your chest. Shoulders off the floor, then down."
-        case .highKnees:    return "Phone in your hand. Knees to hip height, keep the pace."
+        case .pushUps: return "Chest toward the floor, then all the way back up."
+        case .squats:  return "Hips back, chest tall, thighs to parallel."
+        case .steps:   return "Keep walking. Every step is banking minutes."
+        }
+    }
+
+    /// Setup copy for the camera counter. The sensor cues above tell you to put
+    /// the phone under your chest or in your pocket, which is exactly where the
+    /// camera can see nothing — so the camera path needs its own instructions.
+    public var cameraCue: String {
+        switch self {
+        case .pushUps: return "Stand the phone up facing you, just past your hands."
+        case .squats:  return "Stand the phone up a few feet away, facing you."
+        case .steps:   return "Nothing to set up. Your phone is already counting."
         }
     }
 
     /// How the rep detector should read the sensors for this movement.
     public var sensing: SensingMode {
         switch self {
-        case .pushUps:                    return .proximity
-        case .jumpingJacks, .highKnees:   return .impact
-        case .squats, .sitUps:            return .tilt
+        case .pushUps: return .proximity
+        case .squats:  return .tilt
+        case .steps:   return .pedometer
         }
     }
 
-    /// Relative effort, used to scale rep targets so 1 push-up ≈ 2 jumping jacks.
+    /// Relative effort, used to scale rep targets so a squat asks for a few more
+    /// reps than a push-up and a walk asks for a great many more steps.
     public var effortWeight: Double {
         switch self {
-        case .pushUps:      return 1.0
-        case .squats:       return 0.8
-        case .sitUps:       return 0.7
-        case .jumpingJacks: return 0.5
-        case .highKnees:    return 0.4
+        case .pushUps: return 1.0
+        case .squats:  return 0.8
+        // A step is a fraction of a push-up, so a set-sized target becomes a
+        // walk-sized one: ten push-ups' worth is five hundred steps.
+        case .steps:   return 0.02
         }
     }
 
     /// Rough calories burned per rep for an average adult. Used for the stats screen.
     public var caloriesPerRep: Double {
         switch self {
-        case .pushUps:      return 0.5
-        case .squats:       return 0.4
-        case .sitUps:       return 0.3
-        case .jumpingJacks: return 0.2
-        case .highKnees:    return 0.15
+        case .pushUps: return 0.5
+        case .squats:  return 0.4
+        case .steps:   return 0.04
         }
     }
 
@@ -89,6 +135,8 @@ public enum Exercise: String, CaseIterable, Codable, Identifiable, Sendable {
         case impact
         /// Device attitude oscillation (pitch sweeps).
         case tilt
+        /// Counted by the phone all day, with no session to run.
+        case pedometer
     }
 }
 
@@ -110,9 +158,11 @@ public enum Intensity: String, CaseIterable, Codable, Identifiable, Sendable {
 
     public var blurb: String {
         switch self {
-        case .chill:    return "Easing in. Short sets, generous scroll time."
-        case .standard: return "The sweet spot. Most people start here."
-        case .beast:    return "Rex shows no mercy. Earn every single minute."
+        // One line each. Two sentences wrapped onto a second line on every card,
+        // and the number underneath is the part that actually decides it.
+        case .chill:    return "Easy sets, more time."
+        case .standard: return "Most people start here."
+        case .beast:    return "Big sets, less time."
         }
     }
 
@@ -130,6 +180,20 @@ public enum Intensity: String, CaseIterable, Codable, Identifiable, Sendable {
         case .chill:    return 5
         case .standard: return 10
         case .beast:    return 20
+        }
+    }
+
+    /// Steps that buy one minute.
+    ///
+    /// Set directly rather than derived from `effortWeight` like the rep
+    /// movements, because a step is not a small push-up: the weight that made
+    /// squats price sensibly put a minute at thirty-three steps, which anyone
+    /// clears walking to the kitchen. A hundred is the honest middle.
+    public var stepsPerMinute: Int {
+        switch self {
+        case .chill:    return 50
+        case .standard: return 100
+        case .beast:    return 150
         }
     }
 
@@ -153,17 +217,17 @@ public enum FitnessLevel: String, CaseIterable, Codable, Identifiable, Sendable 
 
     public var title: String {
         switch self {
-        case .rarely:    return "0–2 times a week"
-        case .sometimes: return "3–5 times a week"
+        case .rarely:    return "0-2 times a week"
+        case .sometimes: return "3-5 times a week"
         case .often:     return "6+ times a week"
         }
     }
 
     public var subtitle: String {
         switch self {
-        case .rarely:    return "We'll start you gently."
-        case .sometimes: return "You've got a base to build on."
-        case .often:     return "Rex will make it count."
+        case .rarely:    return "Rex will start you easy."
+        case .sometimes: return "You have a base to build on."
+        case .often:     return "Rex can ask for more."
         }
     }
 
@@ -177,11 +241,11 @@ public enum FitnessLevel: String, CaseIterable, Codable, Identifiable, Sendable 
 }
 
 
-/// What the user says they are, rather than what they want.
+/// The one thing the user says they want back.
 ///
-/// Replaces the old six-checkbox goals screen. Identity-based commitments predict
-/// follow-through far better than outcome goals, and unlike the checklist this one
-/// is quoted back on the plan screen and the paywall, so it earns its screen.
+/// Replaces the old six-checkbox goals screen. It is quoted back on the plan screen
+/// and on the paywall, which is the only thing that makes it worth a screen, so both
+/// `statement` and `shortForm` have to stay short enough to sit inside a sentence.
 public enum Identity: String, CaseIterable, Codable, Identifiable, Sendable {
     case stronger
     case eveningsBack
@@ -190,23 +254,25 @@ public enum Identity: String, CaseIterable, Codable, Identifiable, Sendable {
 
     public var id: String { rawValue }
 
-    /// Always first person. The user is completing a sentence about themselves.
+    /// Always first person, always short. The user is picking a goal, not reading
+    /// a paragraph about themselves.
     public var statement: String {
         switch self {
-        case .stronger:       return "I'm someone who gets stronger without going to a gym."
-        case .eveningsBack:   return "I'm someone who takes their evenings back."
-        case .movesDaily:     return "I'm someone who moves every day."
-        case .finishesThings: return "I'm someone who finishes what they start."
+        case .stronger:       return "Get strong without a gym."
+        case .eveningsBack:   return "Take my evenings back."
+        case .movesDaily:     return "Move every day."
+        case .finishesThings: return "Finish what I start."
         }
     }
 
-    /// The short form, for echoing back on the plan and paywall.
+    /// Second person, verb first, so the plan screen and the paywall can drop it
+    /// straight into a sentence: "This is how you take your evenings back."
     public var shortForm: String {
         switch self {
-        case .stronger:       return "stronger without a gym"
-        case .eveningsBack:   return "evenings back"
-        case .movesDaily:     return "moving every day"
-        case .finishesThings: return "finishing what you start"
+        case .stronger:       return "get strong without a gym"
+        case .eveningsBack:   return "take your evenings back"
+        case .movesDaily:     return "move every day"
+        case .finishesThings: return "finish what you start"
         }
     }
 
