@@ -59,10 +59,6 @@ struct HomeView: View {
 
                 RulesSection()
 
-                #if DEBUG
-                blockingDiagnostics
-                #endif
-
                 todayCard
 
                 if !screenTime.isAuthorized {
@@ -487,49 +483,6 @@ struct HomeView: View {
         .ransomCard()
     }
 
-    #if DEBUG
-    /// Notification authorization, read once when the panel appears. The shield's
-    /// primary button hands off through a notification, so a refusal here is
-    /// indistinguishable from a broken button.
-    @State private var notificationStatus = "?"
-
-    /// `-RansomDebugHUD 1` shows what blocking actually thinks is true.
-    ///
-    /// Every guard on the shield path fails silently - `reconcile()` returns
-    /// early when Screen Time was never authorized, the store applies nothing
-    /// when the selection is empty, and a stale unlock lifts the shield the
-    /// instant it goes up. All three look identical from the outside: you block
-    /// an app and nothing happens. This says which one it is.
-    @ViewBuilder
-    private var blockingDiagnostics: some View {
-        if UserDefaults.standard.bool(forKey: "RansomDebugHUD") {
-            VStack(alignment: .leading, spacing: 3) {
-                Text("auth: \(String(describing: screenTime.authorization))")
-                Text("blocked: \(screenTime.blockedCount)  monitoring: \(screenTime.isMonitoring ? "yes" : "no")")
-                Text("unlocked: \(screenTime.isCurrentlyUnlocked ? "yes" : "no")  bank: \(model.bankedMinutes)")
-                Text("shielded now: \(ManagedSettingsStore(named: .ransom).shield.applications?.count.description ?? "nil")")
-                Text("shield shown: \(RansomCore.defaults.integer(forKey: RansomCore.Key.shieldCalls))  tapped: \(RansomCore.defaults.integer(forKey: RansomCore.Key.shieldTaps))")
-                Text("last app: \(RansomCore.defaults.string(forKey: RansomCore.Key.shieldHeadline) ?? "-")  notifs: \(notificationStatus)")
-            }
-            .font(.system(size: 11, design: .monospaced))
-            .foregroundStyle(Palette.inkSoft)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(10)
-            .background(RoundedRectangle(cornerRadius: 10).fill(Palette.surfaceAlt))
-            .task {
-                let settings = await UNUserNotificationCenter.current().notificationSettings()
-                notificationStatus = switch settings.authorizationStatus {
-                case .authorized: "on"
-                case .denied: "DENIED"
-                case .notDetermined: "never asked"
-                case .provisional: "provisional"
-                case .ephemeral: "ephemeral"
-                @unknown default: "?"
-                }
-            }
-        }
-    }
-    #endif
 
     private var chooseAppsCard: some View {
         VStack(alignment: .leading, spacing: 12) {

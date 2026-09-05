@@ -117,6 +117,7 @@ final class ScreenTimeManager {
     /// shield last means the extension can only ever lose that race.
     func grantEarnedTime(minutes: Int) {
         ledger.grant(minutes: minutes)
+        ledger.trace("app granted \(minutes)m")
         syncUnlockState()
         guard isAuthorized else { return }
         restartMonitoring()

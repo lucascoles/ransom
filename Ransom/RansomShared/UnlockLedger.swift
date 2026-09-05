@@ -49,6 +49,14 @@ public struct UnlockLedger {
         return newExpiry
     }
 
+    /// Appends one line to the monitor breadcrumb trail, newest last, capped so
+    /// it cannot grow without bound.
+    public func trace(_ line: String) {
+        var lines = defaults.stringArray(forKey: RansomCore.Key.monitorTrace) ?? []
+        lines.append("\(Date().formatted(date: .omitted, time: .standard)) \(line)")
+        defaults.set(Array(lines.suffix(40)), forKey: RansomCore.Key.monitorTrace)
+    }
+
     public func revoke() {
         expiry = nil
     }

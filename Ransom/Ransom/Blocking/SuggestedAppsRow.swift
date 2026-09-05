@@ -25,6 +25,10 @@ struct SuggestedAppsRow: View {
     var tokens: [ApplicationToken]
     var namedApps: [DistractingApp]
     var measuredAt: Date?
+    /// Tokens the user committed to and cannot take back yet. Shown as done
+    /// rather than as a toggle, so the row never offers a way out that the
+    /// picker behind it would undo.
+    var locked: Set<ApplicationToken> = []
 
     var body: some View {
         if !tokens.isEmpty {
@@ -57,7 +61,12 @@ struct SuggestedAppsRow: View {
 
     private func tile(for token: ApplicationToken) -> some View {
         let isPicked = selection.applicationTokens.contains(token)
+        let isLocked = locked.contains(token)
         return Button {
+            guard !isLocked else {
+                Haptics.warning()
+                return
+            }
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 if isPicked {
                     selection.applicationTokens.remove(token)
@@ -78,10 +87,12 @@ struct SuggestedAppsRow: View {
                         .frame(width: 56, height: 56)
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
-                    Image(systemName: isPicked ? "checkmark.circle.fill" : "plus.circle.fill")
+                    Image(systemName: isLocked ? "lock.circle.fill"
+                                    : (isPicked ? "checkmark.circle.fill" : "plus.circle.fill"))
                         .font(.system(size: 19, weight: .bold))
                         .symbolRenderingMode(.palette)
-                        .foregroundStyle(.white, isPicked ? Palette.green : Palette.brand)
+                        .foregroundStyle(.white, isLocked ? Palette.ink
+                                                : (isPicked ? Palette.green : Palette.brand))
                         .offset(x: 5, y: 5)
                 }
                 .frame(width: 64, height: 64, alignment: .topLeading)

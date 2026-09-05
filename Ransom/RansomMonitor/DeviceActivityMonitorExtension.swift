@@ -17,6 +17,7 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
         // A new day, or monitoring restarted: match the shield to the ledger.
+        ledger.trace("start \(activity.rawValue) unlocked=\(ledger.isUnlocked)")
         selection.reconcile(ledger: ledger)
         // The usage ladder starts again from the bottom, or the home screen shows
         // yesterday's total all morning until the first rung fires.
@@ -35,8 +36,22 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         // apps opened, the countdown appeared, and about a second later the
         // extension woke up, ended the day that had not ended, and took both
         // away. The bank was empty and nothing had been unlocked.
+        let left = Int(ledger.remaining)
+        ledger.trace("end \(activity.rawValue) left=\(left)s")
+
         guard activity == .unlockWindow else {
             selection.reconcile(ledger: ledger)
+            return
+        }
+
+        // A window that "ends" with minutes still on the clock did not end - it
+        // was stopped. `startUnlockWindow` stops the previous window before
+        // opening a new one, and stopping delivers `intervalDidEnd` exactly like
+        // finishing does; taking that at face value revoked each purchase a
+        // second after it was made. The ledger's wall clock is the arbiter: time
+        // is up when it says so, not when a callback implies it.
+        guard left <= 60 else {
+            ledger.trace("ignored early end, \(left)s left")
             return
         }
 
@@ -54,6 +69,8 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         // user's earned time, which was fine while there was only one of them -
         // the moment a second kind of event exists, an unrelated callback would
         // slam the shield down mid-session for no reason the user could see.
+        ledger.trace("threshold \(event.rawValue) on \(activity.rawValue)")
+
         if let minutes = UsageMeter.minutes(fromEventName: event.rawValue) {
             usage.record(minutes: minutes)
             return

@@ -14,6 +14,9 @@ struct AppPickerView: View {
     /// Group, and the row must not reshuffle itself under a finger mid-tap.
     @State private var suggestions: [ApplicationToken] = []
     @State private var measuredAt: Date?
+    /// What was already guarded when this sheet opened, while a commitment is
+    /// running. The list can grow from here and cannot shrink.
+    @State private var locked = FamilyActivitySelection()
 
     var body: some View {
         NavigationStack {
@@ -23,7 +26,8 @@ struct AppPickerView: View {
                     selection: $draft,
                     tokens: suggestions,
                     namedApps: DistractingApp.allCases.filter(model.profile.distractingApps.contains),
-                    measuredAt: measuredAt
+                    measuredAt: measuredAt,
+                    locked: locked.applicationTokens
                 )
                 .padding(.horizontal, 20)
                 .padding(.bottom, 14)
@@ -39,7 +43,17 @@ struct AppPickerView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        screenTime.selection = draft
+                        // A list you can shorten mid-craving is not a commitment.
+                        // Apple's picker is a system view and its ticks cannot be
+                        // disabled, so the rule is enforced on the way out: while
+                        // a run is live the saved set is the union of what was
+                        // there and whatever was added. Unticking is quietly
+                        // undone rather than refused, because a picker that
+                        // fights the user's finger is worse than one that simply
+                        // does not forget.
+                        screenTime.selection = model.profile.isCommitted
+                            ? draft.merging(locked)
+                            : draft
                         Haptics.success()
                         // Asked here rather than only in intake, because this is
                         // the moment it starts mattering. The shield's primary
@@ -57,6 +71,7 @@ struct AppPickerView: View {
             }
             .onAppear {
                 draft = screenTime.selection
+                locked = model.profile.isCommitted ? screenTime.selection : FamilyActivitySelection()
                 let store = UsageSuggestionStore()
                 // A stale ranking recommends the app they already dealt with, so
                 // an old one is treated as no ranking at all.
@@ -66,10 +81,23 @@ struct AppPickerView: View {
         }
     }
 
+    /// Said out loud, before they try it. Finding out that an untick did not
+    /// stick is the app appearing to be broken; being told the rule up front is
+    /// the app holding them to something they chose.
+    private var headerCopy: String {
+        guard model.profile.isCommitted, !locked.applicationTokens.isEmpty
+            || !locked.categoryTokens.isEmpty || !locked.webDomainTokens.isEmpty
+        else {
+            return "Pick the apps that should take a set to open. Everything else stays exactly as it is."
+        }
+        let days = model.profile.commitmentDaysLeft
+        return "You can add apps here. The ones you've already committed to stay put for \(days) more day\(days == 1 ? "" : "s") - that was the deal you made with yourself."
+    }
+
     private var header: some View {
         HStack(alignment: .top, spacing: 12) {
             RexImage(pose: .coach, size: 76, isAlive: false)
-            Text("Pick the apps that should take a set to open. Everything else stays exactly as it is.")
+            Text(headerCopy)
                 .font(RansomFont.body(14))
                 .foregroundStyle(Palette.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)

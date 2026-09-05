@@ -31,19 +31,15 @@ public enum RansomCore {
         public static let minutesPerUnlock = "ransom.config.minutesPerUnlock"
         public static let exerciseName = "ransom.config.exerciseName"
         public static let shieldHeadline = "ransom.shield.headline"
-        /// Incremented every time the shield configuration extension is asked for
-        /// a screen. The whole point is to tell "the extension never ran" apart
-        /// from "the extension ran and iOS ignored what it returned" - which look
-        /// identical from the outside, and need completely different fixes.
-        public static let shieldCalls = "ransom.shield.calls"
-        /// Incremented when the shield's primary button is pressed. With
-        /// `shieldCalls` it separates "the screen never appeared" from "it
-        /// appeared, was tapped, and the handoff went nowhere".
-        public static let shieldTaps = "ransom.shield.taps"
         /// Whole-device screen time today, written by the DeviceActivityReport
         /// extension - the only process that can see it. See `DeviceUsageStore`.
         public static let deviceUsageMinutes = "ransom.device.usageMinutes"
         public static let deviceUsageDay = "ransom.device.usageDay"
+        /// A short breadcrumb trail written by the monitor extension. The
+        /// extension runs in its own process, on iOS's schedule, and leaves no
+        /// other trace - without this every question about what it did is a
+        /// guess, and three separate bugs have already hidden in that gap.
+        public static let monitorTrace = "ransom.debug.monitorTrace"
         /// The user's most-used apps, as opaque tokens, ranked. Written by a
         /// DeviceActivityReport extension - the only place usage can be read -
         /// and read by the app to recommend what to block. See
