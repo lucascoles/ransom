@@ -188,7 +188,9 @@ principles got several of them backwards first:
    cheat. Ankle lift read -0.02 planking and +0.15 kneeling; knee-vs-wrist height
    separates 0.30-0.44 from -0.26-0.13. Leg samples are taken only from frames
    where the elbows were bent, or resting on your knees between reps taints the
-   next one.
+   next one. **Both measures have to agree** before a rep is refused: either one
+   alone had a veto and refused honest planks, because lower-body joints at the
+   edge of the frame are noisy enough for one bad read to throw out a real rep.
  * **No legs visible means counted, not doubted.** Punishing a badly framed camera
    as though it were cheating is the worse error.
  * **Arming is a stillness test**, not a timer: a hand reaching in to prop the
