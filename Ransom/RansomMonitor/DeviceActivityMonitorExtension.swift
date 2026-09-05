@@ -25,6 +25,21 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
+
+        // Only the unlock window ending means the user's time is up.
+        //
+        // `intervalDidEnd` is not just "the schedule finished": iOS delivers it
+        // whenever a monitored activity is *stopped*, and the app stops and
+        // restarts `.daily` on every grant and every change to the app list. So
+        // this used to revoke the minutes a moment after they were bought - the
+        // apps opened, the countdown appeared, and about a second later the
+        // extension woke up, ended the day that had not ended, and took both
+        // away. The bank was empty and nothing had been unlocked.
+        guard activity == .unlockWindow else {
+            selection.reconcile(ledger: ledger)
+            return
+        }
+
         ledger.revoke()
         selection.applyShield()
     }
@@ -44,7 +59,10 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             return
         }
 
-        guard event == .earnedTimeSpent else { return }
+        // Same discipline as `intervalDidEnd`: only the unlock window's own
+        // threshold ends the unlock. Anything else firing here is not about the
+        // minutes the user is currently spending.
+        guard event == .earnedTimeSpent, activity == .unlockWindow else { return }
 
         // The user has burned through the minutes they earned.
         ledger.revoke()
