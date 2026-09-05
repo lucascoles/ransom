@@ -39,6 +39,10 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     // MARK: - Shared builder
 
     private func makeConfiguration(appName: String?) -> ShieldConfiguration {
+        let defaults = RansomCore.defaults
+        defaults.set(defaults.integer(forKey: RansomCore.Key.shieldCalls) + 1,
+                     forKey: RansomCore.Key.shieldCalls)
+
         let ledger = UnlockLedger()
 
         return ShieldConfiguration(

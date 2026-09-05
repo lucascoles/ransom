@@ -42,6 +42,9 @@ final class ShieldActionExtension: ShieldActionDelegate {
 
         switch action {
         case .primaryButtonPressed:
+            let defaults = RansomCore.defaults
+            defaults.set(defaults.integer(forKey: RansomCore.Key.shieldTaps) + 1,
+                         forKey: RansomCore.Key.shieldTaps)
             ledger.pendingRequest = Date()
             // Written by the configuration extension the moment the shield appeared.
             ledger.pendingAppName = RansomCore.defaults.string(forKey: RansomCore.Key.shieldHeadline)

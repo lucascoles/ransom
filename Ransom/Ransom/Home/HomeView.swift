@@ -1,3 +1,4 @@
+import UserNotifications
 import ManagedSettings
 import SwiftUI
 
@@ -487,6 +488,11 @@ struct HomeView: View {
     }
 
     #if DEBUG
+    /// Notification authorization, read once when the panel appears. The shield's
+    /// primary button hands off through a notification, so a refusal here is
+    /// indistinguishable from a broken button.
+    @State private var notificationStatus = "?"
+
     /// `-RansomDebugHUD 1` shows what blocking actually thinks is true.
     ///
     /// Every guard on the shield path fails silently - `reconcile()` returns
@@ -502,13 +508,25 @@ struct HomeView: View {
                 Text("blocked: \(screenTime.blockedCount)  monitoring: \(screenTime.isMonitoring ? "yes" : "no")")
                 Text("unlocked: \(screenTime.isCurrentlyUnlocked ? "yes" : "no")  bank: \(model.bankedMinutes)")
                 Text("shielded now: \(ManagedSettingsStore(named: .ransom).shield.applications?.count.description ?? "nil")")
-                Text("shield ext calls: \(RansomCore.defaults.integer(forKey: RansomCore.Key.shieldCalls))  last: \(RansomCore.defaults.string(forKey: RansomCore.Key.shieldHeadline) ?? "-")")
+                Text("shield shown: \(RansomCore.defaults.integer(forKey: RansomCore.Key.shieldCalls))  tapped: \(RansomCore.defaults.integer(forKey: RansomCore.Key.shieldTaps))")
+                Text("last app: \(RansomCore.defaults.string(forKey: RansomCore.Key.shieldHeadline) ?? "-")  notifs: \(notificationStatus)")
             }
             .font(.system(size: 11, design: .monospaced))
             .foregroundStyle(Palette.inkSoft)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
             .background(RoundedRectangle(cornerRadius: 10).fill(Palette.surfaceAlt))
+            .task {
+                let settings = await UNUserNotificationCenter.current().notificationSettings()
+                notificationStatus = switch settings.authorizationStatus {
+                case .authorized: "on"
+                case .denied: "DENIED"
+                case .notDetermined: "never asked"
+                case .provisional: "provisional"
+                case .ephemeral: "ephemeral"
+                @unknown default: "?"
+                }
+            }
         }
     }
     #endif

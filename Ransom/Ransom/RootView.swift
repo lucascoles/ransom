@@ -93,7 +93,6 @@ struct RootView: View {
         // already running in the background.
         DarwinNotifications.observe(RansomCore.unlockRequestedNotification) {
             model.consumePendingShieldRequest()
-            startPendingWorkoutIfNeeded()
         }
     }
 
@@ -106,22 +105,16 @@ struct RootView: View {
         model.usageRevision += 1
         model.consumePendingShieldRequest()
         Task { await store.refreshEntitlement() }
-        startPendingWorkoutIfNeeded()
     }
 
-    /// If the user got here by tapping the shield, drop them straight into the set.
-    private func startPendingWorkoutIfNeeded() {
-        guard model.pendingUnlockAppName != nil,
-              workoutRequest == nil,
-              model.hasCompletedOnboarding else { return }
-
-        selectedTab = 0
-        workoutRequest = WorkoutRequest(
-            exercise: model.plan.exercise,
-            target: model.repsPerSet,
-            trigger: model.pendingUnlockAppName
-        )
-    }
+    // The shield handoff used to open the camera the moment Ransom came to the
+    // front. It was removed because it fired on *every* foreground, not just the
+    // one after a shield tap - `pendingUnlockAppName` outlives the launch that
+    // set it, so the app reopened the camera each time it was returned to, which
+    // is an app that will not let you look at your own home screen.
+    //
+    // The handoff still lands: Home greets the user by the app they were
+    // reaching for, and starting the set is one deliberate tap from there.
 }
 
 #Preview {

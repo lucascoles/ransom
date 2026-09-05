@@ -36,6 +36,10 @@ public enum RansomCore {
         /// from "the extension ran and iOS ignored what it returned" - which look
         /// identical from the outside, and need completely different fixes.
         public static let shieldCalls = "ransom.shield.calls"
+        /// Incremented when the shield's primary button is pressed. With
+        /// `shieldCalls` it separates "the screen never appeared" from "it
+        /// appeared, was tapped, and the handoff went nowhere".
+        public static let shieldTaps = "ransom.shield.taps"
         /// The user's most-used apps, as opaque tokens, ranked. Written by a
         /// DeviceActivityReport extension - the only place usage can be read -
         /// and read by the app to recommend what to block. See
