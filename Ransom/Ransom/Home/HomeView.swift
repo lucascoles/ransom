@@ -2,14 +2,14 @@ import UserNotifications
 import ManagedSettings
 import SwiftUI
 
-/// The home screen answers two questions in one glance: how is today going, and
-/// what's the next thing to do about it?
+/// The home screen answers two questions: what's the next thing to do, and how
+/// is today going? In that order.
 ///
-/// Today is measured in screen time, not reps. The screen-time card sits first
-/// because it's the thing the user is actually here to change; the unlock card
-/// follows because it's the action. The order flips only when there's a set to
-/// run right now (a shield tap, or time already running), since then the action
-/// is the reason they opened the app.
+/// The first screenful is for doing: a running unlock if there is one, the
+/// setup step while blocking isn't on yet, then earning and spending, with the
+/// balance under them. The second is for looking: the reaches Rex caught, the
+/// phone's real screen time, the rules. Anything that exists on another tab
+/// (the week of reps lives on Progress) or has nothing to say yet stays off.
 struct HomeView: View {
     @Environment(AppModel.self) private var model
     @Environment(ScreenTimeManager.self) private var screenTime
@@ -62,32 +62,39 @@ struct HomeView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 2)
 
+                if screenTime.isCurrentlyUnlocked {
+                    activeUnlockCard
+                }
+
+                // Until blocking is on, earning buys minutes of nothing, so the
+                // step that makes the rest of the screen mean something comes
+                // first - directly under Rex, who is asking for it. It sat three
+                // screenfuls down, behind cards that assumed it was done.
+                setupCard
+
                 // Earning and spending lead; the balance sits under them. The
                 // bank was on top because it is what you check, but checking it
                 // is a glance and the two things you might actually do were being
                 // pushed below the fold to make room for it.
-                if screenTime.isCurrentlyUnlocked {
-                    activeUnlockCard
-                }
                 earnCard
                 spendCard
                 bankCard
 
+                // The second screenful is for looking, and opens with the one
+                // number nothing else on the phone can show them.
                 ReachesCard()
+
+                // Only once it can show something. Unauthorized, it was a second
+                // card asking for the same permission as the setup card above.
+                if screenTime.isAuthorized {
+                    ScreenTimeReportCard()
+                }
 
                 RulesSection()
 
-                ScreenTimeReportCard()
-
-                if !screenTime.isAuthorized {
-                    permissionCard
-                } else if !screenTime.hasSelection {
-                    chooseAppsCard
-                } else {
+                if isSetUp {
                     blockedAppsCard
                 }
-
-                weekCard
             }
             .padding(.horizontal, Metrics.screenPadding)
             .padding(.bottom, 28)
@@ -192,8 +199,11 @@ struct HomeView: View {
         if screenTime.isCurrentlyUnlocked {
             return "You earned it. Go enjoy. I'll give you a nudge when time's up."
         }
+        if !screenTime.isAuthorized {
+            return "Switch on blocking just below and I'll start keeping an eye on your apps."
+        }
         if !screenTime.hasSelection {
-            return "Pick a few apps and I'll keep an eye on them for you. You can pick them in Settings any time."
+            return "Pick a few apps just below and I'll keep an eye on them for you."
         }
         if model.isOverAllowance {
             return "Past today's target. It happens. Tomorrow resets, and anything you've banked carries over."
@@ -204,15 +214,6 @@ struct HomeView: View {
         return "You've got \(model.todayMinutesLeft) minutes left today. Plenty of room."
     }
 
-    // MARK: - Today
-
-    /// Today measured the way the user actually wants their day to go: minutes
-    /// *not* spent in the apps.
-    ///
-    /// This used to count reps toward a daily rep goal, which quietly sold the
-    /// wrong thing: a big rep number means a lot of unlocks were bought, and a
-    /// user who hit it had scrolled all day. Reps are the price, so they stay on
-    /// the card as a receipt line, but the goal is the time.
     // MARK: - Unlock
 
     private var earnCard: some View {
@@ -443,6 +444,19 @@ struct HomeView: View {
 
     // MARK: - Blocking state
 
+    private var isSetUp: Bool { screenTime.isAuthorized && screenTime.hasSelection }
+
+    /// Whichever step is missing, and nothing once both are done: the finished
+    /// state is a quiet row at the bottom, not a card up here.
+    @ViewBuilder
+    private var setupCard: some View {
+        if !screenTime.isAuthorized {
+            permissionCard
+        } else if !screenTime.hasSelection {
+            chooseAppsCard
+        }
+    }
+
     private var permissionCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Label("One more step", systemImage: "hand.raised.fill")
@@ -454,14 +468,18 @@ struct HomeView: View {
                 .foregroundStyle(Palette.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
 
-            PrimaryButton(title: "Turn on blocking") {
+            SecondaryButton(title: "Turn on blocking", icon: "lock.fill") {
                 Task {
                     await screenTime.requestAuthorization()
                     screenTime.startMonitoring()
                 }
             }
         }
-        .ransomCard()
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
+                .fill(Palette.brandSoft)
+        )
     }
 
 
@@ -475,9 +493,13 @@ struct HomeView: View {
                 .font(RansomFont.body(14))
                 .foregroundStyle(Palette.inkSoft)
 
-            PrimaryButton(title: "Choose apps") { showAppPicker = true }
+            SecondaryButton(title: "Choose apps", icon: "square.grid.2x2.fill") { showAppPicker = true }
         }
-        .ransomCard()
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
+                .fill(Palette.brandSoft)
+        )
     }
 
     private var blockedAppsCard: some View {
@@ -523,15 +545,12 @@ struct HomeView: View {
     private var spendCard: some View {
         if model.bankedMinutes > 0 && !screenTime.isCurrentlyUnlocked {
             VStack(spacing: 12) {
-                HStack {
-                    Text("Spend from your bank")
-                        .font(RansomFont.headline(16))
-                        .foregroundStyle(Palette.ink)
-                    Spacer()
-                    Text("\(model.bankedMinutes) available")
-                        .font(RansomFont.caption(12))
-                        .foregroundStyle(Palette.inkSoft)
-                }
+                // No balance in the header: the "all" chip is the balance, and
+                // the bank row directly beneath says it again in full.
+                Text("Spend from your bank")
+                    .font(RansomFont.headline(16))
+                    .foregroundStyle(Palette.ink)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 spendPicker
 
@@ -605,33 +624,31 @@ struct HomeView: View {
 
     // MARK: - The bank
 
-    /// The balance. First on the screen because it's the first thing anyone opens
-    /// the app to find out.
+    /// The balance and today's receipt, in one row.
+    ///
+    /// The balance was a 72pt counter with the card to itself, which is the
+    /// size of the thing you opened the app for - and it sits third, under two
+    /// cards that are. A glance-sized number in third place is the hierarchy
+    /// agreeing with the order. Nothing at all until something has happened
+    /// today: a row of zeros on day one is a scoreboard for a game not started.
+    @ViewBuilder
     private var bankCard: some View {
-        VStack(spacing: 14) {
-            VStack(spacing: 0) {
-                Text("\(model.bankedMinutes)")
-                    .font(RansomFont.counter(72))
-                    .foregroundStyle(model.bankedMinutes > 0 ? Palette.brand : Palette.inkFaint)
-                    .contentTransition(.numericText(value: Double(model.bankedMinutes)))
-                    .animation(.snappy(duration: 0.3), value: model.bankedMinutes)
-
-                Text(model.bankedMinutes == 1 ? "minute banked" : "minutes banked")
-                    .font(RansomFont.headline(15))
-                    .foregroundStyle(Palette.inkSoft)
-            }
-
-            Divider().overlay(Palette.hairline)
-
-            // The rate and the day's earnings, so the balance is never a number
-            // that just appeared. Steps only when they're the chosen movement —
-            // otherwise it's a stat about a challenge they didn't take.
+        if model.bankedMinutes > 0 || model.todayMinutesEarned > 0 || model.todayReps > 0 {
             HStack(spacing: 0) {
-                // Earned, not the exchange rate: the card below already states the
+                bankStat(
+                    value: "\(model.bankedMinutes)",
+                    label: "banked",
+                    tint: model.bankedMinutes > 0 ? Palette.brand : Palette.inkFaint
+                )
+
+                Divider().frame(height: 30).overlay(Palette.hairline)
+                // Earned, not the exchange rate: the earn card already states the
                 // rate, and at 10 push-ups for 15 minutes the rate rounds to
                 // "1 reps per minute", which is both wrong and ungrammatical.
                 bankStat(value: "\(model.todayMinutesEarned)", label: "earned today")
 
+                // Steps only when they're the chosen movement - otherwise it's a
+                // stat about a challenge they didn't take.
                 if plan.exercise.isPassive {
                     Divider().frame(height: 30).overlay(Palette.hairline)
                     bankStat(value: steps.stepsToday.formatted(), label: "steps today")
@@ -640,39 +657,22 @@ struct HomeView: View {
                     bankStat(value: "\(model.todayReps)", label: "\(plan.exercise.unitLabel) today")
                 }
             }
+            .ransomCard(padding: 14)
         }
-        .ransomCard()
     }
 
-    private func bankStat(value: String, label: String) -> some View {
+    private func bankStat(value: String, label: String, tint: Color = Palette.ink) -> some View {
         VStack(spacing: 2) {
             Text(value)
-                .font(RansomFont.headline(19))
-                .foregroundStyle(Palette.ink)
+                .font(RansomFont.counter(24))
+                .foregroundStyle(tint)
+                .contentTransition(.numericText())
+                .animation(.snappy(duration: 0.3), value: value)
             Text(label)
                 .font(RansomFont.caption(11))
                 .foregroundStyle(Palette.inkSoft)
         }
         .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - Week
-
-    private var weekCard: some View {
-        let weekReps = model.weekBars.reduce(0) { $0 + Int($1.value) }
-        return VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("This week")
-                    .font(RansomFont.headline(16))
-                    .foregroundStyle(Palette.ink)
-                Spacer()
-                Text(weekReps == 0 ? "First set fills this in" : "\(weekReps) reps")
-                    .font(RansomFont.caption(13))
-                    .foregroundStyle(Palette.inkSoft)
-            }
-            WeekBars(values: model.weekBars)
-        }
-        .ransomCard()
     }
 }
 
