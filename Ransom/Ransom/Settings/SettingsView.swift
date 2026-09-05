@@ -15,15 +15,7 @@ struct SettingsView: View {
     /// than landing on the first tap of a row.
     @State private var pendingIntensity: Intensity?
     @State private var pendingDays: Int?
-    @State private var showCommitConfirm = false
 
-    private var commitTitle: String {
-        guard let pendingIntensity else { return "Lock it in?" }
-        if pendingIntensity == model.profile.intensity {
-            return model.profile.isCommitted ? "Extend your run?" : "Commit to \(pendingIntensity.title)?"
-        }
-        return "Move to \(pendingIntensity.title)?"
-    }
 
     /// Spells out the consequence with the real date, because "you can't go back"
     /// means very little next to "you can't go back until the 19th".
@@ -81,16 +73,6 @@ struct SettingsView: View {
         .sheet(isPresented: $showAppPicker) { AppPickerView() }
         .sheet(isPresented: $showPaywall) {
             PaywallView(plan: model.plan, context: .standalone, onFinish: {})
-        }
-        .confirmationDialog(
-            commitTitle,
-            isPresented: $showCommitConfirm,
-            titleVisibility: .visible
-        ) {
-            Button("Lock it in") { applyPendingCommitment() }
-            Button("Not yet", role: .cancel) {}
-        } message: {
-            Text(commitMessage)
         }
         .confirmationDialog(
             "Erase everything?",
@@ -213,11 +195,27 @@ struct SettingsView: View {
 
                             CommitmentPicker(days: $pendingDays)
 
-                            PrimaryButton(
-                                title: isCurrent && model.profile.isCommitted ? "Extend commitment" : "I'm committed",
-                                icon: "lock.fill"
+                            // What the second tap used to say, said before the
+                            // hold rather than after it. The date is the whole
+                            // point of confirming - "30 days" is abstract and
+                            // "until Sunday 4 October" is a decision - so it has
+                            // to be on screen while they are holding, not in a
+                            // sheet they dismissed to get here.
+                            Text(commitMessage)
+                                .font(RansomFont.caption(12))
+                                .foregroundStyle(Palette.inkSoft)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                            HoldToCommitButton(
+                                title: isCurrent && model.profile.isCommitted
+                                    ? "Hold to extend" : "Hold to commit",
+                                // Longer than the rule editor's second. This one
+                                // cannot be undone for the length of the run, and
+                                // the hold should feel like that.
+                                duration: 1.6
                             ) {
-                                showCommitConfirm = true
+                                applyPendingCommitment()
                             }
                         }
                         .padding(.horizontal, 4)
