@@ -22,8 +22,26 @@ struct HomeView: View {
     @Binding var workoutRequest: WorkoutRequest?
 
     @State private var showAppPicker = false
+    /// How many sets' worth to do in one go, 1 to 3. A bigger appetite than the
+    /// plan's single set is a good sign and there is no reason to make somebody
+    /// return to this screen three times for it.
+    @State private var earnSets = 1
+    /// The movement the Earn button will start. Nil follows the plan; tapping the
+    /// other one in the swap row sets it, and only that.
+    @State private var chosenExercise: Exercise?
 
     private var plan: RansomPlan { model.plan }
+
+    /// What the Earn button is currently pointed at.
+    private var activeExercise: Exercise { chosenExercise ?? plan.exercise }
+
+    /// Three is the ceiling. Past about forty-five minutes the thing being bought
+    /// stops being a break and starts being the evening, which is the habit this
+    /// app exists to interrupt rather than to sell in bulk.
+    private static let maximumSets = 3
+
+    private var earnReps: Int { scaledTarget(for: activeExercise) * earnSets }
+    private var earnMinutes: Int { plan.minutesPerUnlock * earnSets }
 
     /// A set is the reason they're here, so the unlock card leads.
     private var unlockLeads: Bool {
@@ -295,18 +313,19 @@ struct HomeView: View {
 
     private var earnCard: some View {
         VStack(spacing: 14) {
-            Text(plan.exercise.isPassive ? "Earning as you walk" : "One set")
+            Text(plan.exercise.isPassive ? "Earning as you walk"
+                 : (earnSets == 1 ? "One set" : "\(earnSets) sets"))
                 .font(RansomFont.headline(16))
                 .foregroundStyle(Palette.ink)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             HStack(spacing: 0) {
                 VStack(spacing: 2) {
-                    Text("\(model.repsPerSet)")
+                    Text("\(earnReps)")
                         .font(RansomFont.display(40))
                         .foregroundStyle(Palette.ink)
-                        .contentTransition(.numericText())
-                    Text(plan.exercise.title.lowercased())
+                        .contentTransition(.numericText(value: Double(earnReps)))
+                    Text(activeExercise.title.lowercased())
                         .font(RansomFont.caption(12))
                         .foregroundStyle(Palette.inkSoft)
                 }
@@ -318,15 +337,18 @@ struct HomeView: View {
                     .frame(width: 36)
 
                 VStack(spacing: 2) {
-                    Text("\(plan.minutesPerUnlock) min")
+                    Text("\(earnMinutes) min")
                         .font(RansomFont.display(40))
                         .foregroundStyle(Palette.brand)
+                        .contentTransition(.numericText(value: Double(earnMinutes)))
                     Text("of your apps")
                         .font(RansomFont.caption(12))
                         .foregroundStyle(Palette.inkSoft)
                 }
                 .frame(maxWidth: .infinity)
             }
+
+            if !plan.exercise.isPassive { setsSlider }
 
             // Spending comes first when there's anything to spend. Someone with a
             // full bank who is made to do another set has been told their earlier
@@ -361,10 +383,10 @@ struct HomeView: View {
                 // The icon names the thing you're about to do. A generic bolt said
                 // nothing, and it's the exercise's own symbol so it follows whichever
                 // movement the user picked rather than assuming push-ups.
-                PrimaryButton(title: "Earn \(plan.minutesPerUnlock) minutes", icon: plan.exercise.symbol) {
+                PrimaryButton(title: "Earn \(earnMinutes) minutes", icon: activeExercise.symbol) {
                     workoutRequest = WorkoutRequest(
-                        exercise: plan.exercise,
-                        target: model.repsPerSet,
+                        exercise: activeExercise,
+                        target: earnReps,
                         trigger: model.pendingUnlockAppName
                     )
                 }
@@ -387,28 +409,29 @@ struct HomeView: View {
             ForEach(Array(model.profile.exercises).sorted { $0.effortWeight > $1.effortWeight }) { exercise in
                 Button {
                     Haptics.select()
-                    let target = scaledTarget(for: exercise)
-                    workoutRequest = WorkoutRequest(
-                        exercise: exercise,
-                        target: target,
-                        trigger: model.pendingUnlockAppName
-                    )
+                    // Choose, then go. Tapping a movement used to drop the user
+                    // straight into that camera, so picking squats to see what
+                    // squats would cost started a set of them - a control that
+                    // answers a question by committing you to it.
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                        chosenExercise = exercise
+                    }
                 } label: {
                     VStack(spacing: 3) {
                         Image(systemName: exercise.symbol)
                             .font(.system(size: 15, weight: .semibold))
-                        Text("\(scaledTarget(for: exercise)) \(exercise.shortTitle.lowercased())")
+                        Text("\(scaledTarget(for: exercise) * earnSets) \(exercise.shortTitle.lowercased())")
                             .font(RansomFont.caption(12))
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
                     }
-                    .foregroundStyle(exercise == plan.exercise ? Palette.brand : Palette.inkSoft)
+                    .foregroundStyle(exercise == activeExercise ? Palette.onBrand : Palette.inkSoft)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .padding(.horizontal, 6)
                     .background(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(exercise == plan.exercise ? Palette.brandSoft : Palette.surfaceAlt)
+                            .fill(exercise == activeExercise ? Palette.brand : Palette.surfaceAlt)
                     )
                 }
                 .pressable(scale: 0.95)
@@ -417,9 +440,47 @@ struct HomeView: View {
     }
 
     /// Keeps every movement worth the same amount of scroll time.
+    ///
+    /// Deferred to the plan rather than repeated here. The same conversion used
+    /// to live in two places and they disagreed, which is how a standard squat
+    /// set came to pay sixteen minutes on a fifteen-minute plan.
     private func scaledTarget(for exercise: Exercise) -> Int {
-        let equivalents = Double(model.repsPerSet) * plan.exercise.effortWeight
-        return max(3, Int((equivalents / exercise.effortWeight).rounded()))
+        plan.repsRequired(for: exercise)
+    }
+
+    /// How many sets to do in one go.
+    ///
+    /// A slider rather than a stepper because the interesting number is the one
+    /// on the right - people decide how long they want, not how many push-ups -
+    /// and dragging keeps both figures moving together under the thumb.
+    private var setsSlider: some View {
+        VStack(spacing: 6) {
+            Slider(
+                value: Binding(
+                    get: { Double(earnSets) },
+                    set: { raw in
+                        let value = max(1, min(Self.maximumSets, Int(raw.rounded())))
+                        // Only on a real step change, or one drag fires a tap per
+                        // frame and the phone buzzes like a fault.
+                        guard value != earnSets else { return }
+                        Haptics.tick()
+                        withAnimation(.snappy(duration: 0.18)) { earnSets = value }
+                    }
+                ),
+                in: 1...Double(Self.maximumSets),
+                step: 1
+            )
+            .tint(Palette.brand)
+
+            HStack {
+                Text("1 set")
+                Spacer()
+                Text("\(Self.maximumSets) sets")
+            }
+            .font(RansomFont.caption(11))
+            .foregroundStyle(Palette.inkFaint)
+        }
+        .padding(.horizontal, 2)
     }
 
     private var activeUnlockCard: some View {
