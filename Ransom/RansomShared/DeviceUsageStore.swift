@@ -32,15 +32,8 @@ public struct DeviceUsageStore {
         defaults.object(forKey: RansomCore.Key.deviceUsageDay) as? Date
     }
 
-    /// How many app rows the report drew last time, or nil before it ever has.
-    public var appCount: Int? {
-        guard minutesToday != nil else { return nil }
-        return defaults.integer(forKey: RansomCore.Key.deviceUsageAppCount)
-    }
-
-    public func record(totalMinutes: Int, appCount: Int) {
+    public func record(totalMinutes: Int) {
         defaults.set(totalMinutes, forKey: RansomCore.Key.deviceUsageMinutes)
-        defaults.set(appCount, forKey: RansomCore.Key.deviceUsageAppCount)
         defaults.set(Date(), forKey: RansomCore.Key.deviceUsageDay)
     }
 }

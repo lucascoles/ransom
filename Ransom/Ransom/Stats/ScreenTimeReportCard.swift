@@ -21,17 +21,22 @@ struct ScreenTimeReportCard: View {
     /// five apps before there is one leaves a card that is mostly nothing. It
     /// has to be on screen at some size for the extension to run at all, so the
     /// first pass gets a short one and the full height arrives with the data.
-    /// The height to reserve, from what the report said it drew last time.
+    /// Room for the most the report can ever draw.
     ///
-    /// Guessing this was wrong twice in both directions - too little and the last
-    /// rows were silently clipped, too much and the card was mostly nothing. The
-    /// view is drawn by another process and has no intrinsic height to read, so
-    /// it records its own row count and the host does arithmetic instead of
-    /// estimating. Before the first render there is no count, and the card takes
-    /// the short height it needs to be on screen at all for the extension to run.
+    /// Three attempts at being clever about this failed the same way. The view is
+    /// drawn by another process, has no intrinsic height to read, and fills
+    /// whatever frame it is given - so a frame too short does not scroll or
+    /// shrink, it centres and clips, which hides the total and the top rows and
+    /// leaves a middle slice that looks like the data is simply missing.
+    ///
+    /// Sizing from the last render's row count was the worst of them: the count
+    /// is always one render behind, so a quiet morning locked the card at two
+    /// rows for the rest of the day. The extension caps its list at five, and
+    /// that cap is knowable here, so the card reserves five rows and wears the
+    /// gap on a thin day. Empty space costs nothing; a clipped card looks broken.
+    private static let maximumRows = 5
     private var reportHeight: CGFloat {
-        guard let rows = DeviceUsageStore().appCount, rows > 0 else { return 76 }
-        return 76 + CGFloat(rows) * 54
+        DeviceUsageStore().minutesToday == nil ? 76 : 76 + CGFloat(Self.maximumRows) * 54
     }
 
     /// Today, from midnight. A `.daily` segment over a shorter interval is what
