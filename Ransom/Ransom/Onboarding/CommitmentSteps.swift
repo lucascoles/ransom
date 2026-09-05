@@ -106,6 +106,16 @@ struct FirstRepStep: View {
                         status: cameraStatus
                     )
                     .frame(maxWidth: 240)
+                    // The same status light the set screen uses. The detector is
+                    // identical here, so the feedback has to be too: a rep refused
+                    // in the intake with no visible reason is the first impression
+                    // of a counter that looks broken.
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 26, style: .continuous)
+                            .strokeBorder(borderColour ?? .clear,
+                                          lineWidth: borderColour == nil ? 0 : 4)
+                    )
+                    .animation(.easeInOut(duration: 0.2), value: borderColour)
                 } else {
                     RexImage(pose: pose, size: 150)
                 }
@@ -169,13 +179,15 @@ struct FirstRepStep: View {
                     .font(RansomFont.headline(18))
                     .foregroundStyle(Palette.inkSoft)
             }
+            // Read from the floor mid-push-up, so a correction gets size and
+            // colour rather than being the quietest thing on the screen.
             Text(hintText)
-                .font(RansomFont.body(14))
-                .foregroundStyle(Palette.inkFaint)
+                .font(hasFeedback ? RansomFont.title(20) : RansomFont.body(14))
+                .foregroundStyle(hasFeedback ? Palette.danger : Palette.inkFaint)
                 .multilineTextAlignment(.center)
-                .frame(height: 40)
+                .frame(height: 52)
                 .padding(.horizontal, 12)
-                .animation(.easeInOut, value: hintText)
+                .animation(.easeInOut(duration: 0.15), value: hintText)
         }
         .padding(.top, 8)
     }
@@ -183,6 +195,17 @@ struct FirstRepStep: View {
     /// Form correction first, then the setup instruction for whichever counter is
     /// actually running. The sensor cue tells you to put the phone under your
     /// chest, which is the wrong advice entirely when the camera is watching.
+    /// True while there is something to say about the last rep.
+    private var hasFeedback: Bool { cameraIsLive && counter.formHint != nil }
+
+    /// Green while it is counting cleanly, red the moment a rep is refused,
+    /// nothing while it is still looking for you.
+    private var borderColour: Color? {
+        guard cameraIsLive else { return nil }
+        if hasFeedback { return Palette.danger }
+        return counter.tracking == .tracking ? Palette.green : nil
+    }
+
     private var cameraStatus: String? {
         switch counter.tracking {
         case .searching:   return "Looking for you…"
