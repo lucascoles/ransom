@@ -10,6 +10,10 @@ struct RulesSection: View {
 
     @State private var editing: FocusRule?
     @State private var isCreating = false
+    /// A starter the user tapped, carried into the editor as a prefill. They
+    /// still have to hold the button, so a template is a suggestion rather than
+    /// a rule that appeared without anybody agreeing to it.
+    @State private var seed: FocusRule?
 
     private var rules: [FocusRule] {
         _ = model.ruleRevision
@@ -45,6 +49,18 @@ struct RulesSection: View {
                                 editing = rule
                             }
                     }
+
+                    // Starters, after whatever they have already committed to.
+                    // A blank "New rule" card asks the user to invent the idea;
+                    // these say what a rule is for by example, which is the
+                    // difference between a feature and a prompt.
+                    ForEach(unusedTemplates) { template in
+                        TemplateCard(template: template)
+                            .onTapGesture {
+                                Haptics.tap()
+                                seed = template.rule
+                            }
+                    }
                 }
                 .padding(.horizontal, Metrics.screenPadding)
                 .padding(.vertical, 2)
@@ -72,6 +88,9 @@ struct RulesSection: View {
         .sheet(item: $editing) { rule in
             RuleEditorSheet(rule: rule)
         }
+        .sheet(item: $seed) { seed in
+            RuleEditorSheet(rule: nil, seed: seed)
+        }
     }
 
     /// `-RansomRuleEditor 1` opens the editor straight away. Same reason as
@@ -82,6 +101,14 @@ struct RulesSection: View {
         guard UserDefaults.standard.bool(forKey: "RansomRuleEditor") else { return }
         isCreating = true
         #endif
+    }
+
+    /// Starters the user has not already taken. Matched on name because that is
+    /// what they would recognise as "I already have that one" - a template they
+    /// added and then moved to a different hour is still theirs.
+    private var unusedTemplates: [RuleTemplate] {
+        let taken = Set(rules.map { $0.name.lowercased() })
+        return RuleTemplate.starters.filter { !taken.contains($0.name.lowercased()) }
     }
 
     private var newRuleCard: some View {
@@ -190,5 +217,86 @@ enum FocusRuleFormat {
 private extension Array {
     subscript(safe index: Int) -> Element? {
         indices.contains(index) ? self[index] : nil
+    }
+}
+
+/// A starter rule, offered rather than imposed.
+///
+/// The hours are ordinary on purpose - a gym slot at 5:30, reading before bed -
+/// because the job of a template is to be recognised, not admired. Every one of
+/// them opens the editor prefilled and still has to be held to commit.
+struct RuleTemplate: Identifiable {
+    var emoji: String
+    var name: String
+    var startMinutes: Int
+    var endMinutes: Int
+    var days: Set<Int> = []
+
+    var id: String { name }
+
+    var rule: FocusRule {
+        FocusRule(name: name, startMinutes: startMinutes, endMinutes: endMinutes, days: days)
+    }
+
+    /// Five, and no more. A wall of suggestions is a menu to browse; a handful is
+    /// a nudge to pick one.
+    static let starters: [RuleTemplate] = [
+        RuleTemplate(emoji: "🏋️", name: "Gym time",
+                     startMinutes: 17 * 60 + 30, endMinutes: 18 * 60 + 30,
+                     days: [2, 4, 7]),
+        RuleTemplate(emoji: "📖", name: "Reading time",
+                     startMinutes: 20 * 60, endMinutes: 20 * 60 + 45),
+        RuleTemplate(emoji: "🧠", name: "Deep work",
+                     startMinutes: 9 * 60, endMinutes: 11 * 60,
+                     days: [2, 3, 4, 5, 6]),
+        RuleTemplate(emoji: "🍽️", name: "Dinner",
+                     startMinutes: 18 * 60, endMinutes: 19 * 60),
+        RuleTemplate(emoji: "🌙", name: "Wind down",
+                     startMinutes: 22 * 60, endMinutes: 23 * 60 + 30),
+    ]
+}
+
+/// A starter card. Deliberately quieter than a committed rule - dashed, faded,
+/// and carrying a plus rather than a lock, so the row never reads as though the
+/// user has five rules running that they do not remember agreeing to.
+private struct TemplateCard: View {
+    var template: RuleTemplate
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(template.emoji)
+                    .font(.system(size: 20))
+                Spacer()
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 17, weight: .bold))
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(Palette.surface, Palette.brand)
+            }
+
+            Spacer(minLength: 0)
+
+            Text(template.name)
+                .font(RansomFont.headline(16))
+                .foregroundStyle(Palette.ink)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+
+            Text("\(FocusRuleFormat.clock(template.startMinutes)) - \(FocusRuleFormat.clock(template.endMinutes))")
+                .font(RansomFont.caption(12))
+                .foregroundStyle(Palette.inkFaint)
+                .lineLimit(1)
+        }
+        .padding(14)
+        .frame(width: 150, height: 128, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
+                .fill(Palette.surfaceAlt)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
+                .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
+                .foregroundStyle(Palette.hairline)
+        )
     }
 }

@@ -18,6 +18,10 @@ struct RuleEditorSheet: View {
     /// Nil when creating. Held rather than bound so nothing is written until the
     /// commit completes - a half-built rule must never start charging.
     var rule: FocusRule?
+    /// A starter's values, prefilled for a rule that does not exist yet. Kept
+    /// separate from `rule` so a template still reads as new: it commits rather
+    /// than updates, and it has nothing to delete.
+    var seed: FocusRule?
 
     @State private var name = ""
     @State private var start = Date()
@@ -223,15 +227,15 @@ struct RuleEditorSheet: View {
     }
 
     private func load() {
-        guard let rule else {
+        guard let source = rule ?? seed else {
             start = Self.date(fromMinutes: 17 * 60 + 30)
             end = Self.date(fromMinutes: 18 * 60 + 30)
             return
         }
-        name = rule.name
-        start = Self.date(fromMinutes: rule.startMinutes)
-        end = Self.date(fromMinutes: rule.endMinutes)
-        days = rule.days
+        name = source.name
+        start = Self.date(fromMinutes: source.startMinutes)
+        end = Self.date(fromMinutes: source.endMinutes)
+        days = source.days
     }
 
     private func save() {
