@@ -360,7 +360,7 @@ final class PoseRepCounter: NSObject {
     /// same person kneeling read +0.15, so the line sits between them with room
     /// on both sides. The earlier attempt used the knee *angle*, which is noise
     /// from this camera position, and rejected perfect form.
-    private let kneelingLift: Double = 0.07
+    private let kneelingLift: Double = 0.10
     /// Knees above the wrists, in shoulder widths, *below* which the knees are on
     /// the floor.
     ///
@@ -372,7 +372,7 @@ final class PoseRepCounter: NSObject {
     /// floor when kneeling, so the knees read level with or below the wrists
     /// (-0.26 to +0.13 in that footage); in a plank the knees are a foot off the
     /// floor and read 0.30-0.44 above them. The line sits between the two.
-    private let kneelingKneeHeight: Double = 0.20
+    private let kneelingKneeHeight: Double = 0.14
     /// True once legs have been seen at all. Without it there is no telling
     /// "kneeling" from "legs out of frame", and the second must never be punished
     /// as the first.
@@ -931,12 +931,37 @@ final class PoseRepCounter: NSObject {
         // original; the knee-height test exists because kneeling hides the
         // ankles, and a cheat that hides the only evidence against it is not a
         // cheat that gets caught.
-        let lifts = downAnkleLifts.count >= 5 ? downAnkleLifts : repAnkleLifts
-        let kneeHeights = downKneeHeights.count >= 5 ? downKneeHeights : repKneeHeights
-        if median(of: lifts).map({ $0 > kneelingLift }) == true
-            || median(of: kneeHeights).map({ $0 < kneelingKneeHeight }) == true {
+        // Both signals have to agree before a rep is refused for kneeling.
+        //
+        // Either one alone was enough before, and it refused honest push-ups: at
+        // the edge of the frame Vision's lower-body joints are noisy, and a single
+        // bad read on either measure was sufficient to throw out a rep the user
+        // had genuinely done. Refusing real work is far more damaging than missing
+        // a cheat - the cheat costs a few minutes, the false rejection costs their
+        // belief in the counter, and they cannot argue with it.
+        //
+        // Requiring agreement means an actual knee push-up, where both measures
+        // move together and decisively, is still caught.
+        let lifts = downAnkleLifts.count >= 8 ? downAnkleLifts : repAnkleLifts
+        let kneeHeights = downKneeHeights.count >= 8 ? downKneeHeights : repKneeHeights
+        let ankleSaysKneeling = median(of: lifts).map { $0 > kneelingLift }
+        let kneeSaysKneeling = median(of: kneeHeights).map { $0 < kneelingKneeHeight }
+
+        switch (ankleSaysKneeling, kneeSaysKneeling) {
+        case (true, true):
             reject("knees", "Knees are down - straighten your legs to count.")
             return
+        case (true, nil), (nil, true):
+            // Only one measure is available at all. It has to be well past the
+            // line on its own, not a whisker over it.
+            let ankleClear = median(of: lifts).map { $0 > kneelingLift * 2 } == true
+            let kneeClear = median(of: kneeHeights).map { $0 < kneelingKneeHeight / 2 } == true
+            if ankleClear || kneeClear {
+                reject("knees", "Knees are down - straighten your legs to count.")
+                return
+            }
+        default:
+            break
         }
 
         if duration < minimumRepDuration {

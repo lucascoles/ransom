@@ -93,9 +93,10 @@ struct FirstRepStep: View {
         VStack(spacing: 0) {
             Spacer()
 
-            // Fixed slot on purpose. The camera window and Rex are different
-            // heights, and this view has springs on it — without a reserved height
-            // the swap animates the whole column and the preview appears to lurch.
+            // One reserved box for both states. The camera window and Rex are
+            // different heights, and this view has springs on it - without a
+            // shared box the swap animates the whole column and the preview
+            // appears to lurch.
             ZStack {
                 if cameraIsLive && !finished {
                     CameraWindow(
@@ -105,7 +106,6 @@ struct FirstRepStep: View {
                         target: target,
                         status: cameraStatus
                     )
-                    .frame(maxWidth: 240)
                     // The same status light the set screen uses. The detector is
                     // identical here, so the feedback has to be too: a rep refused
                     // in the intake with no visible reason is the first impression
@@ -120,7 +120,13 @@ struct FirstRepStep: View {
                     RexImage(pose: pose, size: 150)
                 }
             }
-            .frame(height: 320)
+            // Sized like the set screen rather than the postage stamp this used
+            // to be. Doing a push-up means looking at the phone from a foot away
+            // at a bad angle, and a 240pt window put the skeleton and the count
+            // too small to read from the floor. The aspect ratio holds the box's
+            // shape; the max height keeps it off the copy on a small phone.
+            .aspectRatio(3.0 / 4.0, contentMode: .fit)
+            .frame(maxWidth: .infinity, maxHeight: 460)
 
             Group {
                 if !isCounting && !finished {
@@ -131,7 +137,9 @@ struct FirstRepStep: View {
                     counterReadout
                 }
             }
-            .frame(height: 132, alignment: .top)
+            // With the camera up the count lives on the video, so this block is
+            // only the form hint and does not need the taller slot.
+            .frame(height: cameraIsLive && !finished ? 76 : 132, alignment: .top)
 
             Spacer()
 
