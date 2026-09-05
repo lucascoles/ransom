@@ -218,9 +218,12 @@ final class PoseRepCounter: NSObject {
         /// them from the moments just before the descent. The rest is where the
         /// user shifts, looks up, or sits back, none of which is a push-up, and
         /// all of which read as a huge drop if left in.
-        mutating func rescopeDrop(to recent: [Double]) {
+        ///
+        /// The top comes from a longer window than the bottom. See
+        /// `dropLeadLookback` for the reach that this told apart from a rep.
+        mutating func rescopeDrop(topFrom recent: [Double], bottomFrom lead: [Double]) {
             dropLow = recent.min() ?? .infinity
-            dropHigh = recent.max() ?? -.infinity
+            dropHigh = lead.max() ?? -.infinity
         }
     }
 
@@ -254,7 +257,15 @@ final class PoseRepCounter: NSObject {
     /// arms genuinely bent. The elbow is still not optional: a downward dog on
     /// locked arms drops the shoulders a long way with zero elbow travel and
     /// still fails here.
-    private let strongDropTravel: Double = 0.35
+    ///
+    /// Was 0.35. The drop is measured in *current* shoulder widths, and with the
+    /// phone this close the shoulders come at the camera on the way down - the
+    /// width grew 386 to 547 pixels in one rep - which shrinks the ratio for the
+    /// deepest reps. A full-depth first rep whose shoulders fell 1.1 top-widths
+    /// on screen read 0.355-0.384 here, a coin flip against 0.35; the other
+    /// three read 0.50-0.61. Nothing that wasn't a rep came near 0.30: rests
+    /// held within 0.05 and a one-armed reach for the phone made 0.24.
+    private let strongDropTravel: Double = 0.30
     private let corroboratedElbowTravel: Double = 20
     private let corroboratedBottomAngle: Double = 155
     /// Nobody descends and returns in under a third of a second.
@@ -291,7 +302,17 @@ final class PoseRepCounter: NSObject {
     /// anything older than this is the rest between reps, and a rest is where
     /// the user shifts about. Measured over a whole rest the "drop" reached 2.0
     /// shoulder widths without a single rep in it.
+    ///
+    /// This window seeds only the *top* of the rep's shoulder range. The bottom
+    /// is seeded from the shorter `dropLeadLookback`, because 1.5s reaches back
+    /// into the previous rep's ascent when reps come close together: a one-armed
+    /// reach for the phone 1.2s after a rep bent one elbow 29 degrees, moved the
+    /// shoulders 0.24 of their own accord, and was "corroborated" to 0.6 by the
+    /// bottom of the rep before it. The shoulders can be partway down before the
+    /// elbow reading moves - that is what the lookback is for - but they cannot
+    /// have reached the bottom of a rep that hasn't started.
     private let dropLookback: TimeInterval = 1.5
+    private let dropLeadLookback: TimeInterval = 0.6
 
     // Rep state machine
     /// The straightest and most bent the arm has been during the rep in progress.
@@ -416,7 +437,15 @@ final class PoseRepCounter: NSObject {
     /// crossed the old 24.5 degree entry line at its very bottom, so the rep was
     /// "entered" and "returned" within a couple of frames and thrown out as too
     /// fast. Entering earlier lets a shallow-reading rep be timed in full.
-    private let descentEntry = 0.8
+    ///
+    /// Then it happened again at 16 degrees. Vision loses the whole body for
+    /// 0.4-0.9s at the bottom of a deep close-grip rep - the head fills the
+    /// frame - so the descent has to be entered on the last frame before the
+    /// loss or the rep is timed from the way back up and refused as too fast.
+    /// Three of four reps crossed 16 degrees on exactly that last frame, one of
+    /// them by 0.1 degree. Rest tops drift under 5 degrees, so 12 is still well
+    /// clear of noise, and an early entry that goes nowhere is refused quietly.
+    private let descentEntry = 0.6
     /// How far back up the arm has to come for the rep to be complete, as a share
     /// of that rep's own excursion. Well short of the top, because most people
     /// never fully lock out between reps and waiting for it loses the rep.
@@ -713,14 +742,25 @@ final class PoseRepCounter: NSObject {
             return CGPoint(x: p.x * frameAspect, y: p.y)
         }
 
-        // --- Elbow angle, averaged across whichever arms are fully visible ---
+        // --- Elbow angle: the more bent of whichever arms are fully visible ---
+        //
+        // Not the average. Head-on, one arm of a close-grip push-up is seen
+        // almost end-on: shoulder, elbow and wrist line up in the image and the
+        // angle reads 173-175 degrees at the very bottom of a rep that visibly
+        // bends the other arm to 128-156. Averaged, four honest reps read 15-17
+        // degrees of travel - under the line that starts a descent - and two of
+        // them were never judged at all, silently, while the two that counted did
+        // so only because a hidden wrist was re-detected up at elbow height. The
+        // more bent arm read 25-43 degrees on the same four reps. Both arms
+        // bend the same amount in reality; the camera only ever gets a clean
+        // look at one of them.
         func arm(_ shoulder: Joint, _ elbow: Joint, _ wrist: Joint) -> Double? {
             guard let s = measured(shoulder), let e = measured(elbow), let w = measured(wrist) else { return nil }
             return angle(s, e, w)
         }
         let arms = [arm(.leftShoulder, .leftElbow, .leftWrist),
                     arm(.rightShoulder, .rightElbow, .rightWrist)].compactMap { $0 }
-        let elbow = arms.isEmpty ? nil : arms.reduce(0, +) / Double(arms.count)
+        let elbow = arms.min()
 
         // --- Shoulder height, in shoulder-widths ---
         //
@@ -871,8 +911,12 @@ final class PoseRepCounter: NSObject {
             repBottom = elbow
             if isArmed, let top = repTop, top - elbow >= corroboratedElbowTravel * descentEntry {
                 isDown = true
-                repWindow.startedDownAt = .now
-                repWindow.rescopeDrop(to: recentDrops.map(\.drop))
+                let now = Date()
+                repWindow.startedDownAt = now
+                repWindow.rescopeDrop(
+                    topFrom: recentDrops.map(\.drop),
+                    bottomFrom: recentDrops.filter { now.timeIntervalSince($0.at) <= dropLeadLookback }.map(\.drop)
+                )
                 // Descending again with the last rep still waiting on the
                 // shoulders means they never came back up, so it wasn't a rep.
                 if let pending = pendingRep {

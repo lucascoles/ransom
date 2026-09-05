@@ -182,6 +182,24 @@ principles got several of them backwards first:
  * **Close grip is the hard case.** Tucked elbows read 25-31 degrees of travel on
    real reps against a 35 gate, and the wrists vanish behind the head at the
    bottom (hence `jointHold = 0.7s`). Wide grip has never been a problem.
+ * **The elbow signal is the more bent arm, not the average.** A third recording
+   showed why close grip kept failing even with corroboration: head-on, one arm is
+   seen end-on and reads 173-175 at the bottom of a rep that bends the other arm
+   to 128-156. Averaged, four honest reps read 15-17 degrees - under the descent
+   entry, so two were never judged and no hint ever showed - while the more bent
+   arm read 25-43. The two that counted did so on a hidden wrist re-detected at
+   elbow height (a 75-128 degree reading), not on merit. Do not go back to the
+   average.
+ * **Vision loses the whole body at the bottom of a deep rep** for 0.4-0.9s when
+   the head fills the frame: no observation, skeleton frozen, nothing consumed.
+   The descent has to be entered on the last frame before the loss (entry is now
+   12 degrees) and the shoulders' bottom is seeded only from the 0.6s before it
+   (`dropLeadLookback`), because the 1.5s top window reached back into the
+   previous rep and corroborated a one-armed reach for the phone. That reach
+   also bent one elbow 29 degrees, which is why the guard exists.
+ * **The drop ratio shrinks on deep reps** because the shoulders come at the
+   camera and widen: a full first rep read 0.36-0.38 against the old 0.35, so
+   `strongDropTravel` is 0.30. Nothing that wasn't a rep came near it.
  * **Knee push-ups are caught by knee *height*, never knee *angle*.** Head-on the
    leg points at the lens so hip, knee and ankle project to nearly one point and
    the angle is noise - the first version rejected perfect form and passed the
