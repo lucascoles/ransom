@@ -633,7 +633,7 @@ struct HomeView: View {
     /// today: a row of zeros on day one is a scoreboard for a game not started.
     @ViewBuilder
     private var bankCard: some View {
-        if model.bankedMinutes > 0 || model.todayMinutesEarned > 0 || model.todayReps > 0 {
+        if model.bankedMinutes > 0 || model.todayReps > 0 {
             HStack(spacing: 0) {
                 bankStat(
                     value: "\(model.bankedMinutes)",
@@ -641,11 +641,9 @@ struct HomeView: View {
                     tint: model.bankedMinutes > 0 ? Palette.brand : Palette.inkFaint
                 )
 
-                Divider().frame(height: 30).overlay(Palette.hairline)
-                // Earned, not the exchange rate: the earn card already states the
-                // rate, and at 10 push-ups for 15 minutes the rate rounds to
-                // "1 reps per minute", which is both wrong and ungrammatical.
-                bankStat(value: "\(model.todayMinutesEarned)", label: "min earned")
+                // Minutes earned today is gone from here for the same reason it
+                // went from the lifetime card: it counts scroll time bought, and
+                // the balance beside it already says what is left to spend.
 
                 // Steps only when they're the chosen movement - otherwise it's a
                 // stat about a challenge they didn't take.
