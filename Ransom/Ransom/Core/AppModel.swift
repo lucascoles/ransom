@@ -164,7 +164,12 @@ final class AppModel {
         history.filter { $0.exercise == exercise }.reduce(0) { $0 + $1.reps }
     }
 
-    var lifetimePushUps: Int { lifetimeReps(of: .pushUps) }
+    /// Every rep of every movement, all time.
+    ///
+    /// The headline used to count push-ups only, so anybody training squats saw
+    /// a lifetime of zero next to a day's work. The number is reps now, and the
+    /// label says so.
+    var lifetimeReps: Int { history.reduce(0) { $0 + $1.reps } }
 
     /// Days on which at least one set was completed.
     var activeDays: Int {
@@ -245,26 +250,17 @@ final class AppModel {
         return min(1, Double(todayScreenMinutes) / Double(todayAllowance))
     }
 
-    /// Minutes of scrolling the gate has displaced, all time.
+    /// Minutes back today: the old daily average, less what the phone has
+    /// actually taken so far.
     ///
-    /// The honest version of this number: what the user told us they used to scroll
-    /// per day, times the days since they started, minus every minute they've
-    /// actually bought back with reps. It can't go below zero — if someone earns
-    /// more time than their old baseline, Ransom hasn't saved them anything and
-    /// shouldn't claim it has.
-    var lifetimeMinutesSaved: Int {
-        let wouldHaveScrolled = Double(baselineMinutes) * Double(daysSinceStart)
-        return max(0, Int(wouldHaveScrolled) - totalMinutesEarned)
-    }
-
-    var lifetimeDaysSaved: Double {
-        Double(lifetimeMinutesSaved) / (60 * 24)
-    }
-
-    /// Average minutes a day actually spent in the gated apps.
-    var averageEarnedMinutesPerDay: Int {
-        totalMinutesEarned / max(1, daysSinceStart)
-    }
+    /// This replaces a lifetime figure that could not be computed honestly.
+    /// It multiplied the stated baseline by the days installed and subtracted
+    /// minutes *earned* - a number from the history of sets, which is what the
+    /// user banked and not what they used. Earning and spending being different
+    /// numbers is a rule this app already has, and that calculation broke it in
+    /// the one place claiming to prove the app works. Today can be measured, so
+    /// today is what gets claimed.
+    var minutesBackToday: Int { max(0, baselineMinutes - todayScreenMinutes) }
 
     /// The longest run of consecutive logged days, ever.
     var bestStreak: Int {

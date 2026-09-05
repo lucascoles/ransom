@@ -101,11 +101,11 @@ struct StatsView: View {
 
             HStack(spacing: 0) {
                 VStack(spacing: 2) {
-                    Text(model.lifetimePushUps, format: .number)
+                    Text(model.lifetimeReps, format: .number)
                         .font(RansomFont.display(42))
                         .foregroundStyle(Palette.ink)
-                        .contentTransition(.numericText(value: Double(model.lifetimePushUps)))
-                    Text("push-ups")
+                        .contentTransition(.numericText(value: Double(model.lifetimeReps)))
+                    Text("reps")
                         .font(RansomFont.caption(13))
                         .foregroundStyle(Palette.inkSoft)
                 }
@@ -116,10 +116,10 @@ struct StatsView: View {
                     .frame(width: 1, height: 46)
 
                 VStack(spacing: 2) {
-                    Text(savedValue)
+                    Text(minutes(model.totalMinutesEarned))
                         .font(RansomFont.display(42))
                         .foregroundStyle(Palette.green)
-                    Text(savedLabel)
+                    Text("earned")
                         .font(RansomFont.caption(13))
                         .foregroundStyle(Palette.inkSoft)
                 }
@@ -129,7 +129,7 @@ struct StatsView: View {
             savedDerivation
 
             RexScene(
-                pose: model.lifetimePushUps > 500 ? .flex : .coach,
+                pose: model.lifetimeReps > 500 ? .flex : .coach,
                 line: lifetimeLine,
                 size: 92
             )
@@ -140,37 +140,40 @@ struct StatsView: View {
     }
 
     private var lifetimeLine: String {
-        let pushUps = model.lifetimePushUps
-        if pushUps == 0 {
+        let reps = model.lifetimeReps
+        if reps == 0 {
             return "No sets yet. The first one is the hard one, and it's a short one."
         }
-        return "\(pushUps.formatted()) push-ups you wouldn't have done otherwise. I counted every one."
+        return "\(reps.formatted()) reps you wouldn't have done otherwise. I counted every one."
     }
 
-    /// "0.1 days" is technically right and means nothing. Under a day it reads
-    /// as hours and minutes; from a day on, days to one decimal.
-    private var savedValue: String {
-        let saved = model.lifetimeMinutesSaved
-        guard saved >= 24 * 60 else { return minutes(saved) }
-        return model.lifetimeDaysSaved.formatted(.number.precision(.fractionLength(1)))
-    }
-
-    private var savedLabel: String {
-        model.lifetimeMinutesSaved >= 24 * 60 ? "days back" : "back in your day"
-    }
-
-    /// Shows the arithmetic rather than asking for trust: what you used to scroll,
-    /// what you actually scroll now, and the gap between them.
+    /// Today, against the day they described when they signed up.
+    ///
+    /// This used to claim a lifetime saving, worked out by multiplying the stated
+    /// baseline across every day installed and subtracting minutes *earned* -
+    /// which is what was banked, not what was used. It could read "31m now"
+    /// beside a real screen time of three and a half hours, on the same screen.
+    /// Today is the only span that can be measured, so today is the only one
+    /// claimed, and the figure it uses is the one the card underneath shows.
     private var savedDerivation: some View {
         let baseline = model.baselineMinutes
-        let now = model.averageEarnedMinutesPerDay
-        let widest = max(baseline, 1)
+        let today = model.todayScreenMinutes
+        let widest = max(baseline, today, 1)
 
         return VStack(alignment: .leading, spacing: 10) {
-            derivationBar(label: "Before Ransom", minutes: baseline, widest: widest, tint: Palette.inkFaint)
-            derivationBar(label: "Now", minutes: now, widest: widest, tint: Palette.green)
+            Text("TODAY")
+                .font(RansomFont.caption(11))
+                .tracking(1.4)
+                .foregroundStyle(Palette.inkFaint)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text("\(model.daysSinceStart) day\(model.daysSinceStart == 1 ? "" : "s") × \(minutes(baseline - now)) back a day")
+            derivationBar(label: "Before Ransom", minutes: baseline, widest: widest, tint: Palette.inkFaint)
+            derivationBar(label: "In your apps", minutes: today, widest: widest,
+                          tint: today <= baseline ? Palette.green : Palette.danger)
+
+            Text(model.minutesBackToday > 0
+                 ? "\(minutes(model.minutesBackToday)) back so far today"
+                 : "Past your old average for today")
                 .font(RansomFont.caption(12))
                 .foregroundStyle(Palette.inkSoft)
         }
