@@ -30,7 +30,7 @@ unverified.
 |---|---|
 | Builds (simulator, signing off) | yes, on CI and locally on Xcode 26.6, zero warnings |
 | Launches and renders all 16 intake screens | yes, see `screenshots/` |
-| Runs on a real device | yes, installed and launched (entitlements stripped) |
+| Runs on a real device | yes, with real entitlements since 2026-09-05 |
 | Blocking actually blocking anything | never attempted |
 | Camera rep counting | working; tuned against two screen recordings, see below |
 | Tests | none exist |
@@ -48,6 +48,23 @@ open Ransom/Ransom.xcodeproj      # ⌘R to a simulator
 Family Controls and App Groups are paid-account capabilities, the bundle IDs are
 `com.ransom.*` and won't sign against another team, and §4 has a strip-down that
 runs the whole intake flow in a simulator on a free Apple ID.
+
+**Device builds no longer strip entitlements.** The paid membership landed on
+2026-09-05, `com.apple.developer.family-controls` and `group.com.ransom.app` are
+provisioned on all four App IDs under team `N5UZJ54WPP`, and the deploy command
+is now plain:
+
+```
+xcodebuild build -project Ransom/Ransom.xcodeproj -scheme Ransom \
+  -destination "id=<device>" -configuration Debug \
+  -allowProvisioningUpdates DEVELOPMENT_TEAM=N5UZJ54WPP
+```
+
+Two things that cost an hour and will again: `xcodebuild -allowProvisioningUpdates`
+registers App IDs and adds most capabilities but **will not create an App Group** -
+that has to exist in the portal first, and be ticked on each App ID by hand. And
+signing needs an Apple ID in Xcode's Accounts pane; without one every target fails
+with "No Accounts" and no amount of flags helps.
 
 CI builds with `CODE_SIGNING_ALLOWED=NO` against a generic simulator, so a green
 build says nothing about whether entitlements will provision.
