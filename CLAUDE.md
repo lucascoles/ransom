@@ -238,6 +238,14 @@ by frame rather than guessing.
   minutes" should say banks, and "4,400 push-ups along the way" is computed from
   the old per-unlock model. Under the bank the honest figure is far larger and far
   less flattering, so it is a product decision, not a copy fix.
+- **The suggested-apps row has no data source yet.** `SuggestedAppsRow` shows the
+  user's most-used apps above Apple's picker, as real icons, one tap to block -
+  the Opal trick. It reads `UsageSuggestionStore`, which nothing writes: the
+  ranking only exists inside a `DeviceActivityReport` extension, that target does
+  not exist, and it would need Family Controls anyway. Tokens are the thing that
+  crosses (Codable, and opaque enough to name an app without telling us which),
+  so the extension writes tokens to the App Group and the app renders them with
+  `Label(token)`. Until then the row falls back to the apps named in intake.
 - `RansomPlan.projectedReps` and `expectedUnlocksPerDay` still model unlocks.
 - **No app icon yet.** Four concepts generated (Rex silhouette, Rex head, padlock,
   spiked R); the two vector ones are real SVGs. None chosen or installed.
