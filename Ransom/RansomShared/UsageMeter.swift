@@ -78,9 +78,18 @@ public struct UsageMeter {
         defaults.set(Date(), forKey: RansomCore.Key.usageDay)
     }
 
-    /// Called when monitoring starts for a new day, so the ladder begins from the
-    /// bottom rather than reporting yesterday's total until the first rung fires.
+    /// Called when monitoring starts, so the ladder begins from the bottom on a
+    /// new day rather than reporting yesterday's total until the first rung fires.
+    ///
+    /// Guarded on the date because `intervalDidStart` is not a once-a-day event:
+    /// the schedule spans the whole day, so restarting monitoring - which happens
+    /// on every spend and every change to the app list - fires it immediately.
+    /// Unguarded, that reset today's usage to zero several times a day and the
+    /// number on the home screen only ever counted the last few minutes.
     public nonmutating func startDay() {
+        let isToday = (defaults.object(forKey: RansomCore.Key.usageDay) as? Date)
+            .map { Calendar.current.isDateInToday($0) } ?? false
+        guard !isToday else { return }
         defaults.set(0, forKey: RansomCore.Key.usageMinutes)
         defaults.set(Date(), forKey: RansomCore.Key.usageDay)
     }

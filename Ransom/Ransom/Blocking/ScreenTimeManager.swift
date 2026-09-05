@@ -104,13 +104,23 @@ final class ScreenTimeManager {
         store.reconcile(ledger: ledger)
     }
 
-    /// Called after a completed set: lifts the shield and starts the burn-down.
+    /// Called after a completed set, or a spend from the bank: lifts the shield
+    /// and starts the burn-down.
+    ///
+    /// **Order matters, and getting it wrong makes the minutes vanish with the
+    /// apps still blocked.** The daily schedule covers the whole day, so we are
+    /// always inside it, and `startMonitoring` therefore makes iOS call
+    /// `intervalDidStart` on the monitor extension straight away. That extension
+    /// reconciles the shield against the ledger - and if it runs in its own
+    /// process before this one's grant is visible there, it reads "locked" and
+    /// puts the shield back up on top of a grant that just happened. Removing the
+    /// shield last means the extension can only ever lose that race.
     func grantEarnedTime(minutes: Int) {
         ledger.grant(minutes: minutes)
         syncUnlockState()
         guard isAuthorized else { return }
-        store.removeShield()
         restartMonitoring(thresholdMinutes: minutes)
+        store.removeShield()
         NotificationManager.scheduleTimeUpReminder(in: minutes)
     }
 
