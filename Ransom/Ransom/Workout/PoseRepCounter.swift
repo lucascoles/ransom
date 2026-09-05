@@ -360,7 +360,10 @@ final class PoseRepCounter: NSObject {
     /// same person kneeling read +0.15, so the line sits between them with room
     /// on both sides. The earlier attempt used the knee *angle*, which is noise
     /// from this camera position, and rejected perfect form.
-    private let kneelingLift: Double = 0.10
+    /// Set well past the kneeling reading rather than between the two, because
+    /// the gate kept refusing honest push-ups on the phone even after both
+    /// signals were made to agree. Everything between -0.02 and here now counts.
+    private let kneelingLift: Double = 0.12
     /// Knees above the wrists, in shoulder widths, *below* which the knees are on
     /// the floor.
     ///
@@ -371,8 +374,22 @@ final class PoseRepCounter: NSObject {
     /// and where they sit relative to the hands is the tell. Both are on the
     /// floor when kneeling, so the knees read level with or below the wrists
     /// (-0.26 to +0.13 in that footage); in a plank the knees are a foot off the
-    /// floor and read 0.30-0.44 above them. The line sits between the two.
-    private let kneelingKneeHeight: Double = 0.14
+    /// floor and read 0.30-0.44 above them.
+    ///
+    /// The line used to sit between the two ranges, and that is what was refusing
+    /// real reps. This measure is taken *against the wrists*, and on close grip
+    /// the wrists disappear behind the head at the bottom of the rep - which is
+    /// exactly when the leg samples are taken. A bad wrist read moves the
+    /// reference rather than the knees, and the rep is thrown out for a cheat
+    /// nobody committed. So the line now sits below the kneeling range's own
+    /// middle: knees *underneath* the hands, which a plank cannot produce
+    /// however badly the wrists are read.
+    private let kneelingKneeHeight: Double = -0.05
+    /// How many bottom-of-rep readings a leg measure needs before it is allowed an
+    /// opinion, and how much of that pile has to agree with its own median.
+    /// Both are high on purpose: this gate's failure mode is refusing real work.
+    private let minimumLegSamples = 10
+    private let legAgreement = 0.7
     /// True once legs have been seen at all. Without it there is no telling
     /// "kneeling" from "legs out of frame", and the second must never be punished
     /// as the first.
@@ -931,37 +948,25 @@ final class PoseRepCounter: NSObject {
         // original; the knee-height test exists because kneeling hides the
         // ankles, and a cheat that hides the only evidence against it is not a
         // cheat that gets caught.
-        // Both signals have to agree before a rep is refused for kneeling.
+        // Kneeling has to be obvious, sustained, and read from the bottom of the
+        // rep before it costs anybody a rep.
         //
-        // Either one alone was enough before, and it refused honest push-ups: at
-        // the edge of the frame Vision's lower-body joints are noisy, and a single
-        // bad read on either measure was sufficient to throw out a rep the user
-        // had genuinely done. Refusing real work is far more damaging than missing
-        // a cheat - the cheat costs a few minutes, the false rejection costs their
-        // belief in the counter, and they cannot argue with it.
+        // The first version of this gate fired on a single measure crossing a line
+        // drawn midway between the two ranges, and it refused honest push-ups over
+        // and over on a real phone. Both thresholds have since been pushed out past
+        // the kneeling readings themselves, and a rejection now needs a decent pile
+        // of samples taken while the elbows were bent, a median past the line, and
+        // most of those samples agreeing with the median. Scattered noise from
+        // legs at the edge of the frame can no longer refuse a rep on its own.
         //
-        // Requiring agreement means an actual knee push-up, where both measures
-        // move together and decisively, is still caught.
-        let lifts = downAnkleLifts.count >= 8 ? downAnkleLifts : repAnkleLifts
-        let kneeHeights = downKneeHeights.count >= 8 ? downKneeHeights : repKneeHeights
-        let ankleSaysKneeling = median(of: lifts).map { $0 > kneelingLift }
-        let kneeSaysKneeling = median(of: kneeHeights).map { $0 < kneelingKneeHeight }
-
-        switch (ankleSaysKneeling, kneeSaysKneeling) {
-        case (true, true):
+        // This deliberately lets a marginal knee push-up through. That costs a few
+        // minutes. Refusing work somebody actually did costs their belief in the
+        // counter, and there is nothing they can do to argue with it.
+        let anklesSayKneeling = kneelingVerdict(downAnkleLifts, says: { $0 > kneelingLift })
+        let kneesSayKneeling = kneelingVerdict(downKneeHeights, says: { $0 < kneelingKneeHeight })
+        if anklesSayKneeling || kneesSayKneeling {
             reject("knees", "Knees are down - straighten your legs to count.")
             return
-        case (true, nil), (nil, true):
-            // Only one measure is available at all. It has to be well past the
-            // line on its own, not a whisker over it.
-            let ankleClear = median(of: lifts).map { $0 > kneelingLift * 2 } == true
-            let kneeClear = median(of: kneeHeights).map { $0 < kneelingKneeHeight / 2 } == true
-            if ankleClear || kneeClear {
-                reject("knees", "Knees are down - straighten your legs to count.")
-                return
-            }
-        default:
-            break
         }
 
         if duration < minimumRepDuration {
@@ -1050,6 +1055,22 @@ final class PoseRepCounter: NSObject {
         guard samples.count >= 5 else { return nil }
         let sorted = samples.sorted()
         return sorted[sorted.count / 2]
+    }
+
+    /// Whether a leg measure says "kneeling" convincingly enough to refuse a rep.
+    ///
+    /// Three hurdles, all of which exist because a single crossing of a single
+    /// line was refusing real push-ups: enough samples that this is not one bad
+    /// frame, a median past the line rather than any reading past it, and most of
+    /// the samples agreeing with that median. Fewer than `minimumLegSamples`
+    /// readings is not evidence of anything and the rep is allowed - a camera that
+    /// cannot see your legs must never be treated as a camera catching you.
+    private func kneelingVerdict(_ samples: [Double],
+                                 says isKneeling: (Double) -> Bool) -> Bool {
+        guard samples.count >= minimumLegSamples,
+              let middle = median(of: samples), isKneeling(middle) else { return false }
+        let agreeing = samples.filter(isKneeling).count
+        return Double(agreeing) / Double(samples.count) >= legAgreement
     }
 
     // MARK: - Arming
