@@ -19,8 +19,11 @@ struct ProjectionStep: View {
     /// pause: read the year first, feel it, then be told what it adds up to. Given
     /// all at once it is a paragraph, and a paragraph gets skimmed.
     @State private var stage = 0
+    /// Set by a tap, which finishes whatever is typing rather than jumping past
+    /// a line the reader has not seen.
+    @State private var hasSkipped = false
 
-    private let stages = 4
+    private let stages = 3
 
     private var minutesPerDay: Int { profile.baselineDailyMinutes }
     private var daysPerYear: Double { Double(minutesPerDay) * 365 / (60 * 24) }
@@ -46,48 +49,36 @@ struct ProjectionStep: View {
             VStack(alignment: .leading, spacing: 0) {
                 Spacer(minLength: 8)
 
-                Text("At your current rate, you'll spend")
-                    .font(RansomFont.body(17))
-                    .foregroundStyle(Palette.inkSoft)
-                    .opacity(stage >= 0 ? 1 : 0)
-
-                Text("\(Int(daysPerYear.rounded())) days")
-                    .font(RansomFont.counter(58))
-                    .foregroundStyle(Palette.ink)
-                    .padding(.top, 2)
-
-                Text("on your phone over the next year.")
-                    .font(RansomFont.title(22))
-                    .foregroundStyle(Palette.ink)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 2)
+                TypedStack(
+                    lines: [
+                        .line("At your current rate, you'll spend", RansomFont.body(17), Palette.inkSoft),
+                        .line("\(Int(daysPerYear.rounded())) days", RansomFont.counter(58), Palette.ink),
+                        .line("on your phone over the next year.", RansomFont.title(22), Palette.ink),
+                    ],
+                    alignment: .leading,
+                    perCharacter: 0.03,
+                    isInstant: hasSkipped,
+                    onComplete: { advance() }
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 Spacer(minLength: 20)
 
                 if stage >= 1 {
-                    Text("Which puts you on track for")
-                        .font(RansomFont.body(17))
-                        .foregroundStyle(Palette.inkSoft)
-                        .transition(.opacity.combined(with: .offset(y: 14)))
-                }
-
-                if stage >= 2 {
-                    Text("\(wakingYearsLeft, specifier: "%.1f") years")
-                        .font(RansomFont.counter(76))
-                        .foregroundStyle(Palette.danger)
-                        .minimumScaleFactor(0.6)
-                        .lineLimit(1)
-                        .padding(.top, 2)
-                        .transition(.opacity.combined(with: .scale(scale: 0.86)))
-                }
-
-                if stage >= 3 {
-                    Text("of the time you're awake, spent looking down.")
-                        .font(RansomFont.title(22))
-                        .foregroundStyle(Palette.ink)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, 4)
-                        .transition(.opacity.combined(with: .offset(y: 14)))
+                    TypedStack(
+                        lines: [
+                            .line("Which puts you on track for", RansomFont.body(17), Palette.inkSoft, leadIn: 0.5),
+                            .line("\(String(format: "%.1f", wakingYearsLeft)) years", RansomFont.counter(76), Palette.danger,
+                                  leadIn: 0.35, fitsOneLine: true),
+                            .line("of the time you're awake, spent looking down.", RansomFont.title(22), Palette.ink),
+                        ],
+                        alignment: .leading,
+                        perCharacter: 0.03,
+                        isInstant: hasSkipped,
+                        onComplete: { advance() }
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .transition(.opacity)
                 }
 
                 Spacer(minLength: 20)
@@ -96,7 +87,7 @@ struct ProjectionStep: View {
                     .font(RansomFont.caption(12))
                     .foregroundStyle(Palette.inkFaint)
                     .fixedSize(horizontal: false, vertical: true)
-                    .opacity(stage >= 3 ? 1 : 0)
+                    .opacity(stage >= 2 ? 1 : 0)
 
                 Spacer(minLength: 8)
             }
@@ -108,24 +99,17 @@ struct ProjectionStep: View {
             .containerRelativeFrame(.vertical)
             .contentShape(Rectangle())
             // Impatience should skip ahead, never be ignored.
-            .onTapGesture { advance() }
-            .task {
-                // Unhurried on purpose. The pause before the years figure is doing
-                // as much work as the figure.
-                for delay in [1.6, 1.1, 1.3] {
-                    try? await Task.sleep(for: .seconds(delay))
-                    if Task.isCancelled { return }
-                    advance()
-                }
-            }
+            .onTapGesture { hasSkipped = true }
         }
     }
 
+    /// Called when a typed block finishes, so the pacing follows the words
+    /// rather than a timer that has to be kept in step with them.
     private func advance() {
         guard stage < stages - 1 else { return }
         // The years figure is the sting, so that is where the haptic lands.
-        if stage == 1 { Haptics.warning() } else { Haptics.tap() }
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) { stage += 1 }
+        if stage == 0 { Haptics.warning() }
+        withAnimation(.easeOut(duration: 0.25)) { stage += 1 }
     }
 }
 

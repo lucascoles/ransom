@@ -203,149 +203,25 @@ private struct LoopingClip: UIViewRepresentable {
     }
 }
 
-/// Types a beat's copy on, one character at a time.
-///
-/// Three lines of setup delivered as finished blocks are read in a glance and
-/// absorbed by nobody. Typing sets the pace of the joke: the reader arrives at
-/// the punchline at the moment it lands rather than a second before it.
-///
-/// The opener is typed first and smaller, then the line under it, so "This is
-/// Rex" has landed before he is accused of anything.
+/// The copy for one beat: an optional smaller opener, then the line.
 private struct TypedLines: View {
     var lead: String?
     var line: String
-    /// Skip straight to the finished text - Reduce Motion, or an impatient tap.
     var isInstant: Bool
     var onComplete: () -> Void
 
-    /// One progress per line, driven in sequence.
-    ///
-    /// A single shared value looked right on paper and typed both lines at once:
-    /// each renderer interpolates its own copy over the same window, so deriving
-    /// "where is this line up to" from one number loses the ordering entirely.
-    /// Two values, animated one after the other, is what actually sequences them.
-    @State private var leadProgress: Double = 0
-    @State private var lineProgress: Double = 0
-
-    /// Unhurried on purpose. Fast typing is just a stutter before the text
-    /// appears; at this pace the reader is reading along with it.
-    private let perCharacter: Double = 0.055
-    /// A pause between the opener and the line, so they read as two thoughts.
-    private let betweenLines: Double = 0.4
-
-    private var leadCount: Int { lead?.count ?? 0 }
-    private var leadDuration: Double { Double(leadCount) * perCharacter }
-    private var lineDuration: Double { Double(line.count) * perCharacter }
-    private var totalDuration: Double {
-        leadDuration + (leadCount > 0 ? betweenLines : 0) + lineDuration
-    }
-
     var body: some View {
-        VStack(spacing: 6) {
-            if let lead {
-                typed(lead, progress: leadProgress)
-                    .font(RansomFont.headline(17))
-                    .foregroundStyle(Palette.inkSoft)
-            }
-
-            typed(line, progress: lineProgress)
-                .font(RansomFont.title(24))
-                .foregroundStyle(Palette.ink)
-        }
-        .multilineTextAlignment(.center)
+        TypedStack(
+            lines: [
+                lead.map { TypedLine.line($0, RansomFont.headline(17), Palette.inkSoft) },
+                // A pause between the opener and the line, so they read as two
+                // thoughts rather than one run-on.
+                TypedLine.line(line, RansomFont.title(24), Palette.ink,
+                               leadIn: lead == nil ? 0 : 0.4),
+            ].compactMap { $0 },
+            isInstant: isInstant,
+            onComplete: onComplete
+        )
         .frame(maxWidth: .infinity, alignment: .center)
-        .task(id: line) {
-            leadProgress = 0
-            lineProgress = 0
-            guard !isInstant else {
-                leadProgress = 1
-                lineProgress = 1
-                onComplete()
-                return
-            }
-
-            if leadCount > 0 {
-                // Linear, because the per-glyph spring below supplies the
-                // character; easing the reveal too would make it arrive in a rush.
-                withAnimation(.linear(duration: leadDuration)) { leadProgress = 1 }
-                try? await Task.sleep(for: .seconds(leadDuration + betweenLines))
-                if Task.isCancelled { return }
-            }
-
-            withAnimation(.linear(duration: lineDuration)) { lineProgress = 1 }
-            try? await Task.sleep(for: .seconds(lineDuration))
-            if !Task.isCancelled { onComplete() }
-        }
-        .onChange(of: isInstant) { _, instant in
-            guard instant else { return }
-            withAnimation(.easeOut(duration: 0.18)) {
-                leadProgress = 1
-                lineProgress = 1
-            }
-        }
-    }
-
-    /// One line's worth of glyphs, keeping native text layout so wrapping,
-    /// kerning and alignment stay the system's job rather than mine.
-    @ViewBuilder
-    private func typed(_ text: String, progress: Double) -> some View {
-        if #available(iOS 18.0, *) {
-            Text(text).textRenderer(TypeOnRenderer(progress: progress))
-        } else {
-            // Pre-18 has no per-glyph hook, so it falls back to a clean prefix
-            // reveal. Same pacing, no bounce.
-            Text(String(text.prefix(Int((progress * Double(text.count)).rounded()))))
-        }
-    }
-}
-
-/// Draws each glyph in as the reveal passes over it, with a small overshoot.
-///
-/// A prefix reveal pops whole characters into existence, which reads as
-/// mechanical however fast it runs. Animating per glyph - fading up, drifting
-/// down a couple of points and settling from slightly too large - is what makes
-/// it feel handwritten rather than printed.
-@available(iOS 18.0, *)
-private struct TypeOnRenderer: TextRenderer, Animatable {
-    var progress: Double
-
-    var animatableData: Double {
-        get { progress }
-        set { progress = newValue }
-    }
-
-    /// How much of the line one glyph's entrance occupies. Wide enough that
-    /// several are always in flight, so the motion reads as a wave rather than
-    /// as one letter at a time.
-    private let window = 0.12
-
-    func draw(layout: Text.Layout, in context: inout GraphicsContext) {
-        let glyphs = layout.flatMap { $0 }.flatMap { $0 }
-        guard !glyphs.isEmpty else { return }
-
-        let count = Double(glyphs.count)
-        for (index, glyph) in glyphs.enumerated() {
-            // Starts are packed into 0...(1 - window) so the final glyph begins
-            // its entrance with a full window left to finish it. Spreading them
-            // across the whole 0...1 instead left the last few characters frozen
-            // part-way through their fade, which reads as permanently blurred
-            // rather than as still arriving.
-            let start = (Double(index) / count) * (1 - window)
-            let t = min(1, max(0, (progress - start) / window))
-            guard t > 0 else { continue }
-
-            // Overshoot then settle: back-ease out, the same shape a spring
-            // gives, without the cost of one animator per character.
-            let eased = 1 + 2.2 * pow(t - 1, 3) + 1.2 * pow(t - 1, 2)
-            let scale = 1 + 0.22 * (1 - eased)
-            let rect = glyph.typographicBounds.rect
-
-            var copy = context
-            copy.opacity = t
-            copy.translateBy(x: rect.midX, y: rect.midY)
-            copy.scaleBy(x: scale, y: scale)
-            copy.translateBy(x: -rect.midX, y: -rect.midY + (1 - eased) * -3)
-            copy.draw(glyph)
-        }
     }
 }
