@@ -7,10 +7,9 @@ import SwiftUI
 /// on every screen stops being a character and becomes a distraction - and the
 /// two that earn it are the two you sit and look at, waiting or resting.
 ///
-/// The clip is played forward and then backward, which is why nothing has to be
-/// done to make the ends match. A generated clip almost never loops cleanly, and
-/// the jump at the seam is exactly the sort of thing that reads as a bug; ping
-/// ponging it means the only frame that has to join is the one it started on.
+/// The bundled clips are boomerangs - forward then back - so they loop with no
+/// seam. A generated clip almost never ends where it began, and the jump at the
+/// join is exactly the sort of thing that reads as a bug.
 struct RexClip: View {
     var name: String
     var size: CGFloat
@@ -46,70 +45,47 @@ struct RexClip: View {
     }
 }
 
-/// Plays a clip forward, then backward, forever.
+/// Loops a clip, forever, with no seam to hide.
+///
+/// The clips are boomerangs - every frame forward then every frame back - baked
+/// that way at build time, so the last frame is the first one and an ordinary
+/// looping player is all that is needed.
+///
+/// The first version tried to do that turn at runtime by setting `rate = -1` at
+/// the end. It played once and stopped: most H.264 encodes cannot be played in
+/// reverse at all, and `AVPlayerItemDidPlayToEndTime` never fires at the *start*
+/// of a clip anyway, so nothing was there to turn it round again. Doing the work
+/// once, offline, beats asking the player for something it will not do.
 private struct PingPongClip: UIViewRepresentable {
     let url: URL
 
     func makeUIView(context: Context) -> PlayerView {
         let view = PlayerView()
-        let player = AVPlayer(url: url)
-        player.isMuted = true
+        let item = AVPlayerItem(url: url)
+        let queue = AVQueuePlayer(playerItem: item)
+        queue.isMuted = true
         // Decorative video must never duck whatever the user is listening to.
-        player.actionAtItemEnd = .none
-        view.playerLayer.player = player
+        queue.actionAtItemEnd = .advance
+        context.coordinator.looper = AVPlayerLooper(player: queue, templateItem: item)
+        view.playerLayer.player = queue
         view.playerLayer.videoGravity = .resizeAspect
-        context.coordinator.attach(to: player)
-        player.play()
+        queue.play()
         return view
     }
 
-    func updateUIView(_ view: PlayerView, context: Context) {}
+    func updateUIView(_ view: PlayerView, context: Context) {
+        // Coming back from the background leaves the player paused.
+        (view.playerLayer.player as? AVQueuePlayer)?.play()
+    }
 
     static func dismantleUIView(_ view: PlayerView, coordinator: Coordinator) {
-        view.playerLayer.player?.pause()
-        coordinator.detach()
+        (view.playerLayer.player as? AVQueuePlayer)?.pause()
+        coordinator.looper = nil
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    final class Coordinator {
-        private var player: AVPlayer?
-        private var observer: NSObjectProtocol?
-        private var isReversing = false
-
-        func attach(to player: AVPlayer) {
-            self.player = player
-            observer = NotificationCenter.default.addObserver(
-                forName: .AVPlayerItemDidPlayToEndTime,
-                object: player.currentItem,
-                queue: .main
-            ) { [weak self] _ in self?.turnAround() }
-        }
-
-        /// At each end, seek back to that end and play the other way.
-        ///
-        /// `rate = -1` needs the playhead off the boundary or it refuses to move,
-        /// hence the seek before the rate change rather than after it.
-        private func turnAround() {
-            guard let player, let item = player.currentItem else { return }
-            isReversing.toggle()
-            if isReversing {
-                player.seek(to: item.duration, toleranceBefore: .zero, toleranceAfter: .zero) { _ in
-                    player.rate = -1
-                }
-            } else {
-                player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { _ in
-                    player.rate = 1
-                }
-            }
-        }
-
-        func detach() {
-            if let observer { NotificationCenter.default.removeObserver(observer) }
-            observer = nil
-            player = nil
-        }
-    }
+    final class Coordinator { var looper: AVPlayerLooper? }
 
     final class PlayerView: UIView {
         override static var layerClass: AnyClass { AVPlayerLayer.self }
