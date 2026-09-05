@@ -38,7 +38,11 @@ public enum DarwinNotifications {
         )
     }
 
-    private final class Box: Sendable {
+    // Unchecked because Swift 5 does not yet count a `@MainActor` function type as
+    // Sendable while Swift 6 does, and a plain `Sendable` warns in one mode or the
+    // other. What it holds is a `let` closure that only ever runs on the main
+    // actor, which is the guarantee `Sendable` would be asserting anyway.
+    private final class Box: @unchecked Sendable {
         let handler: @MainActor () -> Void
         init(handler: @escaping @MainActor () -> Void) { self.handler = handler }
     }

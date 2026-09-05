@@ -11,19 +11,24 @@ spends from it. SwiftUI, iOS 17+, on Apple's Screen Time frameworks.
 ## Context for whoever picks this up
 
 Every line of this app was written on a Linux container with no Swift toolchain.
-It was never compiled during authoring. A GitHub Actions macOS runner
-(`.github/workflows/build.yml`) is the only thing that has ever type-checked it,
-and it now builds green and launches in a simulator.
+It was never compiled during authoring. For most of its life a GitHub Actions
+macOS runner (`.github/workflows/build.yml`) was the only thing that had ever
+type-checked it.
 
-That history matters: **the code compiles and runs, but almost none of it has
-been exercised.** No test has ever run. Nothing has touched a real device. Treat
-runtime behaviour as unverified.
+That is no longer the constraint: the current machine has Xcode 26.6 and Swift
+6.3, so the app builds, installs and launches locally, and the loop is now a
+minute rather than a CI round trip. Build against a real simulator before
+believing anything.
+
+That history still matters, though: **the code compiles and runs, but almost none
+of it has been exercised.** No test has ever run. Treat runtime behaviour as
+unverified.
 
 ## State
 
 | | |
 |---|---|
-| Builds (simulator, signing off) | yes, verified on CI |
+| Builds (simulator, signing off) | yes, on CI and locally on Xcode 26.6, zero warnings |
 | Launches and renders all 16 intake screens | yes, see `screenshots/` |
 | Runs on a real device | yes, installed and launched (entitlements stripped) |
 | Blocking actually blocking anything | never attempted |
@@ -212,9 +217,12 @@ by frame rather than guessing.
 - `RansomPlan.projectedReps` and `expectedUnlocksPerDay` still model unlocks.
 - **No app icon yet.** Four concepts generated (Rex silhouette, Rex head, padlock,
   spiked R); the two vector ones are real SVGs. None chosen or installed.
-- **Swift 6 landmine.** `SubscriptionManager.swift` captures a `var` in concurrent
-  code - a warning today, an error under Swift 6.
-- Two `AVCaptureSession` Sendable warnings in `PoseRepCounter`.
+- **Swift 6 is a project, not a landmine.** The default build is warning-free, and
+  the seven sites that blocked `SWIFT_VERSION=6` outright are fixed. Building with
+  `SWIFT_STRICT_CONCURRENCY=complete` still reports **47 issues across 12 files**,
+  concentrated in `Core/Haptics.swift` (14), `Workout/RepEngine.swift` (9) and
+  `Core/SubscriptionManager.swift` (8). That is the real remaining scope; flipping
+  the language mode before working through it will not build.
 - `Tariff.swift` is dead code. `RansomPlan.dailyRepGoal` nearly so.
 - `Onboarding/RexIntakeArt.swift` duplicates the canvas maths in `Mascot/RexPose`,
   an artefact of two agents owning different directories. Worth folding together.

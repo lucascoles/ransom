@@ -12,7 +12,15 @@ struct ProjectionStep: View {
     var profile: UserProfile
     var onNext: () -> Void
 
-    @State private var showsPayoff = false
+    /// How much of the argument has landed. Each stage is one thought.
+    ///
+    /// The whole thing used to arrive in two lumps, stacked in the top half of a
+    /// screen that was two thirds empty. A number this size needs the room and the
+    /// pause: read the year first, feel it, then be told what it adds up to. Given
+    /// all at once it is a paragraph, and a paragraph gets skimmed.
+    @State private var stage = 0
+
+    private let stages = 4
 
     private var minutesPerDay: Int { profile.baselineDailyMinutes }
     private var daysPerYear: Double { Double(minutesPerDay) * 365 / (60 * 24) }
@@ -29,56 +37,95 @@ struct ProjectionStep: View {
         StepScaffold(
             title: "",
             buttonTitle: "I don't love that",
-            showsButton: showsPayoff,
+            showsButton: stage >= stages - 1,
             onNext: onNext
         ) {
-            VStack(alignment: .leading, spacing: 26) {
-                Text("At your current rate, you'll spend \(Int(daysPerYear.rounded())) days on your phone over the next year.")
-                    .font(RansomFont.title(26))
+            // Spread down the whole height rather than piling into the top. The
+            // spacers are weighted so the big number sits slightly above centre,
+            // where the eye lands first.
+            VStack(alignment: .leading, spacing: 0) {
+                Spacer(minLength: 8)
+
+                Text("At your current rate, you'll spend")
+                    .font(RansomFont.body(17))
+                    .foregroundStyle(Palette.inkSoft)
+                    .opacity(stage >= 0 ? 1 : 0)
+
+                Text("\(Int(daysPerYear.rounded())) days")
+                    .font(RansomFont.counter(58))
+                    .foregroundStyle(Palette.ink)
+                    .padding(.top, 2)
+
+                Text("on your phone over the next year.")
+                    .font(RansomFont.title(22))
                     .foregroundStyle(Palette.ink)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
 
-                if showsPayoff {
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text("Which puts you on track for")
-                            .font(RansomFont.body(16))
-                            .foregroundStyle(Palette.inkSoft)
+                Spacer(minLength: 20)
 
-                        Text("\(wakingYearsLeft, specifier: "%.1f") years")
-                            .font(RansomFont.counter(64))
-                            .foregroundStyle(Palette.danger)
-
-                        Text("of the time you're awake, spent looking down.")
-                            .font(RansomFont.title(21))
-                            .foregroundStyle(Palette.ink)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        Text("Based on the \(minutesPerDay) minutes a day you just told us, an 85-year life, and 16 waking hours a day.")
-                            .font(RansomFont.caption(12))
-                            .foregroundStyle(Palette.inkFaint)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.top, 6)
-                    }
-                    .transition(.opacity.combined(with: .offset(y: 18)))
+                if stage >= 1 {
+                    Text("Which puts you on track for")
+                        .font(RansomFont.body(17))
+                        .foregroundStyle(Palette.inkSoft)
+                        .transition(.opacity.combined(with: .offset(y: 14)))
                 }
 
-                Spacer(minLength: 0)
+                if stage >= 2 {
+                    Text("\(wakingYearsLeft, specifier: "%.1f") years")
+                        .font(RansomFont.counter(76))
+                        .foregroundStyle(Palette.danger)
+                        .minimumScaleFactor(0.6)
+                        .lineLimit(1)
+                        .padding(.top, 2)
+                        .transition(.opacity.combined(with: .scale(scale: 0.86)))
+                }
+
+                if stage >= 3 {
+                    Text("of the time you're awake, spent looking down.")
+                        .font(RansomFont.title(22))
+                        .foregroundStyle(Palette.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 4)
+                        .transition(.opacity.combined(with: .offset(y: 14)))
+                }
+
+                Spacer(minLength: 20)
+
+                Text("Based on the \(minutesPerDay) minutes a day you just told us, an 85-year life, and 16 waking hours a day.")
+                    .font(RansomFont.caption(12))
+                    .foregroundStyle(Palette.inkFaint)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .opacity(stage >= 3 ? 1 : 0)
+
+                Spacer(minLength: 8)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            // The scaffold puts its content in a ScrollView, which offers
+            // unbounded height, so spacers inside it collapse to nothing and
+            // everything piles into the top. Matching the scroll container's own
+            // height gives them something to divide.
+            .containerRelativeFrame(.vertical)
             .contentShape(Rectangle())
-            .onTapGesture(perform: reveal)
-            .onAppear {
-                // Beat before the payoff. The first number has to be read and felt
-                // before the second one means anything.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.4, execute: reveal)
+            // Impatience should skip ahead, never be ignored.
+            .onTapGesture { advance() }
+            .task {
+                // Unhurried on purpose. The pause before the years figure is doing
+                // as much work as the figure.
+                for delay in [1.6, 1.1, 1.3] {
+                    try? await Task.sleep(for: .seconds(delay))
+                    if Task.isCancelled { return }
+                    advance()
+                }
             }
         }
     }
 
-    private func reveal() {
-        guard !showsPayoff else { return }
-        Haptics.warning()
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) { showsPayoff = true }
+    private func advance() {
+        guard stage < stages - 1 else { return }
+        // The years figure is the sting, so that is where the haptic lands.
+        if stage == 1 { Haptics.warning() } else { Haptics.tap() }
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) { stage += 1 }
     }
 }
 

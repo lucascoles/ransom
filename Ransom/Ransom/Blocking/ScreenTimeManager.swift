@@ -183,5 +183,7 @@ final class ScreenTimeManager {
 }
 
 extension DeviceActivityEvent.Name {
-    static let earnedTimeSpent = Self("ransom.earned-time-spent")
+    // Immutable string wrapper that Apple never marked Sendable, same as the
+    // names in `ScreenTimeNames.swift`.
+    nonisolated(unsafe) static let earnedTimeSpent = Self("ransom.earned-time-spent")
 }
