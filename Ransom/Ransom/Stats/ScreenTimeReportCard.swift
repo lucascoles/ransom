@@ -21,7 +21,18 @@ struct ScreenTimeReportCard: View {
     /// five apps before there is one leaves a card that is mostly nothing. It
     /// has to be on screen at some size for the extension to run at all, so the
     /// first pass gets a short one and the full height arrives with the data.
-    private var hasRendered: Bool { DeviceUsageStore().minutesToday != nil }
+    /// The height to reserve, from what the report said it drew last time.
+    ///
+    /// Guessing this was wrong twice in both directions - too little and the last
+    /// rows were silently clipped, too much and the card was mostly nothing. The
+    /// view is drawn by another process and has no intrinsic height to read, so
+    /// it records its own row count and the host does arithmetic instead of
+    /// estimating. Before the first render there is no count, and the card takes
+    /// the short height it needs to be on screen at all for the extension to run.
+    private var reportHeight: CGFloat {
+        guard let rows = DeviceUsageStore().appCount, rows > 0 else { return 76 }
+        return 76 + CGFloat(rows) * 54
+    }
 
     /// Today, from midnight. A `.daily` segment over a shorter interval is what
     /// makes the report a running total rather than yesterday's finished one.
@@ -50,7 +61,7 @@ struct ScreenTimeReportCard: View {
                     // The report brings its own intrinsic size and it is not
                     // always sensible, so the card decides how much room it gets
                     // rather than being pushed around by another process's view.
-                    .frame(height: hasRendered ? 318 : 76)
+                    .frame(height: reportHeight)
             } else {
                 Text("Turn on Screen Time and Rex can show you the whole picture, not just the apps he's guarding.")
                     .font(RansomFont.body(14))

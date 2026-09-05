@@ -68,7 +68,7 @@ struct TotalActivityReport: DeviceActivityReportScene {
             .sorted { $0.minutes > $1.minutes }
             .prefix(5)
 
-        DeviceUsageStore().record(totalMinutes: Int(total / 60))
+        DeviceUsageStore().record(totalMinutes: Int(total / 60), appCount: apps.count)
         return DayActivity(totalMinutes: Int(total / 60), apps: Array(apps))
     }
 }
