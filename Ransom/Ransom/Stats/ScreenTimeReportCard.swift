@@ -14,6 +14,15 @@ import SwiftUI
 struct ScreenTimeReportCard: View {
     @Environment(ScreenTimeManager.self) private var screenTime
 
+    /// Whether the report has ever come back with anything.
+    ///
+    /// The card cannot ask the report how tall it wants to be - it is drawn by
+    /// another process - so the host reserves the room, and reserving room for
+    /// five apps before there is one leaves a card that is mostly nothing. It
+    /// has to be on screen at some size for the extension to run at all, so the
+    /// first pass gets a short one and the full height arrives with the data.
+    private var hasRendered: Bool { DeviceUsageStore().minutesToday != nil }
+
     /// Today, from midnight. A `.daily` segment over a shorter interval is what
     /// makes the report a running total rather than yesterday's finished one.
     private var filter: DeviceActivityFilter {
@@ -41,12 +50,7 @@ struct ScreenTimeReportCard: View {
                     // The report brings its own intrinsic size and it is not
                     // always sensible, so the card decides how much room it gets
                     // rather than being pushed around by another process's view.
-                    // Tall enough for the total and five app rows with their
-                    // bars. The report is rendered by another process and brings
-                    // no useful intrinsic height, so this side has to reserve the
-                    // room - too little and the last row's bar is simply clipped
-                    // off, which is what it was doing.
-                    .frame(height: 318)
+                    .frame(height: hasRendered ? 318 : 76)
             } else {
                 Text("Turn on Screen Time and Rex can show you the whole picture, not just the apps he's guarding.")
                     .font(RansomFont.body(14))

@@ -36,17 +36,19 @@ struct StatsView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
-                lifetimeCard
+                ScreenTimeReportCard()
                     .padding(.top, 4)
 
-                ScreenTimeReportCard()
+                todayCompareCard
+
+                headlineCard
+
+                lifetimeCard
 
                 SegmentPicker(
                     options: Window.allCases.map { (value: $0, label: $0.title) },
                     selection: $window
                 )
-
-                headlineCard
 
                 LazyVGrid(
                     columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
@@ -55,7 +57,10 @@ struct StatsView: View {
                     stat(value: "\(totalReps)", label: "reps done", icon: model.profile.primaryExercise.symbol, tint: Palette.brand)
                     stat(value: "\(Int(totalCalories))", label: "calories", icon: "flame.fill", tint: Palette.flame)
                     stat(value: "\(records.count)", label: "sets", icon: "checkmark.seal.fill", tint: Palette.brand)
-                    stat(value: hoursEarned, label: "unlocked", icon: "lock.open.fill", tint: Palette.green)
+                    // Earned, not unlocked. These are the minutes the sets paid
+                    // out; what was actually spent is a different number, and
+                    // this label has already been wrong once on this tab.
+                    stat(value: hoursEarned, label: "earned", icon: "lock.open.fill", tint: Palette.green)
                 }
 
                 // An empty history already has a Rex line and a streak card saying
@@ -91,48 +96,39 @@ struct StatsView: View {
 
     // MARK: - Sections
 
-    /// The two numbers people actually stay subscribed for: reps done, time back.
+    /// One number, all time, and nothing else on it.
+    ///
+    /// Rex used to greet the user here too, which meant two of him on one screen -
+    /// the streak card above has the one that has something to say.
     private var lifetimeCard: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 4) {
             Text("LIFETIME")
                 .font(RansomFont.caption(11))
                 .tracking(1.4)
                 .foregroundStyle(Palette.inkFaint)
 
-            // Reps alone. The other half of this row was lifetime minutes
-            // earned, which is a count of scroll time bought - true, but a
-            // strange thing to celebrate on the screen that is meant to show the
-            // habit shrinking. Reps are the part that only goes one way.
-            VStack(spacing: 2) {
-                Text(model.lifetimeReps, format: .number)
-                    .font(RansomFont.display(56))
-                    .foregroundStyle(Palette.ink)
-                    .contentTransition(.numericText(value: Double(model.lifetimeReps)))
-                Text("reps")
-                    .font(RansomFont.caption(13))
-                    .foregroundStyle(Palette.inkSoft)
-            }
-            .frame(maxWidth: .infinity)
+            Text(model.lifetimeReps, format: .number)
+                .font(RansomFont.display(56))
+                .foregroundStyle(Palette.ink)
+                .contentTransition(.numericText(value: Double(model.lifetimeReps)))
 
-            savedDerivation
-
-            RexScene(
-                pose: model.lifetimeReps > 500 ? .flex : .coach,
-                line: lifetimeLine,
-                size: 92
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(model.lifetimeReps == 1 ? "rep" : "reps")
+                .font(RansomFont.caption(13))
+                .foregroundStyle(Palette.inkSoft)
         }
-        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
         .ransomCard()
     }
 
-    private var lifetimeLine: String {
-        let reps = model.lifetimeReps
-        if reps == 0 {
-            return "No sets yet. The first one is the hard one, and it's a short one."
-        }
-        return "\(reps.formatted()) reps you wouldn't have done otherwise. I counted every one."
+    /// Today against the day they described at signup.
+    ///
+    /// Directly under the screen-time card because it is the same measurement -
+    /// separated by two cards, the reader had to remember a number to compare it
+    /// to the one they were being shown.
+    private var todayCompareCard: some View {
+        savedDerivation
+            .ransomCard()
     }
 
     /// Today, against the day they described when they signed up.

@@ -637,7 +637,7 @@ struct HomeView: View {
             HStack(spacing: 0) {
                 bankStat(
                     value: "\(model.bankedMinutes)",
-                    label: "banked",
+                    label: "min banked",
                     tint: model.bankedMinutes > 0 ? Palette.brand : Palette.inkFaint
                 )
 
@@ -645,7 +645,7 @@ struct HomeView: View {
                 // Earned, not the exchange rate: the earn card already states the
                 // rate, and at 10 push-ups for 15 minutes the rate rounds to
                 // "1 reps per minute", which is both wrong and ungrammatical.
-                bankStat(value: "\(model.todayMinutesEarned)", label: "earned today")
+                bankStat(value: "\(model.todayMinutesEarned)", label: "min earned")
 
                 // Steps only when they're the chosen movement - otherwise it's a
                 // stat about a challenge they didn't take.
