@@ -21,23 +21,19 @@ struct ScreenTimeReportCard: View {
     /// five apps before there is one leaves a card that is mostly nothing. It
     /// has to be on screen at some size for the extension to run at all, so the
     /// first pass gets a short one and the full height arrives with the data.
-    /// Room for the most the report can ever draw.
+    /// A fixed 318pt, and deliberately not conditional on anything.
     ///
-    /// Three attempts at being clever about this failed the same way. The view is
-    /// drawn by another process, has no intrinsic height to read, and fills
-    /// whatever frame it is given - so a frame too short does not scroll or
-    /// shrink, it centres and clips, which hides the total and the top rows and
-    /// leaves a middle slice that looks like the data is simply missing.
+    /// Every attempt to be smart here has failed, each in its own way. Sizing
+    /// from the last render's row count lags a render, so a quiet morning locked
+    /// the card small for the day. Starting short "until the report has data"
+    /// deadlocks: the short card is what the report draws into, and nothing
+    /// redraws it once the data lands, so it stays short forever.
     ///
-    /// Sizing from the last render's row count was the worst of them: the count
-    /// is always one render behind, so a quiet morning locked the card at two
-    /// rows for the rest of the day. The extension caps its list at five, and
-    /// that cap is knowable here, so the card reserves five rows and wears the
-    /// gap on a thin day. Empty space costs nothing; a clipped card looks broken.
-    private static let maximumRows = 5
-    private var reportHeight: CGFloat {
-        DeviceUsageStore().minutesToday == nil ? 76 : 76 + CGFloat(Self.maximumRows) * 54
-    }
+    /// The view is drawn by another process, has no intrinsic height, and clips
+    /// rather than scrolls when the frame is too small - losing the total off the
+    /// top and leaving a middle slice that reads as missing data. So the frame is
+    /// a constant, sized to the five rows the extension caps its list at.
+    private static let reportHeight: CGFloat = 318
 
     /// Today, from midnight. A `.daily` segment over a shorter interval is what
     /// makes the report a running total rather than yesterday's finished one.
@@ -66,7 +62,7 @@ struct ScreenTimeReportCard: View {
                     // The report brings its own intrinsic size and it is not
                     // always sensible, so the card decides how much room it gets
                     // rather than being pushed around by another process's view.
-                    .frame(height: reportHeight)
+                    .frame(height: Self.reportHeight)
             } else {
                 Text("Turn on Screen Time and Rex can show you the whole picture, not just the apps he's guarding.")
                     .font(RansomFont.body(14))
