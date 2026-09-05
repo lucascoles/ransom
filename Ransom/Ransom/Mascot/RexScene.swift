@@ -20,7 +20,15 @@ struct RexScene: View {
     var body: some View {
         HStack(alignment: .top, spacing: 4) {
             if bubbleAlignment == .trailing { bubble }
-            RexImage(pose: pose, size: size)
+            // A clip where one exists, the drawing everywhere else. Rex stops
+            // being a picture of a character on the two screens you actually sit
+            // and look at.
+            if let clip = RexImage.loopName(for: pose) {
+                RexClip(name: clip, size: size, fallback: pose)
+                    .id(clip)
+            } else {
+                RexImage(pose: pose, size: size)
+            }
             if bubbleAlignment == .leading { bubble }
         }
         .onAppear(perform: startTyping)

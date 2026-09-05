@@ -22,6 +22,19 @@ struct RexImage: View {
     /// Every asset shares this canvas, which is what keeps the poses registered.
     private static let aspect: CGFloat = 640.0 / 451.0
 
+    /// Poses with an idle clip, and the clip's resource name.
+    ///
+    /// Only two. A mascot that twitches on every screen stops being a character
+    /// and becomes something to look away from; these are the two the user sits
+    /// and looks at - waiting to start, or resting afterwards.
+    static func loopName(for pose: RexPose) -> String? {
+        switch pose {
+        case .coach: return "RexCoachLoop"
+        case .relax: return "RexRelaxLoop"
+        default:     return nil
+        }
+    }
+
     var body: some View {
         Group {
             if case .pushUp = pose {
