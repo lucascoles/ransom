@@ -41,8 +41,12 @@ struct ScreenTimeReportCard: View {
                     // The report brings its own intrinsic size and it is not
                     // always sensible, so the card decides how much room it gets
                     // rather than being pushed around by another process's view.
-                    // Tall enough for a total and five apps.
-                    .frame(height: 240)
+                    // Tall enough for the total and five app rows with their
+                    // bars. The report is rendered by another process and brings
+                    // no useful intrinsic height, so this side has to reserve the
+                    // room - too little and the last row's bar is simply clipped
+                    // off, which is what it was doing.
+                    .frame(height: 318)
             } else {
                 Text("Turn on Screen Time and Rex can show you the whole picture, not just the apps he's guarding.")
                     .font(RansomFont.body(14))

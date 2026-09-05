@@ -99,7 +99,7 @@ struct TotalActivityView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     }
 
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 7) {
                         Text(app.name)
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                             .lineLimit(1)
@@ -109,9 +109,9 @@ struct TotalActivityView: View {
                         GeometryReader { geometry in
                             Capsule()
                                 .fill(Color(RansomPalette.brand))
-                                .frame(width: geometry.size.width * share(app), height: 4)
+                                .frame(width: geometry.size.width * share(app), height: 5)
                         }
-                        .frame(height: 4)
+                        .frame(height: 5)
                     }
 
                     Text(clock(app.minutes))
