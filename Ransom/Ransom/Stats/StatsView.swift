@@ -99,32 +99,20 @@ struct StatsView: View {
                 .tracking(1.4)
                 .foregroundStyle(Palette.inkFaint)
 
-            HStack(spacing: 0) {
-                VStack(spacing: 2) {
-                    Text(model.lifetimeReps, format: .number)
-                        .font(RansomFont.display(42))
-                        .foregroundStyle(Palette.ink)
-                        .contentTransition(.numericText(value: Double(model.lifetimeReps)))
-                    Text("reps")
-                        .font(RansomFont.caption(13))
-                        .foregroundStyle(Palette.inkSoft)
-                }
-                .frame(maxWidth: .infinity)
-
-                Rectangle()
-                    .fill(Palette.hairline)
-                    .frame(width: 1, height: 46)
-
-                VStack(spacing: 2) {
-                    Text(minutes(model.totalMinutesEarned))
-                        .font(RansomFont.display(42))
-                        .foregroundStyle(Palette.green)
-                    Text("earned")
-                        .font(RansomFont.caption(13))
-                        .foregroundStyle(Palette.inkSoft)
-                }
-                .frame(maxWidth: .infinity)
+            // Reps alone. The other half of this row was lifetime minutes
+            // earned, which is a count of scroll time bought - true, but a
+            // strange thing to celebrate on the screen that is meant to show the
+            // habit shrinking. Reps are the part that only goes one way.
+            VStack(spacing: 2) {
+                Text(model.lifetimeReps, format: .number)
+                    .font(RansomFont.display(56))
+                    .foregroundStyle(Palette.ink)
+                    .contentTransition(.numericText(value: Double(model.lifetimeReps)))
+                Text("reps")
+                    .font(RansomFont.caption(13))
+                    .foregroundStyle(Palette.inkSoft)
             }
+            .frame(maxWidth: .infinity)
 
             savedDerivation
 
