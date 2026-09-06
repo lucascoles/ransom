@@ -26,7 +26,7 @@ struct StepsView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
-                RexScene(pose: earned >= cap ? .cheer : .idle, line: rexLine, size: 84)
+                RexScene(pose: earned >= cap ? .cheer : .walking, line: rexLine, size: 84)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 2)
 

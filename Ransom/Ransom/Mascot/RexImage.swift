@@ -31,6 +31,10 @@ struct RexImage: View {
         switch pose {
         case .coach: return "RexCoachLoop"
         case .relax: return "RexRelaxLoop"
+        // Its own pose rather than reusing `.idle`, which the streak card on
+        // Progress also asks for - Rex should not be striding on a screen about
+        // push-ups.
+        case .walking: return "RexWalkLoop"
         default:     return nil
         }
     }
@@ -85,6 +89,7 @@ struct RexImage: View {
         case .flex:    return "RexFlex"
         case .sad:     return "RexSad"
         case .relax:   return "RexRelax"
+        case .walking: return "RexIdle"
         // No artwork for sleep yet, and nothing in the app asks for it.
         case .sleep:   return "RexIdle"
         case .pushUp(let down): return down ? "RexPushUpBottom" : "RexPushUpTop"
@@ -100,6 +105,7 @@ struct RexImage: View {
         case .flex:    return "Rex, flexing"
         case .sad:     return "Rex, disappointed"
         case .relax:   return "Rex, relaxing"
+        case .walking: return "Rex, walking"
         case .sleep:   return "Rex, asleep"
         case .pushUp:  return "Rex, doing a push-up"
         }

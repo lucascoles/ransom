@@ -205,9 +205,9 @@ public enum Intensity: String, CaseIterable, Codable, Identifiable, Sendable {
     /// clears walking to the kitchen. A hundred is the honest middle.
     public var stepsPerMinute: Int {
         switch self {
-        case .chill:    return 50
+        case .chill:    return 75
         case .standard: return 100
-        case .beast:    return 150
+        case .beast:    return 200
         }
     }
 
