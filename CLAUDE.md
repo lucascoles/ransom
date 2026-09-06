@@ -183,7 +183,11 @@ against `minutesFromStepsToday`, and the cap is stated in the copy wherever
 walking is offered - "up to N minutes a day" - because the offer without the
 ceiling reads as a loophole and gets found the first evening anybody tests it.
 Steps past the cap are still marked paid, or they all land at once at midnight.
-`Exercise.isPassive` keeps them out of anything camera-shaped.
+`Exercise.isPassive` keeps them out of anything camera-shaped, and walking has
+its own tab (`Steps/StepsView.swift`) that only exists for people who chose it -
+steps earn whether or not anybody opens a screen, so they do not belong on Home
+next to a button asking you to do something. `-RansomWalking 1` adds walking to
+the seeded profile, which is the only way to reach that tab in a screenshot run.
 
 **One set costs the same for everyone on a tier.** A self-reported fitness level
 used to scale the rep target, so "Standard" meant 10 push-ups for one person and

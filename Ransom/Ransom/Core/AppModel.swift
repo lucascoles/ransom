@@ -111,6 +111,12 @@ final class AppModel {
         // something to spend is unreachable in a screenshot run.
         let seededBank = UserDefaults.standard.integer(forKey: "RansomBank")
         if seededBank > 0 { ledger.bankedMinutes = seededBank }
+        // `-RansomWalking 1` adds walking to the movements, which is the only way
+        // to reach its tab in a screenshot run - the tab is deliberately absent
+        // for anybody who did not choose it.
+        if UserDefaults.standard.bool(forKey: "RansomWalking") {
+            profile.exercises.insert(.steps)
+        }
         #endif
 
         syncPlanToExtensions()

@@ -13,11 +13,9 @@ import SwiftUI
 struct HomeView: View {
     @Environment(AppModel.self) private var model
     @Environment(ScreenTimeManager.self) private var screenTime
-    @State private var steps = StepTracker()
     /// Nil until the user picks, so the default follows the balance rather than
     /// sticking at a number that may no longer be affordable.
     @State private var spendAmount: Int?
-    @State private var showStepsInfo = false
 
     @Binding var workoutRequest: WorkoutRequest?
 
@@ -105,23 +103,10 @@ struct HomeView: View {
         // running out. Neither goes through SwiftUI, so the mirror is refreshed on
         // a tick and the card flips back on its own either way.
         .task {
-            // Steps taken while the app was closed are banked on arrival, which is
-            // the whole appeal of the walking challenge: you open the app and the
-            // minutes are already there.
-            await steps.syncToday(plan: plan)
-            steps.startLiveUpdates()
             while !Task.isCancelled {
                 screenTime.syncUnlockState()
                 try? await Task.sleep(for: .seconds(1))
             }
-        }
-        .onDisappear { steps.stopLiveUpdates() }
-        .alert("Steps count themselves", isPresented: $showStepsInfo) {
-            Button("Got it", role: .cancel) {}
-        } message: {
-            // Honest about the one limit: iOS doesn't keep this app running, so
-            // steps taken while it's closed are banked the next time it opens.
-            Text("Your phone is already counting. Every \(plan.stepsPerMinute) steps adds a minute to your bank, live while the app is open and caught up the moment you come back to it. Nothing to start, nothing to tap.")
         }
         .sheet(isPresented: $showAppPicker) {
             AppPickerView()
@@ -253,8 +238,7 @@ struct HomeView: View {
 
     private var earnCard: some View {
         VStack(spacing: 14) {
-            Text(plan.exercise.isPassive ? "Earning as you walk"
-                 : (earnSets == 1 ? "One set" : "\(earnSets) sets"))
+            Text(earnSets == 1 ? "One set" : "\(earnSets) sets")
                 .font(RansomFont.headline(16))
                 .foregroundStyle(Palette.ink)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -308,33 +292,7 @@ struct HomeView: View {
             // Spending comes first when there's anything to spend. Someone with a
             // full bank who is made to do another set has been told their earlier
             // effort didn't count for anything.
-            // Steps have no set to start: the phone counts them whether or not
-            // this app is open, so a button promising to "earn" them would be
-            // offering to do something already happening. It explains itself
-            // instead.
-            if plan.exercise.isPassive {
-                Button {
-                    Haptics.tap()
-                    showStepsInfo = true
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "figure.walk")
-                        Text("\(steps.stepsToday.formatted()) steps today")
-                            .font(RansomFont.headline(16))
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Palette.inkFaint)
-                    }
-                    .foregroundStyle(Palette.ink)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(
-                        RoundedRectangle(cornerRadius: Metrics.cardRadius, style: .continuous)
-                            .fill(Palette.brandSoft)
-                    )
-                }
-                .pressable(scale: 0.985)
-            } else {
+            do {
                 // The icon names the thing you're about to do. A generic bolt said
                 // nothing, and it's the exercise's own symbol so it follows whichever
                 // movement the user picked rather than assuming push-ups.
@@ -680,12 +638,9 @@ struct HomeView: View {
                 // went from the lifetime card: it counts scroll time bought, and
                 // the balance beside it already says what is left to spend.
 
-                // Steps only when they're the chosen movement - otherwise it's a
-                // stat about a challenge they didn't take.
-                if plan.exercise.isPassive {
-                    Divider().frame(height: 30).overlay(Palette.hairline)
-                    bankStat(value: steps.stepsToday.formatted(), label: "steps today")
-                } else if model.todayReps > 0 {
+                // Steps have their own tab now, and the count means more beside
+                // the cap it is working towards than beside a balance.
+                if model.todayReps > 0 {
                     Divider().frame(height: 30).overlay(Palette.hairline)
                     bankStat(value: "\(model.todayReps)", label: "\(plan.exercise.unitLabel) today")
                 }

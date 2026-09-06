@@ -36,8 +36,9 @@ struct RootView: View {
         #endif
     }
 
-    /// `-RansomSeedHistory 1` fills a fortnight of usage so the trend chart can
-    /// be looked at before a fortnight has passed.
+    /// `-RansomSeedHistory 1` fills the Progress tab with a plausible three
+    /// weeks: usage history for the trend, and completed sets for the streak,
+    /// the totals, the movement breakdown and the recent list.
     ///
     /// Seeding it from outside does not work: the App Group's plist is cached by
     /// cfprefsd, and the `defaults` CLI writes to a different store than the
@@ -46,15 +47,46 @@ struct RootView: View {
     private func seedHistoryIfAsked() {
         #if DEBUG
         guard UserDefaults.standard.bool(forKey: "RansomSeedHistory") else { return }
-        let minutes = [128, 141, 119, 133, 150, 126, 138, 118, 109, 0, 97, 104, 88, 92]
-        let history = UsageHistory()
         let calendar = Calendar.current
+
+        // Screen time coming down over a fortnight, with one day missing so the
+        // chart's gap handling is visible rather than assumed.
+        let minutes = [128, 141, 119, 133, 150, 126, 138, 118, 109, 0, 97, 104, 88, 92]
+        let usage = UsageHistory()
         for (index, value) in minutes.enumerated() where value > 0 {
             guard let day = calendar.date(byAdding: .day,
                                           value: -(minutes.count - 1 - index),
                                           to: Date()) else { continue }
-            history.record(.guarded, minutes: value, on: day)
+            usage.record(.guarded, minutes: value, on: day)
         }
+
+        // Sets over three weeks. Deliberately uneven - a couple of rest days, a
+        // mix of movements, some days with two sets - because a perfect run makes
+        // the streak, the averages and the breakdown all look better than they
+        // ever will in life.
+        guard model.history.isEmpty else { return }
+        let plan = [(0, 2), (1, 1), (2, 1), (3, 0), (4, 2), (5, 1), (6, 1),
+                    (7, 1), (8, 0), (9, 1), (10, 2), (11, 1), (12, 1), (13, 0),
+                    (14, 1), (15, 1), (16, 2), (17, 0), (18, 1), (19, 1), (20, 1)]
+        var seeded: [WorkoutRecord] = []
+        for (back, sets) in plan {
+            guard sets > 0,
+                  let day = calendar.date(byAdding: .day, value: -back, to: Date()),
+                  let at = calendar.date(bySettingHour: 18, minute: 20, second: 0, of: day)
+            else { continue }
+            for set in 0..<sets {
+                let squats = (back + set) % 3 == 0
+                let reps = squats ? 12 : 10
+                seeded.append(WorkoutRecord(
+                    date: at.addingTimeInterval(Double(set) * 3_600),
+                    exercise: squats ? .squats : .pushUps,
+                    reps: reps,
+                    durationSeconds: 40 + set * 6,
+                    minutesGranted: 15
+                ))
+            }
+        }
+        model.history = seeded.sorted { $0.date < $1.date }
         #endif
     }
 
@@ -108,6 +140,17 @@ struct RootView: View {
             }
             .tabItem { Label("Progress", systemImage: "chart.bar.fill") }
             .tag(1)
+
+            // Only for people who chose walking. A tab that is present but empty
+            // is a permanent advertisement for a feature somebody declined.
+            if model.profile.exercises.contains(.steps) {
+                NavigationStack {
+                    StepsView()
+                        .navigationTitle("Walking")
+                }
+                .tabItem { Label("Walking", systemImage: "figure.walk") }
+                .tag(3)
+            }
 
             NavigationStack {
                 SettingsView()
