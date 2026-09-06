@@ -23,18 +23,10 @@ struct RexClip: View {
 
     private static let aspect: CGFloat = 640.0 / 451.0
 
-    /// The generated clips render their flat background at 248,248,246 while the
-    /// app's canvas is 251,250,246 - close enough to look identical in isolation
-    /// and far enough to show as a faint pale square sitting on the screen. A
-    /// three-point lift matches them; the same lift on Rex himself is nowhere
-    /// near visible, which is why this is cheaper than re-rendering the clips.
-    private static let backgroundLift = 3.0 / 255.0
-
     var body: some View {
         Group {
-            if let url = Bundle.main.url(forResource: name, withExtension: "mp4"), !reduceMotion {
+            if let url = Bundle.main.url(forResource: name, withExtension: "mov"), !reduceMotion {
                 PingPongClip(url: url)
-                    .brightness(Self.backgroundLift)
             } else {
                 // Reduce Motion gets the still. Someone who has asked the system
                 // to stop things moving has not made an exception for mascots.
@@ -69,6 +61,15 @@ private struct PingPongClip: UIViewRepresentable {
         context.coordinator.looper = AVPlayerLooper(player: queue, templateItem: item)
         view.playerLayer.player = queue
         view.playerLayer.videoGravity = .resizeAspect
+        // The clips carry an alpha channel, so the layer must not paint anything
+        // behind them - left opaque, iOS composites the transparency against
+        // black and the character sits in a dark box on a light screen.
+        view.playerLayer.pixelBufferAttributes = [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
+        ]
+        view.playerLayer.isOpaque = false
+        view.backgroundColor = .clear
+        view.isOpaque = false
         queue.play()
         return view
     }
