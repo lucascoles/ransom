@@ -1030,7 +1030,9 @@ final class PoseRepCounter: NSObject {
         if !isDown {
             repTop = max(repTop ?? primary, primary)
             repBottom = primary
-            if isArmed, let top = repTop, top - primary >= movement.corroboratedTravel * descentEntry {
+            let entryTravel = (sawBodyLengthwise && movement.kind == .pushUp)
+                ? movement.sideOnCorroboratedTravel : movement.corroboratedTravel
+            if isArmed, let top = repTop, top - primary >= entryTravel * descentEntry {
                 isDown = true
                 let now = Date()
                 repWindow.startedDownAt = now
@@ -1162,9 +1164,27 @@ final class PoseRepCounter: NSObject {
         // and relaxes its gates. Without it the primary signal stands alone and
         // has to prove the rep by itself.
         let corroborated = drop.map { $0 >= movement.strongDropTravel } == true && repWindow.sawDropThroughout
-        let requiredTravel = corroborated ? movement.corroboratedTravel
-            : drop == nil ? movement.soloTravel : movement.minTravel
-        let allowedBottom = corroborated ? movement.corroboratedBottom : movement.maxBottom
+
+        // How strict to be depends on how well the camera could see.
+        //
+        // Every push-up threshold in this file was set against head-on footage,
+        // where the upper arm is foreshortened and a genuinely deep rep reads
+        // 25-31 degrees of travel bottoming at 116-129. They had to be that
+        // forgiving to count real work through a lens that was hiding most of it.
+        //
+        // Side on, nothing is hidden: a full push-up swings the elbow through
+        // 70-90 degrees and bottoms near a right angle. Applying the forgiving
+        // numbers to an honest measurement is what let a quarter rep through -
+        // 30 degrees of travel is most of a rep when it is being under-read, and
+        // barely a dip when it is not.
+        let strict = sawBodyLengthwise && movement.kind == .pushUp
+        let requiredTravel = strict
+            ? (corroborated ? movement.sideOnCorroboratedTravel : movement.sideOnMinTravel)
+            : (corroborated ? movement.corroboratedTravel
+               : drop == nil ? movement.soloTravel : movement.minTravel)
+        let allowedBottom = strict
+            ? (corroborated ? movement.sideOnCorroboratedBottom : movement.sideOnMaxBottom)
+            : (corroborated ? movement.corroboratedBottom : movement.maxBottom)
 
         guard travel >= requiredTravel else {
             reject("travel", movement.shallowHint, quietly: brief)
@@ -1414,6 +1434,13 @@ private struct Movement {
     let strongDropTravel: Double
     let corroboratedTravel: Double
     let corroboratedBottom: Double
+    /// The same two gates for a camera that can actually see the arm bend.
+    /// Meaningless for squats, which are filmed facing the lens either way, so
+    /// they simply repeat the ordinary numbers.
+    let sideOnMinTravel: Double
+    let sideOnMaxBottom: Double
+    let sideOnCorroboratedTravel: Double
+    let sideOnCorroboratedBottom: Double
     /// The least the height signal may drop, when it was tracked throughout,
     /// before the rep is refused for the body not having come down.
     let minDropTravel: Double
@@ -1517,6 +1544,16 @@ private struct Movement {
             strongDropTravel: strongDropTravel,
             corroboratedTravel: corroboratedElbowTravel,
             corroboratedBottom: corroboratedBottomAngle,
+            // Side on, where the elbow angle is what it says it is. A full
+            // push-up swings through 70-90 degrees and finishes near a right
+            // angle; a quarter rep manages about 30 and stops around 140, which
+            // is why it sailed through gates built for a foreshortened view.
+            // 55 and 120 sit between the two with room on both sides, and the
+            // corroborated pair stay 15 degrees more forgiving as they do above.
+            sideOnMinTravel: 55,
+            sideOnMaxBottom: 120,
+            sideOnCorroboratedTravel: 40,
+            sideOnCorroboratedBottom: 135,
             minDropTravel: minDropTravel,
             restingTop: restingElbow,
             stillRange: stillElbowRange,
@@ -1662,6 +1699,12 @@ private struct Movement {
             strongDropTravel: strongHipDrop,
             corroboratedTravel: corroboratedGapTravel,
             corroboratedBottom: corroboratedBottomGap,
+            // A squat is filmed facing the camera whichever way you stand it, so
+            // there is no better view to switch to and no second set of numbers.
+            sideOnMinTravel: minGapTravel,
+            sideOnMaxBottom: maxBottomGap,
+            sideOnCorroboratedTravel: corroboratedGapTravel,
+            sideOnCorroboratedBottom: corroboratedBottomGap,
             minDropTravel: minHipDrop,
             restingTop: standingGap,
             stillRange: stillGapRange,
