@@ -36,6 +36,28 @@ struct RootView: View {
         #endif
     }
 
+    /// `-RansomSeedHistory 1` fills a fortnight of usage so the trend chart can
+    /// be looked at before a fortnight has passed.
+    ///
+    /// Seeding it from outside does not work: the App Group's plist is cached by
+    /// cfprefsd, and the `defaults` CLI writes to a different store than the
+    /// group container the app reads. The app writing its own is the only route
+    /// that goes through the same door as the real thing.
+    private func seedHistoryIfAsked() {
+        #if DEBUG
+        guard UserDefaults.standard.bool(forKey: "RansomSeedHistory") else { return }
+        let minutes = [128, 141, 119, 133, 150, 126, 138, 118, 109, 0, 97, 104, 88, 92]
+        let history = UsageHistory()
+        let calendar = Calendar.current
+        for (index, value) in minutes.enumerated() where value > 0 {
+            guard let day = calendar.date(byAdding: .day,
+                                          value: -(minutes.count - 1 - index),
+                                          to: Date()) else { continue }
+            history.record(.guarded, minutes: value, on: day)
+        }
+        #endif
+    }
+
     var body: some View {
         Group {
             if model.hasCompletedOnboarding && !forcesIntake {
@@ -46,6 +68,7 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.35), value: model.hasCompletedOnboarding)
+        .onAppear(perform: seedHistoryIfAsked)
         .fullScreenCover(item: $workoutRequest) { request in
             WorkoutView(
                 exercise: request.exercise,

@@ -76,6 +76,8 @@ public struct UsageMeter {
         let current = isToday ? defaults.integer(forKey: RansomCore.Key.usageMinutes) : 0
         defaults.set(max(current, minutes), forKey: RansomCore.Key.usageMinutes)
         defaults.set(Date(), forKey: RansomCore.Key.usageDay)
+        // Same figure, filed under today's date, so it survives midnight.
+        UsageHistory().record(.guarded, minutes: minutes)
     }
 
     /// Called when monitoring starts, so the ladder begins from the bottom on a

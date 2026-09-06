@@ -35,6 +35,10 @@ public enum RansomCore {
         /// extension - the only process that can see it. See `DeviceUsageStore`.
         public static let deviceUsageMinutes = "ransom.device.usageMinutes"
         public static let deviceUsageDay = "ransom.device.usageDay"
+        /// Day-by-day usage, kept for a month so a trend can be drawn. See
+        /// `UsageHistory` for why there are two series.
+        public static let usageHistory = "ransom.usage.history"
+        public static let deviceUsageHistory = "ransom.device.usageHistory"
         /// A short breadcrumb trail written by the monitor extension. The
         /// extension runs in its own process, on iOS's schedule, and leaves no
         /// other trace - without this every question about what it did is a

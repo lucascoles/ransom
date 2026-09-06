@@ -39,7 +39,7 @@ struct StatsView: View {
                 ScreenTimeReportCard()
                     .padding(.top, 4)
 
-                todayCompareCard
+                ScreenTimeTrendCard()
 
                 headlineCard
 
@@ -119,75 +119,6 @@ struct StatsView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
         .ransomCard()
-    }
-
-    /// Today against the day they described at signup.
-    ///
-    /// Directly under the screen-time card because it is the same measurement -
-    /// separated by two cards, the reader had to remember a number to compare it
-    /// to the one they were being shown.
-    private var todayCompareCard: some View {
-        savedDerivation
-            .ransomCard()
-    }
-
-    /// Today, against the day they described when they signed up.
-    ///
-    /// This used to claim a lifetime saving, worked out by multiplying the stated
-    /// baseline across every day installed and subtracting minutes *earned* -
-    /// which is what was banked, not what was used. It could read "31m now"
-    /// beside a real screen time of three and a half hours, on the same screen.
-    /// Today is the only span that can be measured, so today is the only one
-    /// claimed, and the figure it uses is the one the card underneath shows.
-    private var savedDerivation: some View {
-        let baseline = model.baselineMinutes
-        let today = model.todayScreenMinutes
-        let widest = max(baseline, today, 1)
-
-        return VStack(alignment: .leading, spacing: 10) {
-            Text("TODAY")
-                .font(RansomFont.caption(11))
-                .tracking(1.4)
-                .foregroundStyle(Palette.inkFaint)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            derivationBar(label: "Before Ransom", minutes: baseline, widest: widest, tint: Palette.inkFaint)
-            derivationBar(label: "In your apps", minutes: today, widest: widest,
-                          tint: today <= baseline ? Palette.green : Palette.danger)
-
-            Text(model.minutesBackToday > 0
-                 ? "\(minutes(model.minutesBackToday)) back so far today"
-                 : "Past your old average for today")
-                .font(RansomFont.caption(12))
-                .foregroundStyle(Palette.inkSoft)
-        }
-        .padding(.top, 4)
-    }
-
-    private func derivationBar(label: String, minutes value: Int, widest: Int, tint: Color) -> some View {
-        HStack(spacing: 10) {
-            Text(label)
-                .font(RansomFont.caption(12))
-                .foregroundStyle(Palette.inkSoft)
-                .frame(width: 78, alignment: .leading)
-
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Palette.surfaceAlt)
-                    // Clamped: on a day that beat the old baseline the bar
-                    // would otherwise run past its own track.
-                    Capsule()
-                        .fill(tint)
-                        .frame(width: max(6, geo.size.width * min(1, Double(value) / Double(widest))))
-                }
-            }
-            .frame(height: 10)
-
-            Text(minutes(value))
-                .font(RansomFont.caption(12))
-                .foregroundStyle(Palette.ink)
-                .frame(width: 56, alignment: .trailing)
-        }
     }
 
     private func minutes(_ value: Int) -> String {

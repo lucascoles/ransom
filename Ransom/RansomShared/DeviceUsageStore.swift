@@ -35,5 +35,6 @@ public struct DeviceUsageStore {
     public func record(totalMinutes: Int) {
         defaults.set(totalMinutes, forKey: RansomCore.Key.deviceUsageMinutes)
         defaults.set(Date(), forKey: RansomCore.Key.deviceUsageDay)
+        UsageHistory().record(.device, minutes: totalMinutes)
     }
 }
