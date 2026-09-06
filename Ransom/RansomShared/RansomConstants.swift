@@ -62,6 +62,10 @@ public enum RansomCore {
         /// Weekdays Ransom guards. Empty is every day. Read by the shield and the
         /// monitor as well as the app - see `ScheduleStore`.
         public static let activeDays = "ransom.schedule.activeDays"
+        /// Minutes credited from steps today, and the day that belongs to. The
+        /// cap is enforced against this - see `RansomPlan.stepMinutesCap`.
+        public static let stepMinutes = "ransom.steps.minutesToday"
+        public static let stepMinutesDay = "ransom.steps.minutesDay"
         /// Highest usage rung reached today, and the day it belongs to. Written
         /// by the monitor extension - see `UsageMeter` for why usage has to
         /// arrive as callbacks rather than be read.

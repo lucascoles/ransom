@@ -31,6 +31,21 @@ final class StepTracker {
         static let paidDay = "ransom.steps.paidDay"
     }
 
+    /// Minutes already credited from walking today, which the cap is measured
+    /// against. Rolls over with the date rather than on a timer, like everything
+    /// else that resets at midnight here.
+    var minutesFromStepsToday: Int {
+        get {
+            guard let day = defaults.object(forKey: RansomCore.Key.stepMinutesDay) as? Date,
+                  Calendar.current.isDateInToday(day) else { return 0 }
+            return defaults.integer(forKey: RansomCore.Key.stepMinutes)
+        }
+        set {
+            defaults.set(newValue, forKey: RansomCore.Key.stepMinutes)
+            defaults.set(Date(), forKey: RansomCore.Key.stepMinutesDay)
+        }
+    }
+
     /// Steps already converted into minutes today. Reset by the date rolling over
     /// rather than by a timer, so a phone that sleeps through midnight still gets
     /// a clean slate on the next read.
@@ -74,14 +89,27 @@ final class StepTracker {
         let unpaid = steps - paidStepsToday
         guard unpaid > 0 else { return 0 }
 
-        let minutes = plan.minutesEarned(reps: unpaid, exercise: .steps)
-        guard minutes > 0 else { return 0 }
+        let earned = plan.minutesEarned(reps: unpaid, exercise: .steps)
+        guard earned > 0 else { return 0 }
+
+        // The cap is the whole reason steps can be offered at all. Without it a
+        // day of ordinary walking funds an evening of scrolling and nothing has
+        // to change, which is why they were withheld from the app in the first
+        // place.
+        let minutes = min(earned, max(0, plan.stepMinutesCap - minutesFromStepsToday))
+        guard minutes > 0 else {
+            // Still mark them paid. Leaving capped steps unpaid means the moment
+            // the day rolls over they are all credited at once.
+            paidStepsToday = steps
+            return 0
+        }
 
         // Only credit the steps that actually paid out. Anything left over is
         // fractional and stays on the clock toward the next whole minute, rather
         // than being rounded away every time this runs.
         let stepsPerMinute = plan.repsPerMinute(for: .steps)
         paidStepsToday += minutes * stepsPerMinute
+        minutesFromStepsToday += minutes
         ledger.bank(minutes: minutes)
         return minutes
     }

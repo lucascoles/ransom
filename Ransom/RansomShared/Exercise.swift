@@ -14,11 +14,13 @@ public enum Exercise: String, CaseIterable, Codable, Identifiable, Sendable {
 
     public var id: String { rawValue }
 
-    /// What the pickers offer. Steps are built and priced but withheld for now:
-    /// the phone counts them whether or not anyone is trying, so an ordinary day's
-    /// walking funds an evening's scrolling and the habit never has to change.
-    /// Everything behind it still works, so putting it back is one line.
-    public static var selectable: [Exercise] { [.pushUps, .squats] }
+    /// What the pickers offer.
+    ///
+    /// Steps were withheld for a while, because the phone counts them whether or
+    /// not anybody is trying and uncapped they fund an evening's scrolling from
+    /// an ordinary day of walking about. `RansomPlan.stepMinutesCap` is what made
+    /// them safe to offer: a day's walking is worth two sets and no more.
+    public static var selectable: [Exercise] { [.pushUps, .squats, .steps] }
 
     public var title: String {
         switch self {
@@ -74,7 +76,7 @@ public enum Exercise: String, CaseIterable, Codable, Identifiable, Sendable {
         switch self {
         case .pushUps: return "The classic. Chest, arms and core."
         case .squats:  return "Legs and glutes. No floor needed."
-        case .steps:   return "Your phone counts them already. Just walk."
+        case .steps:   return "Your phone counts them already. Capped, so it tops you up rather than covering the day."
         }
     }
 

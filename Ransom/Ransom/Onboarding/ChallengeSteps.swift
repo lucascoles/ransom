@@ -318,6 +318,10 @@ struct BankExplainerStep: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     bullet("\(plan.repsPerUnlock) \(exercise.title.lowercased()) fills it by \(plan.minutesPerUnlock) minutes.")
+                    // The cap is part of the offer, not fine print. "Walking pays"
+                    // without "up to here" is the version that reads as a loophole
+                    // and gets found the first evening somebody tests it.
+                    bullet("Walking pays too, up to \(plan.stepMinutesCap) minutes a day.")
                     bullet("Open a blocked app and it spends from the bank.")
                 }
             }

@@ -175,11 +175,15 @@ clips of Rex with his phone, copy typed on per glyph, ending by turning the stor
 on the reader. Copy is deliberately written for an 11-year-old reader; beat 2's
 short-arms joke is the product thesis in disguise and must survive any rewrite.
 
-**Only push-ups and squats are offered.** `Exercise.selectable` withholds steps:
-the pedometer counts them whether or not anyone is trying, so an ordinary day's
-walking would fund an evening's scrolling. All the step code, pricing and the
-`StepTracker` still work; restoring it is one line, but it needs a daily cap or a
-baseline subtraction first.
+**Steps are offered again, capped.** They were withheld because the pedometer
+counts them whether or not anybody is trying, so uncapped an ordinary day's
+walking funds an evening's scrolling and the habit never has to change.
+`RansomPlan.stepMinutesCap` is two sets' worth a day, enforced in `StepTracker`
+against `minutesFromStepsToday`, and the cap is stated in the copy wherever
+walking is offered - "up to N minutes a day" - because the offer without the
+ceiling reads as a loophole and gets found the first evening anybody tests it.
+Steps past the cap are still marked paid, or they all land at once at midnight.
+`Exercise.isPassive` keeps them out of anything camera-shaped.
 
 **One set costs the same for everyone on a tier.** A self-reported fitness level
 used to scale the rep target, so "Standard" meant 10 push-ups for one person and

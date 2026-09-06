@@ -193,7 +193,10 @@ struct FirstRepStep: View {
     /// push-ups would simply never see a squat.
     private var movementPicker: some View {
         HStack(spacing: 8) {
-            ForEach(Exercise.selectable) { option in
+            // Camera movements only. Steps are a selectable challenge but there
+            // is nothing to demonstrate in front of a lens - the phone has been
+            // counting them all day already.
+            ForEach(Exercise.selectable.filter { !$0.isPassive }) { option in
                 Button {
                     guard option != exercise else { return }
                     Haptics.select()

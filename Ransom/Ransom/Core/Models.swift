@@ -392,6 +392,15 @@ struct RansomPlan: Equatable {
         return scaled
     }
 
+    /// The most a day's walking can be worth.
+    ///
+    /// Steps were withheld from the app for exactly this: the phone counts them
+    /// whether or not anybody is trying, so uncapped they turn an ordinary day of
+    /// walking about into an evening of scrolling, and the habit never has to
+    /// change. Two sets' worth is the ceiling - enough that a genuine walk is
+    /// recognised, not enough that anyone can live off it.
+    var stepMinutesCap: Int { minutesPerUnlock * 2 }
+
     /// How many of a movement it takes to earn one minute. Quoted on the home
     /// screen so the exchange rate is never a mystery.
     func repsPerMinute(for exercise: Exercise) -> Int {
