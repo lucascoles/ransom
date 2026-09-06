@@ -62,6 +62,7 @@ struct SettingsView: View {
                 subscriptionCard
                 difficultyCard
                 exercisesCard
+                scheduleCard
                 blockingCard
                 aboutCard
             }
@@ -277,6 +278,100 @@ struct SettingsView: View {
             }
         }
         .ransomCard()
+    }
+
+    /// Which days Ransom is on duty.
+    ///
+    /// Guarding your apps Monday to Friday and taking Saturday back is not
+    /// cheating - an app that is all or nothing is one people switch off entirely
+    /// rather than turn down. But it is obviously the softest thing in here to
+    /// reach for mid-craving, so it locks with everything else: harder whenever
+    /// you like, easier never, until the run is over.
+    private var scheduleCard: some View {
+        let locked = model.profile.isCommitted
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Days on duty", systemImage: "calendar")
+                    .font(RansomFont.headline(16))
+                    .foregroundStyle(Palette.ink)
+                Spacer()
+                if locked {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Palette.inkFaint)
+                }
+            }
+
+            Text(locked
+                 ? "Locked until your run ends. You picked these, and picking a quieter week from inside a craving is the thing this stops."
+                 : "Tap a day to take it off. Rex stands down and your apps open normally.")
+                .font(RansomFont.body(14))
+                .foregroundStyle(Palette.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 6) {
+                ForEach(1...7, id: \.self) { weekday in
+                    dayToggle(weekday, locked: locked)
+                }
+            }
+
+            Text(scheduleSummary)
+                .font(RansomFont.caption(12))
+                .foregroundStyle(model.profile.activeDays.isEmpty ? Palette.inkFaint : Palette.brand)
+        }
+        .ransomCard()
+    }
+
+    private func dayToggle(_ weekday: Int, locked: Bool) -> some View {
+        // Empty means every day, so an untouched picker shows all seven on and
+        // reads as "always" rather than as a control nobody has filled in.
+        let days = model.profile.activeDays
+        let isOn = days.isEmpty || days.contains(weekday)
+
+        return Button {
+            guard !locked else {
+                Haptics.warning()
+                return
+            }
+            Haptics.tick()
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { toggleDay(weekday) }
+        } label: {
+            Text(Self.dayInitials[weekday - 1])
+                .font(RansomFont.headline(14))
+                .foregroundStyle(isOn ? Palette.onBrand : Palette.inkSoft)
+                .frame(maxWidth: .infinity)
+                .frame(height: 42)
+                .background(Circle().fill(isOn ? Palette.brand : Palette.surfaceAlt))
+        }
+        .buttonStyle(.plain)
+        .opacity(locked ? 0.55 : 1)
+    }
+
+    private static let dayInitials = ["S", "M", "T", "W", "T", "F", "S"]
+
+    private func toggleDay(_ weekday: Int) {
+        var days = model.profile.activeDays.isEmpty ? Set(1...7) : model.profile.activeDays
+        if days.contains(weekday) { days.remove(weekday) } else { days.insert(weekday) }
+        // Every day off is just the app switched off, which Settings already has a
+        // clearer way to say. The last day on stays on.
+        guard !days.isEmpty else {
+            Haptics.warning()
+            return
+        }
+        model.profile.activeDays = days.count == 7 ? [] : days
+        // Take effect now rather than at the next thing that happens to reconcile.
+        // Turning today off and finding your apps still shielded reads as the
+        // setting not working.
+        screenTime.reconcile()
+    }
+
+    private var scheduleSummary: String {
+        let days = model.profile.activeDays
+        guard !days.isEmpty, days.count < 7 else { return "On every day." }
+        let symbols = Calendar.current.shortWeekdaySymbols
+        let off = (1...7).filter { !days.contains($0) }.map { symbols[$0 - 1] }
+        return "Off on \(off.joined(separator: ", "))."
     }
 
     private var blockingCard: some View {

@@ -43,8 +43,17 @@ public struct BlockedSelectionStore {
 
     // MARK: - Enforcement
 
-    /// Puts Rex in the doorway of every selected app.
-    public func applyShield() {
+    /// Puts Rex in the doorway of every selected app, unless today is a day off.
+    ///
+    /// The check lives here rather than at the call sites because there are four
+    /// of them across three processes - the app, the monitor extension and the
+    /// shield action - and a day off honoured by three of them is not a day off.
+    public func applyShield(schedule: ScheduleStore = ScheduleStore()) {
+        guard schedule.isActive() else {
+            removeShield()
+            return
+        }
+
         let store = ManagedSettingsStore(named: .ransom)
         let selection = self.selection
 

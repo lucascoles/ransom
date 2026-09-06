@@ -55,6 +55,9 @@ public enum RansomCore {
         /// The user's named focus windows. In the App Group because the shield
         /// prices against them too - see `FocusRuleStore`.
         public static let focusRules = "ransom.rules.focus"
+        /// Weekdays Ransom guards. Empty is every day. Read by the shield and the
+        /// monitor as well as the app - see `ScheduleStore`.
+        public static let activeDays = "ransom.schedule.activeDays"
         /// Highest usage rung reached today, and the day it belongs to. Written
         /// by the monitor extension - see `UsageMeter` for why usage has to
         /// arrive as callbacks rather than be read.

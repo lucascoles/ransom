@@ -205,6 +205,12 @@ struct HomeView: View {
         if !screenTime.hasSelection {
             return "Pick a few apps just below and I'll keep an eye on them for you."
         }
+        // Said out loud. A day off with no explanation is indistinguishable from
+        // blocking having quietly broken, and that is the one thing this app
+        // cannot afford to look like.
+        if !ScheduleStore().isActive() {
+            return "Day off today, by your own rules. Your apps are open - I'll be back tomorrow."
+        }
         return workLine
     }
 

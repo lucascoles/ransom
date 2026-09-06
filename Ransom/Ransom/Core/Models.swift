@@ -193,6 +193,9 @@ struct UserProfile: Codable, Equatable {
     var goalDailyMinutes: Int?
     /// How long they committed to the plan for, and when the clock started.
     /// Nil before the commitment step, and never cleared afterwards.
+    /// Weekdays Ransom guards, as `Calendar` numbers with 1 = Sunday. Empty is
+    /// every day, which is what every profile written before this decodes to.
+    var activeDays: Set<Int> = []
     var commitmentDays: Int?
     var commitmentStartedAt: Date?
     var exercises: Set<Exercise> = [.pushUps]

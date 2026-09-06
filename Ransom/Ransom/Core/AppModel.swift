@@ -368,6 +368,8 @@ final class AppModel {
         )
         // They flagged late-night scrolling during intake; charge for it.
         ledger.nightSurchargeEnabled = profile.peakTimes.contains(.lateNight)
+        // The extensions enforce the days off, so they have to be told about them.
+        ScheduleStore().activeDays = profile.activeDays
     }
 
     private func persist() {

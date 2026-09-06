@@ -129,6 +129,17 @@ moment it starts working. The rules live in the App Group so the shield prices
 against them too; a rule the app knew about and the shield didn't would quote two
 prices for the same set.
 
+**Days off are supported, and lock with everything else.** `profile.activeDays`
+(Calendar weekdays, empty = every day) mirrors into the App Group via
+`ScheduleStore`, and `BlockedSelectionStore.applyShield` refuses to shield on a
+day off - the check lives there because four call sites across three processes
+apply the shield, and a day off honoured by three of them is not a day off. The
+picker is locked while `profile.isCommitted`: an app that is all or nothing gets
+switched off entirely rather than turned down, but a quieter week chosen from
+inside a craving is the exact thing the commitment exists to prevent. Home says
+when a day is off, because a day off with no explanation is indistinguishable
+from blocking having broken.
+
 **The daily goal is screen time, not reps.** `profile.goalDailyMinutes` is set by
 the user on the "What's the target?" step and drives `AppModel.todayAllowance`.
 A rep-based daily goal sells the wrong thing: a big rep number means a lot of
