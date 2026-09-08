@@ -1708,8 +1708,24 @@ private struct Movement {
         /// frame to frame; the shoulders held to within 0.08 shoulder widths.
         let restingElbow: Double = 150
         let stillElbowRange: Double = 15
-        /// Shoulder width as a share of the frame, past which the body is too close
-        /// for the arms to stay in shot at the bottom of a rep.
+        /// Shoulder width as a share of the frame *height*, past which the body
+        /// is too close for the arms to stay in shot at the bottom of a rep.
+        ///
+        /// Unreachable in practice, and recorded here so nobody verifies it by
+        /// accident. The buffer is portrait (720 wide, 1280 tall) and `measured`
+        /// scales x by width / height, so two shoulders both inside the frame
+        /// span at most 0.5625 of its height. 0.55 therefore means "both
+        /// shoulders within 2% of the frame's edges", which no recording has
+        /// produced. The edge fallback in `read` is the check that actually
+        /// fires. An extreme close-up (head filling the preview, shoulders
+        /// 0.58 to 0.80 of the frame width at the top of every rep) got past
+        /// both: at the bottom of each rep Vision returned no body at all for
+        /// 0.75 to 1.0s, and on the frames where it returned shoulders alone
+        /// they sat 16% and 87% across the frame, nowhere near an edge.
+        /// Deliberately not lowered. The honest close set in the bedroom clip
+        /// reaches 0.60 to 0.66 of the frame width at the bottom of reps that
+        /// count, which overlaps the close-up's tops, so a per-frame line low
+        /// enough to catch the close-up would nag honest reps in red mid set.
         let tooCloseWidth: Double = 0.55
 
         return Movement(

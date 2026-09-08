@@ -301,6 +301,26 @@ principles got several of them backwards first:
    reasons were wiped ~30ms after being written and the counter looked broken
    because the only thing that explained it was invisible. Hints now hold 2.5s,
    take the headline, and turn the camera border red; green means counting.
+ * **An extreme close-up cannot be counted, and cannot yet be named.** Head
+   filling the preview, shoulders 0.58-0.80 of the frame width at the top of
+   every rep: Vision returned no body at all for 0.75-1.0s at each bottom, so
+   ten reps produced two counts (both off a lucky frame caught part way down
+   with an elbow bent) and no refusal. Neither too-close check can see it: the
+   shoulder test is unreachable in portrait (see `tooCloseWidth`) and the edge
+   fallback needs a joint within 2% of an edge, but the joints that go simply
+   vanish. Not fixed, on purpose: the honest bedroom set reaches 0.60-0.66 of
+   the frame width at the bottom of counted reps, which overlaps the
+   close-up's tops, so a per-frame width line would nag honest reps in red.
+ * **Head-on, knee push-ups count. That is the design, and it has been
+   tested.** Three honest reps then seven with the knees down banked 10/10.
+   Every recording so far, that one included, is head-on, so the side-on knee
+   gate has never run on footage. The one thing that separated the two in that
+   clip was the shoulder-width swell at the bottom: +41-48% on the honest
+   reps, +6-12% on the knees (the pivot moves from the toes to the knees, so
+   the shoulders stop coming at the lens). It is not a gate: later honest reps
+   in the good-light clip swell only +15-20% and the second person's knee reps
+   +22%, so across clips it does not separate, and a shallow honest rep would
+   be refused as kneeling.
 
 `-RansomDebugHUD 1` puts the live readout back under the camera. Reading those
 numbers off a screen recording is how all of the above was established; if the
