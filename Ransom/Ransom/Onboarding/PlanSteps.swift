@@ -104,13 +104,13 @@ struct IntensityStep: View {
                     Image(systemName: "arrow.right")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(Palette.inkFaint)
-                    previewStat(value: "\(plan.minutesPerUnlock) min", label: "banked")
+                    previewStat(value: Currency.amount(plan.minutesPerUnlock), label: "coins banked")
                 }
                 .padding(.vertical, 6)
                 .ransomCard()
                 .padding(.top, 4)
 
-                Text("Same rate all day. Do as many sets as you like - the minutes stack up in your bank and clear at midnight.")
+                Text("Same rate all day. Do as many sets as you like - the coins stack up in your bank and clear at midnight.")
                     .font(RansomFont.body(13))
                     .foregroundStyle(Palette.inkSoft)
                     .multilineTextAlignment(.center)

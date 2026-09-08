@@ -105,9 +105,9 @@ struct WorkoutCompleteView: View {
         let move = exercise.title.lowercased()
         if didEarn {
             if let trigger {
-                return "\(reps) \(move) done. \(minutes) minutes banked - spend them on \(trigger) or keep them."
+                return "\(reps) \(move) done. \(Currency.coins(minutes)) banked - spend them on \(trigger) or keep them."
             }
-            return "\(reps) \(move) done. \(minutes) minutes in the bank."
+            return "\(reps) \(move) done. \(Currency.coins(minutes)) in the bank."
         }
         return "\(reps) \(move) still count toward today. The apps stay closed this time."
     }
@@ -131,7 +131,7 @@ struct WorkoutCompleteView: View {
 
     private var statRow: some View {
         HStack(spacing: 12) {
-            miniStat(value: "\(minutes)m", label: "unlocked", tint: Palette.green)
+            miniStat(value: Currency.amount(minutes), label: "coins", tint: Palette.flame)
             miniStat(value: "\(model.streak)", label: "day streak", tint: Palette.flame)
             miniStat(value: "\(model.todayReps)", label: "reps today", tint: Palette.ink)
         }

@@ -315,7 +315,7 @@ struct HomeView: View {
                 // The icon names the thing you're about to do. A generic bolt said
                 // nothing, and it's the exercise's own symbol so it follows whichever
                 // movement the user picked rather than assuming push-ups.
-                PrimaryButton(title: "Earn \(earnMinutes) minutes", icon: activeExercise.symbol) {
+                PrimaryButton(title: "Earn \(Currency.coins(earnMinutes))", icon: activeExercise.symbol) {
                     workoutRequest = WorkoutRequest(
                         exercise: activeExercise,
                         target: earnReps,
@@ -575,7 +575,7 @@ struct HomeView: View {
 
                 spendPicker
 
-                SecondaryButton(title: "Spend \(spendChoice) minutes", icon: "hourglass") {
+                SecondaryButton(title: "Spend \(Currency.coins(spendChoice))", icon: Currency.symbolName) {
                     Haptics.success()
                     let spent = model.spendFromBank(minutes: spendChoice)
                     if spent > 0 { screenTime.grantEarnedTime(minutes: spent) }

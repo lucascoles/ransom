@@ -132,8 +132,8 @@ public enum ShieldCopy {
             // the bank this line is about the choice, not the price, and the
             // shorter half keeps the sentence balanced against "your minutes".
             lines.append(deal.isPassive
-                ? "Keep walking or spend your minutes."
-                : "Do your reps or spend your minutes.")
+                ? "Keep walking or spend your coins."
+                : "Do your reps or spend your coins.")
         } else {
             lines.append(deal.isPassive
                 ? "Your steps are already paying for it."
@@ -149,8 +149,8 @@ public enum ShieldCopy {
     /// label still names the outcome rather than the mechanism: "Start my set" is
     /// what the user is deciding to do, and the notification is just the next tap.
     public static func primaryButton(_ deal: Deal) -> String {
-        if deal.banked > 0 { return deal.isPassive ? "Spend my minutes" : "Spend or earn minutes" }
-        return deal.isPassive ? "See my steps" : "Earn minutes"
+        if deal.banked > 0 { return deal.isPassive ? "Spend my coins" : "Spend or earn coins" }
+        return deal.isPassive ? "See my steps" : "Earn coins"
     }
 
     /// Walking away is allowed and gets no speech.
@@ -167,7 +167,7 @@ public enum ShieldCopy {
 
     public static func handoffBody(_ deal: Deal) -> String {
         if deal.isPassive {
-            return "Your steps are banking minutes for \(deal.appLabel). See where you're at."
+            return "Your steps are banking coins for \(deal.appLabel). See where you're at."
         }
         if deal.banked > 0 {
             return "\(minutes(deal.banked)) banked. Spend what you like on \(deal.appLabel), or do \(deal.repsPhrase) for \(deal.minutes) more."
@@ -177,7 +177,7 @@ public enum ShieldCopy {
 
     // MARK: - Helpers
 
-    private static func minutes(_ count: Int) -> String {
-        count == 1 ? "1 minute" : "\(count) minutes"
-    }
+    /// The bank is in coins; a coin is a minute. `Currency` owns the wording so
+    /// the shield and the app cannot end up calling the same number two things.
+    private static func minutes(_ count: Int) -> String { Currency.coins(count) }
 }
