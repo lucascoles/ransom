@@ -78,6 +78,11 @@ public enum ShieldCopy {
         /// The app by name, or a plain stand-in that still makes the sentence.
         var appLabel: String { appName ?? "this app" }
 
+        /// The same, for the start of a sentence. iOS does not always tell us
+        /// which app was reached for, and "this app is blocked by Ransom" needs
+        /// the capital that `appLabel` cannot carry mid-sentence.
+        var appLabelCapitalised: String { appName ?? "This app" }
+
         /// Deliberately no "spendable" figure any more.
         ///
         /// There used to be one, `min(banked, minutes)`, and the shield quoted it
@@ -106,8 +111,7 @@ public enum ShieldCopy {
     /// user has to act on comes first: the set when the bank is empty, the
     /// balance when it is not.
     public static func title(_ deal: Deal) -> String {
-        if deal.banked > 0 { return "\(minutes(deal.banked)) in the bank" }
-        return "\(deal.repsPhrase) for \(minutes(deal.minutes))"
+        "\(deal.appLabelCapitalised) is blocked by Ransom"
     }
 
     /// What to do about it. One or two short sentences; the shield wraps them.
@@ -120,19 +124,17 @@ public enum ShieldCopy {
         var lines: [String] = []
         if let rule = deal.ruleLine { lines.append(rule) }
 
+        // The title no longer carries the numbers, so the price lives here. No
+        // figure on the spend side on purpose: `spendOptions` goes up to the
+        // whole balance, so naming one would undersell it again.
         if deal.banked > 0 {
-            // No figure here on purpose: spend as little or as much as you like,
-            // up to the whole balance.
             lines.append(deal.isPassive
-                ? "Rex takes minutes. Spend what you like, or keep walking for more."
-                : "Rex takes minutes. Spend what you like, or do \(deal.repsPhrase) for \(deal.minutes) more.")
+                ? "Keep walking or spend your minutes."
+                : "Do \(deal.repsPhrase) or spend your minutes.")
         } else {
-            // With a rule running, the rule is the news; three sentences is a
-            // paragraph, and nobody reads a paragraph on a locked door.
-            if deal.ruleName == nil { lines.append("Rex doesn't take cash.") }
             lines.append(deal.isPassive
                 ? "Your steps are already paying for it."
-                : "One set and he steps aside.")
+                : "Do \(deal.repsPhrase) for \(minutes(deal.minutes)).")
         }
         return lines.joined(separator: " ")
     }
@@ -144,8 +146,8 @@ public enum ShieldCopy {
     /// label still names the outcome rather than the mechanism: "Start my set" is
     /// what the user is deciding to do, and the notification is just the next tap.
     public static func primaryButton(_ deal: Deal) -> String {
-        if deal.banked > 0 { return deal.isPassive ? "Spend my minutes" : "Spend or earn" }
-        return deal.isPassive ? "See my steps" : "Start my set"
+        if deal.banked > 0 { return deal.isPassive ? "Spend my minutes" : "Spend or earn minutes" }
+        return deal.isPassive ? "See my steps" : "Earn minutes"
     }
 
     /// Walking away is allowed and gets no speech.

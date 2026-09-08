@@ -47,9 +47,24 @@ final class ShieldActionExtension: ShieldActionDelegate {
             ledger.pendingAppName = RansomCore.defaults.string(forKey: RansomCore.Key.shieldHeadline)
 
             DarwinNotifications.post(RansomCore.unlockRequestedNotification)
-            notifyUserToOpenRansom(ledger: ledger)
 
-            completionHandler(.close)
+            // Straight back into Ransom, where the system allows it.
+            //
+            // An extension cannot launch its host app: `UIApplication.open` does
+            // not exist out here, and for years `ShieldActionResponse` had only
+            // `none`, `close` and `defer`. That is why this path went through a
+            // notification - it was the only supported route back, and it cost
+            // the user a second tap on a banner that a Focus mode could swallow.
+            //
+            // iOS 26.5 added `openParentalControlsApp`, which opens the app that
+            // set the shield. Older systems keep the notification, so the button
+            // still leads somewhere on iOS 17 through 26.4.
+            if #available(iOS 26.5, *) {
+                completionHandler(.openParentalControlsApp)
+            } else {
+                notifyUserToOpenRansom(ledger: ledger)
+                completionHandler(.close)
+            }
 
         // iOS 26.4 added a three-item secondary submenu to the shield. Ransom
         // configures no submenu, so these cannot fire today, but they have to be
