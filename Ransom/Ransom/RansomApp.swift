@@ -29,6 +29,13 @@ struct RansomApp: App {
     /// two-second title card between them and the set is a tax on being interrupted.
     @State private var isLaunching = true
 
+    init() {
+        // Existing installs still have the retired 7pm nudge pending with
+        // `repeats: true`; removing the code that scheduled it does not
+        // unschedule it on a device that already has it.
+        NotificationManager.removeRetiredDailyNudge()
+    }
+
     var body: some Scene {
         WindowGroup {
             ZStack {
@@ -42,6 +49,10 @@ struct RansomApp: App {
                     LaunchSplash { isLaunching = false }
                         .transition(.opacity)
                         .zIndex(1)
+                        // Shown over intake, so it follows intake's rule rather
+                        // than the system's. Without this the splash is the one
+                        // dark frame in an otherwise light sequence.
+                        .preferredColorScheme(.light)
                 }
             }
         }

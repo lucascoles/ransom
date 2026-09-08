@@ -81,35 +81,42 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         // minutes the user is currently spending.
         guard event == .earnedTimeSpent, activity == .unlockWindow else { return }
 
-        // The user has burned through the minutes they earned.
+        // The user has burned through the minutes they earned. Whether anything
+        // was actually revoked has to be read *before* revoking: a threshold that
+        // fires against an already-expired unlock has nothing to announce, and
+        // announcing it anyway is a second "Time's up" for one expiry.
+        let wasUnlocked = ledger.isUnlocked
         ledger.revoke()
         selection.applyShield()
-        postTimeUpNotification()
+        if wasUnlocked { postTimeUpNotification() }
     }
 
-    override func eventWillReachThresholdWarning(
-        _ event: DeviceActivityEvent.Name,
-        activity: DeviceActivityName
-    ) {
-        super.eventWillReachThresholdWarning(event, activity: activity)
-        postWarningNotification()
-    }
+    // `eventWillReachThresholdWarning` is deliberately not overridden. The
+    // callback exists, but nothing in this SDK can arm it: `DeviceActivityEvent`
+    // takes only a `threshold`, and `warningTime` lives on `DeviceActivitySchedule`,
+    // where it drives `intervalWillEndWarning` instead. An override here looks like
+    // a working "nearly out" warning and is never called. The real one is a
+    // wall-clock notification scheduled by the app in `NotificationManager`.
 
     // MARK: - Notifications
 
+    /// The app has already scheduled this same alert against the wall clock. Getting
+    /// here means the minutes were *spent* before that timer was due, so the pending
+    /// twin has to go: identical identifiers stop two banners arriving at once, but
+    /// they do not stop the app's copy firing again minutes later.
     private func postTimeUpNotification() {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [
+            RansomNotificationID.timeUp,
+            RansomNotificationID.timeWarning,
+        ])
+        center.removeDeliveredNotifications(withIdentifiers: [RansomNotificationID.timeWarning])
+
         let content = UNMutableNotificationContent()
         content.title = "Time's up"
         content.body = "Rex is back in the doorway. One more set to keep going."
         content.sound = .default
-        deliver(content, id: "ransom.monitor.time-up")
-    }
-
-    private func postWarningNotification() {
-        let content = UNMutableNotificationContent()
-        content.title = "Nearly out"
-        content.body = "Your earned scroll time is about to run out."
-        deliver(content, id: "ransom.monitor.warning")
+        deliver(content, id: RansomNotificationID.timeUp)
     }
 
     private func deliver(_ content: UNMutableNotificationContent, id: String) {

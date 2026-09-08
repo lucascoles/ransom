@@ -20,6 +20,21 @@ public extension DeviceActivityName {
     nonisolated(unsafe) static let unlockWindow = Self("ransom.unlock-window")
 }
 
+/// Notification identifiers, shared because two *processes* raise the same two
+/// alerts and iOS only collapses them when the identifier matches.
+///
+/// Time is up for one of two reasons: the wall clock ran out, which the app knows
+/// in advance and schedules a timer for, or the bought minutes were actually spent,
+/// which only the monitor extension is told about. Both are the same event to the
+/// person holding the phone. They used to carry different identifiers and both
+/// arrive.
+public enum RansomNotificationID {
+    /// "Time's up." Raised by the app on the wall clock and by the monitor on usage.
+    public static let timeUp = "ransom.time-up"
+    /// The heads-up a few minutes before the above.
+    public static let timeWarning = "ransom.time-warning"
+}
+
 public extension DeviceActivityEvent.Name {
     /// Fires when the minutes the user bought have been used up.
     ///
