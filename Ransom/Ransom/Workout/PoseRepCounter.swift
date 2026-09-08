@@ -153,6 +153,38 @@ final class PoseRepCounter: NSObject {
     /// barely changes during a set — so once seen it's remembered, and a single
     /// visible shoulder is enough to keep measuring.
     private var lastShoulderWidth: Double?
+    /// The shoulder width at the top of the rep, which is the yardstick the
+    /// height signal is actually measured in once the count is armed.
+    ///
+    /// Measuring the drop in *current* shoulder widths was the bug that made the
+    /// height signal unreadable head on. The shoulders come towards a floor
+    /// level phone on the way down, and the elbows flare, so the apparent
+    /// shoulder width grows 10-30% at the bottom of every rep (read off four
+    /// screen recordings: 157 to 215 px, 117 to 143, 182 to 258, 136 to 194).
+    /// Dividing a modest height change by a yardstick that is swelling at the
+    /// same time shrinks the ratio, and for a second person doing knee push-ups
+    /// with a low camera it reversed it outright: every one of her ten reps read
+    /// -0.15 to -0.57 "drop", so the shoulders appeared to *rise* at the bottom.
+    /// Nine of those reps still counted, by accident of the ordering; the tenth
+    /// was refused with "Push all the way back up" while she was visibly back at
+    /// the top, because a reversed signal can never satisfy a return check. The
+    /// same reps measured against the width seen at the top read +0.38 to +1.27,
+    /// every one of them positive, and every one clear of `strongDropTravel`.
+    ///
+    /// So the yardstick is frozen at the moment the count arms - the user has
+    /// just held the top still for a second, so it is a clean top width - and
+    /// then only nudged, slowly, while the arms are straight again between reps,
+    /// so someone who shuffles closer to the phone mid set is re-measured within
+    /// a couple of seconds. It is never touched during a descent, which is the
+    /// whole point. Nil until armed, and cleared with everything else on disarm;
+    /// before arming the current width is used, exactly as before, so the
+    /// stillness check sees no step when the freeze happens.
+    private var restingShoulderWidth: Double?
+    /// How fast the resting width follows the top-of-rep width, per frame.
+    /// About two seconds to settle at 30fps: slow enough that a few frames of an
+    /// elbow reading "straight" while the shoulders are still low (which head-on
+    /// footage does produce) move it by well under a percent.
+    private let restingWidthFollow = 0.03
     /// Hands-to-feet horizontal distance in shoulder widths, this frame. Large
     /// means the camera is seeing the body side on; small means it is pointed
     /// down the length of it and the legs are a smudge.
@@ -669,8 +701,12 @@ final class PoseRepCounter: NSObject {
     private struct Reading {
         /// The movement's own measure - elbow angle, or hips above knees.
         var primary: Double?
-        /// Height in frame of the shoulders (push-ups) or hips (squats).
+        /// Height in frame of the shoulders (push-ups) or hips (squats), in
+        /// *current* shoulder widths. `consume` re-measures it against the
+        /// resting width once armed; see `restingShoulderWidth` for why.
         var drop: Double?
+        /// The shoulder width `drop` was divided by, so it can be re-measured.
+        var shoulderWidth: Double?
         /// How far the ankles sit above the knees, in shoulder widths. Kneeling
         /// folds the shins up and pushes this positive; a plank keeps it at or
         /// below zero. Nil means the legs aren't in shot, which is not the same
@@ -1010,7 +1046,8 @@ final class PoseRepCounter: NSObject {
             if let p = raw(name) { joints[key] = CGPoint(x: p.x, y: 1 - p.y) }
         }
 
-        let reading = Reading(primary: primary, drop: drop, knee: ankleLift, kneeHeight: kneeHeight,
+        let reading = Reading(primary: primary, drop: drop, shoulderWidth: width,
+                              knee: ankleLift, kneeHeight: kneeHeight,
                               frame: PoseFrame(joints: joints, aspect: frameAspect))
         return reading.isUsable ? reading : nil
     }
@@ -1022,10 +1059,20 @@ final class PoseRepCounter: NSObject {
         // The tracks still smooth, and still feed the diagnostics. They no longer
         // decide anything: counting is done against each rep's own peak and
         // valley, below.
+        // The height signal in top-of-rep shoulder widths, not this frame's.
+        // Both are the same number until the count arms; after that the
+        // difference is the difference between a signal that reads the same way
+        // up every rep and one that reversed on a second user. See
+        // `restingShoulderWidth`.
+        var rawDrop = reading.drop
+        if let d = reading.drop, let seen = reading.shoulderWidth,
+           let resting = restingShoulderWidth, resting > 0.02 {
+            rawDrop = d * seen / resting
+        }
         _ = reading.primary.map { primaryTrack.push($0) }
-        _ = reading.drop.map { dropTrack.push($0) }
+        _ = rawDrop.map { dropTrack.push($0) }
         let primary = reading.primary != nil ? primaryTrack.current : nil
-        let drop = reading.drop != nil ? dropTrack.current : nil
+        let drop = rawDrop != nil ? dropTrack.current : nil
 
         repWindow.observe(primary: primary, drop: drop)
         if let drop {
@@ -1093,6 +1140,15 @@ final class PoseRepCounter: NSObject {
 
         if !isArmed {
             updateArming(primary: primary, drop: drop)
+            // Armed on this frame: the user has just held the top still for a
+            // second, so this frame's shoulder width is the top width.
+            if isArmed { restingShoulderWidth = reading.shoulderWidth }
+        } else if let seen = reading.shoulderWidth, let resting = restingShoulderWidth,
+                  !isDown, pendingRep == nil, primary >= movement.restingTop {
+            // Between reps, arms straight: follow the top width slowly so a user
+            // who shifts closer to the phone is re-measured. Never during a
+            // descent, where the width is the thing that misleads.
+            restingShoulderWidth = resting + (seen - resting) * restingWidthFollow
         }
         let state: Tracking = isArmed ? .tracking : .calibrating
         if tracking != state { tracking = state }
@@ -1243,6 +1299,11 @@ final class PoseRepCounter: NSObject {
         // and relaxes its gates. Without it the primary signal stands alone and
         // has to prove the rep by itself.
         let corroborated = drop.map { $0 >= movement.strongDropTravel } == true && repWindow.sawDropThroughout
+        // A drop well beyond what anything but a rep produces vouches harder
+        // still, and the elbow then only has to have started a descent. Head on,
+        // that is the difference between counting a set and refusing half of it:
+        // see `Movement.pushUps.deepDropTravel`.
+        let deep = drop.map { $0 >= movement.deepDropTravel } == true && repWindow.sawDropThroughout
 
         // How strict to be depends on how well the camera could see.
         //
@@ -1259,11 +1320,13 @@ final class PoseRepCounter: NSObject {
         let strict = sawBodyLengthwise && movement.kind == .pushUp
         let requiredTravel = strict
             ? (corroborated ? movement.sideOnCorroboratedTravel : movement.sideOnMinTravel)
-            : (corroborated ? movement.corroboratedTravel
+            : (deep ? movement.deepCorroboratedTravel
+               : corroborated ? movement.corroboratedTravel
                : drop == nil ? movement.soloTravel : movement.minTravel)
         let allowedBottom = strict
             ? (corroborated ? movement.sideOnCorroboratedBottom : movement.sideOnMaxBottom)
-            : (corroborated ? movement.corroboratedBottom : movement.maxBottom)
+            : (deep ? movement.deepCorroboratedBottom
+               : corroborated ? movement.corroboratedBottom : movement.maxBottom)
 
         guard travel >= requiredTravel else {
             reject("travel", movement.shallowHint, quietly: brief)
@@ -1429,6 +1492,7 @@ final class PoseRepCounter: NSObject {
         repBottom = nil
         pendingRep = nil
         recentDrops = []
+        restingShoulderWidth = nil
         resetStillness()
     }
 
@@ -1464,6 +1528,12 @@ final class PoseRepCounter: NSObject {
         }
         lastRepAt = .now
         reps += 1
+        // A counted rep outranks whatever was being said about the last one.
+        // Without this a refusal kept the floor for its full 2.5 seconds: one
+        // set ended with "Not deep enough" in red over a rep that counted and
+        // banked the set, which is the counter contradicting itself on screen.
+        formHint = nil
+        hintExpiresAt = nil
         Haptics.rep()
         if reps >= target { stop() }
     }
@@ -1513,6 +1583,12 @@ private struct Movement {
     let strongDropTravel: Double
     let corroboratedTravel: Double
     let corroboratedBottom: Double
+    /// A drop this big, seen throughout, is more than corroboration: nothing
+    /// but a rep produces it, and the primary signal then only has to show that
+    /// a descent happened at all. Set to infinity to disable the tier.
+    let deepDropTravel: Double
+    let deepCorroboratedTravel: Double
+    let deepCorroboratedBottom: Double
     /// The same two gates for a camera that can actually see the arm bend.
     /// Meaningless for squats, which are filmed facing the lens either way, so
     /// they simply repeat the ordinary numbers.
@@ -1593,16 +1669,41 @@ private struct Movement {
         /// locked arms drops the shoulders a long way with zero elbow travel and
         /// still fails here.
         ///
-        /// Was 0.35. The drop is measured in *current* shoulder widths, and with the
-        /// phone this close the shoulders come at the camera on the way down - the
-        /// width grew 386 to 547 pixels in one rep - which shrinks the ratio for the
-        /// deepest reps. A full-depth first rep whose shoulders fell 1.1 top-widths
-        /// on screen read 0.355-0.384 here, a coin flip against 0.35; the other
-        /// three read 0.50-0.61. Nothing that wasn't a rep came near 0.30: rests
-        /// held within 0.05 and a one-armed reach for the phone made 0.24.
+        /// Was 0.35, lowered because the drop was then measured in *current*
+        /// shoulder widths and the width grew 386 to 547 pixels in one rep, which
+        /// shrank a full-depth rep to a coin flip against 0.35. The drop is now
+        /// measured in the resting width (see `restingShoulderWidth`), so a real
+        /// rep reads far larger: 0.38-1.27 across four recordings, forty-five
+        /// reps, none under 0.38. Left at 0.30 rather than raised, because the
+        /// smallest of those were a second person's knee push-ups and 0.30 is
+        /// still clear of everything that wasn't a rep: rests held within 0.05,
+        /// a one-armed reach for the phone made 0.24-0.28.
         let strongDropTravel: Double = 0.30
         let corroboratedElbowTravel: Double = 20
         let corroboratedBottomAngle: Double = 155
+        /// The deep-drop tier, from four screen recordings read frame by frame at
+        /// 6fps against the skeleton Vision drew.
+        ///
+        /// Head on, the elbow angle under-reads the bottom of a full push-up so
+        /// badly that honest reps straddle the 20 degree gate above. With the
+        /// phone close (bedroom clip) six of eleven full-depth reps were refused
+        /// "Not deep enough", every one of them with the chest on the floor and
+        /// the head filling the frame; the elbow read 12-27 degrees of travel
+        /// on them and bottomed at 142-153. A dark hallway clip lost two of
+        /// twelve the same way (14 and 27 degrees), a good-light clip one of
+        /// eleven. On every one of those the shoulders had dropped 0.41-0.84 of
+        /// the resting shoulder width, which no movement in any of the four
+        /// clips other than a push-up came near: rests held within 0.05, a reach
+        /// for the phone made 0.24-0.28, sitting back onto the knees and coming
+        /// forward again made 0.33. So past 0.45, starting a descent is enough:
+        /// the elbow gate falls to the entry travel, and the bottom to 160,
+        /// which rest tops (155-180 in the same footage) clear with room. The
+        /// elbow is still not optional - a descent has to be entered - so a
+        /// downward dog on locked arms is refused as before, and the return
+        /// check still refuses anything that finishes at the bottom.
+        let deepDropTravel: Double = 0.45
+        let deepElbowTravel: Double = 12
+        let deepBottomAngle: Double = 160
         /// Rest tops in real footage read 155-180 degrees and drifted under 5 degrees
         /// frame to frame; the shoulders held to within 0.08 shoulder widths.
         let restingElbow: Double = 150
@@ -1623,6 +1724,9 @@ private struct Movement {
             strongDropTravel: strongDropTravel,
             corroboratedTravel: corroboratedElbowTravel,
             corroboratedBottom: corroboratedBottomAngle,
+            deepDropTravel: deepDropTravel,
+            deepCorroboratedTravel: deepElbowTravel,
+            deepCorroboratedBottom: deepBottomAngle,
             // Side on, where the elbow angle is what it says it is. A full
             // push-up swings through 70-90 degrees and finishes near a right
             // angle; a quarter rep manages about 30 and stops around 140, which
@@ -1778,6 +1882,11 @@ private struct Movement {
             strongDropTravel: strongHipDrop,
             corroboratedTravel: corroboratedGapTravel,
             corroboratedBottom: corroboratedBottomGap,
+            // No deep tier for squats: nothing here has been read off footage,
+            // and a tier that relaxes the depth gate is the last thing to guess.
+            deepDropTravel: .infinity,
+            deepCorroboratedTravel: corroboratedGapTravel,
+            deepCorroboratedBottom: corroboratedBottomGap,
             // A squat is filmed facing the camera whichever way you stand it, so
             // there is no better view to switch to and no second set of numbers.
             sideOnMinTravel: minGapTravel,
