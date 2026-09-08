@@ -67,7 +67,7 @@ struct PaywallView: View {
                         )
                         feature(
                             icon: plan.exercise.symbol,
-                            title: "\(plan.repsPerUnlock) \(plan.exercise.shortTitle.lowercased()) unlocks \(plan.minutesPerUnlock) minutes",
+                            title: "\(plan.setTarget) \(plan.exercise.shortTitle.lowercased()) unlocks \(plan.minutesPerUnlock) minutes",
                             detail: "Bank minutes whenever you like, spend them when you want them."
                         )
                         feature(
@@ -79,9 +79,14 @@ struct PaywallView: View {
                     .padding(.horizontal, Metrics.screenPadding)
                     .padding(.top, 14)
 
-                    firstMonthStrip
-                        .padding(.horizontal, Metrics.screenPadding)
-                        .padding(.top, 12)
+                    // Nothing to quote when the target sits on the baseline. The
+                    // plan screen hides its projection for that case; a green
+                    // "0h back in month one" here undid that a screen later.
+                    if plan.projectedMinutesSavedPerDay > 0 {
+                        firstMonthStrip
+                            .padding(.horizontal, Metrics.screenPadding)
+                            .padding(.top, 12)
+                    }
 
                     planPicker
                         .padding(.horizontal, Metrics.screenPadding)
@@ -148,8 +153,7 @@ struct PaywallView: View {
 
     private func feature(icon: String, title: String, detail: String) -> some View {
         HStack(alignment: .center, spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
+            ExerciseIcon(name: icon, size: 15)
                 .foregroundStyle(Palette.brand)
                 .frame(width: 32, height: 32)
                 .background(Circle().fill(Palette.brandSoft))
@@ -273,10 +277,10 @@ struct PaywallView: View {
 
             HStack(spacing: 18) {
                 TextButton(title: "Restore") { restore() }
-                Link("Terms", destination: URL(string: "https://ransom.app/terms")!)
+                Link("Terms", destination: RansomLinks.terms)
                     .font(RansomFont.caption(14))
                     .foregroundStyle(Palette.inkSoft)
-                Link("Privacy", destination: URL(string: "https://ransom.app/privacy")!)
+                Link("Privacy", destination: RansomLinks.privacy)
                     .font(RansomFont.caption(14))
                     .foregroundStyle(Palette.inkSoft)
             }

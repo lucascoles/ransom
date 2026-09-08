@@ -23,8 +23,7 @@ struct ChoiceCard: View {
                         .frame(width: 44, height: 44)
                         .background(Circle().fill(isSelected ? Palette.brandSoft : Palette.surfaceAlt))
                 } else if let icon {
-                    Image(systemName: icon)
-                        .font(.system(size: 19, weight: .semibold))
+                    ExerciseIcon(name: icon, size: 19)
                         .foregroundStyle(isSelected ? Palette.brand : Palette.inkSoft)
                         .frame(width: 44, height: 44)
                         .background(Circle().fill(isSelected ? Palette.brandSoft : Palette.surfaceAlt))

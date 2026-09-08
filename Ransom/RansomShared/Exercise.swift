@@ -63,7 +63,10 @@ public enum Exercise: String, CaseIterable, Codable, Identifiable, Sendable {
 
     public var symbol: String {
         switch self {
-        case .pushUps: return "figure.strengthtraining.functional"
+        // Not an SF Symbol. Apple ships no push-up - the nearest candidates are
+        // a lunge and a sit-up - so this names an imageset. `ExerciseIcon`
+        // resolves bundled art before system symbols.
+        case .pushUps: return "figure.pushup"
         case .squats:  return "figure.cross.training"
         case .steps:   return "figure.walk"
         }
@@ -76,7 +79,7 @@ public enum Exercise: String, CaseIterable, Codable, Identifiable, Sendable {
         switch self {
         case .pushUps: return "The classic. Chest, arms and core."
         case .squats:  return "Legs and glutes. No floor needed."
-        case .steps:   return "Your phone counts them already. Capped, so it tops you up rather than covering the day."
+        case .steps:   return "Your phone already counts them. Capped, so it can't be your only move."
         }
     }
 

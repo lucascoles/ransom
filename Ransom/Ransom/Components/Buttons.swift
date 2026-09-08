@@ -21,7 +21,7 @@ struct PrimaryButton: View {
                         .tint(Palette.onBrand)
                 } else {
                     if let icon {
-                        Image(systemName: icon).font(.system(size: 17, weight: .bold))
+                        ExerciseIcon(name: icon, size: 17, weight: .bold)
                     }
                     Text(title).font(RansomFont.headline(17))
                 }
@@ -53,7 +53,7 @@ struct SecondaryButton: View {
             action()
         } label: {
             HStack(spacing: 8) {
-                if let icon { Image(systemName: icon).font(.system(size: 16, weight: .semibold)) }
+                if let icon { ExerciseIcon(name: icon, size: 16) }
                 Text(title).font(RansomFont.headline(16))
             }
             .foregroundStyle(Palette.ink)
@@ -98,7 +98,7 @@ struct Pill: View {
 
     var body: some View {
         HStack(spacing: 5) {
-            if let icon { Image(systemName: icon).font(.system(size: 11, weight: .bold)) }
+            if let icon { ExerciseIcon(name: icon, size: 11, weight: .bold) }
             Text(text).font(RansomFont.caption(12))
         }
         .foregroundStyle(tint)

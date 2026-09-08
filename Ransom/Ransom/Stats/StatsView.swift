@@ -43,6 +43,10 @@ struct StatsView: View {
 
                 headlineCard
 
+                if model.profile.commitmentDays != nil {
+                    commitmentCard
+                }
+
                 lifetimeCard
 
                 SegmentPicker(
@@ -157,6 +161,99 @@ struct StatsView: View {
         .ransomCard()
     }
 
+    // MARK: - The commitment
+
+    /// Days elapsed out of days promised.
+    ///
+    /// Derived rather than stored, and clamped on the way out: `commitmentDaysLeft`
+    /// adds a day so that the last day of a run still reads "1 day left" rather
+    /// than zero, which means on day one it can exceed the length of the run
+    /// itself. Left unclamped that produces a negative elapsed count and a ring
+    /// that starts out running backwards.
+    private var commitmentProgress: (done: Int, total: Int, left: Int, fraction: Double) {
+        let total = model.profile.commitmentDays ?? 0
+        guard total > 0 else { return (0, 0, 0, 0) }
+        let left = min(total, max(0, model.profile.commitmentDaysLeft))
+        let done = total - left
+        return (done, total, left, Double(done) / Double(total))
+    }
+
+    private var isCommitmentComplete: Bool {
+        let p = commitmentProgress
+        return p.total > 0 && p.left == 0
+    }
+
+    /// The run, as a ring that fills a day at a time.
+    ///
+    /// The number in the middle is days *left*, not days done, because that is the
+    /// question somebody opening this tab is actually asking. The ring fills the
+    /// other way - it is the part already earned, and a ring that emptied as the
+    /// run progressed would make finishing look like loss.
+    private var commitmentCard: some View {
+        let p = commitmentProgress
+        let tint = isCommitmentComplete ? Palette.green : Palette.brand
+
+        return HStack(spacing: 18) {
+            ZStack {
+                ProgressRing(progress: p.fraction, lineWidth: 11, tint: tint, showsEmptyDot: false)
+                    .frame(width: 92, height: 92)
+
+                VStack(spacing: -2) {
+                    if isCommitmentComplete {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 30, weight: .bold))
+                            .foregroundStyle(Palette.green)
+                    } else {
+                        Text("\(p.left)")
+                            .font(RansomFont.counter(34))
+                            .foregroundStyle(Palette.ink)
+                            .contentTransition(.numericText(value: Double(p.left)))
+                        Text(p.left == 1 ? "day left" : "days left")
+                            .font(RansomFont.caption(11))
+                            .foregroundStyle(Palette.inkSoft)
+                    }
+                }
+            }
+            .animation(.snappy(duration: 0.35), value: p.fraction)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(isCommitmentComplete ? "Run complete" : "Your run")
+                    .font(RansomFont.headline(17))
+                    .foregroundStyle(Palette.ink)
+
+                Text(commitmentLine)
+                    .font(RansomFont.body(14))
+                    .foregroundStyle(Palette.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if !isCommitmentComplete, let ends = model.profile.commitmentEndsAt {
+                    Text("Ends \(ends.formatted(.dateTime.day().month(.abbreviated)))")
+                        .font(RansomFont.caption(12))
+                        .foregroundStyle(Palette.inkFaint)
+                        .padding(.top, 1)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .ransomCard()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(isCommitmentComplete
+            ? "Run complete. \(p.total) days finished."
+            : "Day \(p.done) of \(p.total). \(p.left) days left in your run.")
+    }
+
+    private var commitmentLine: String {
+        let p = commitmentProgress
+        if isCommitmentComplete {
+            return "\(p.total) days, done. Rex held the door the whole way."
+        }
+        if p.done == 0 {
+            return "Day one of \(p.total). The plan is locked until it is up."
+        }
+        return "Day \(p.done) of \(p.total). You can make it harder, never easier."
+    }
+
     private var streakLine: String {
         switch model.streak {
         case 0:  return "One set today starts it."
@@ -168,8 +265,9 @@ struct StatsView: View {
 
     private func stat(value: String, label: String, icon: String, tint: Color) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
+            // Takes the user's own movement, so it can be the bundled push-up
+            // glyph rather than an SF Symbol.
+            ExerciseIcon(name: icon, size: 15)
                 .foregroundStyle(tint)
             Text(value)
                 .font(RansomFont.title(26))
@@ -194,8 +292,7 @@ struct StatsView: View {
             } else {
                 ForEach(breakdown, id: \.exercise) { item in
                     HStack(spacing: 12) {
-                        Image(systemName: item.exercise.symbol)
-                            .font(.system(size: 14, weight: .semibold))
+                        ExerciseIcon(name: item.exercise.symbol, size: 14)
                             .foregroundStyle(Palette.brand)
                             .frame(width: 30, height: 30)
                             .background(Circle().fill(Palette.brandSoft))
