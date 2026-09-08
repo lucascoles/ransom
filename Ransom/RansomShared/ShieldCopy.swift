@@ -78,10 +78,14 @@ public enum ShieldCopy {
         /// The app by name, or a plain stand-in that still makes the sentence.
         var appLabel: String { appName ?? "this app" }
 
-        /// How much of the bank one visit can take: a set's worth, or whatever is
-        /// left when the balance is short of one. `RansomPlan.spendOptions`
-        /// always offers the remainder, so a small balance is never a dead end.
-        var spendable: Int { min(banked, minutes) }
+        /// Deliberately no "spendable" figure any more.
+        ///
+        /// There used to be one, `min(banked, minutes)`, and the shield quoted it
+        /// as "Spend 15 on Instagram". That is not the deal: `spendOptions`
+        /// offers one, two and three sets' worth *and* the whole remaining
+        /// balance, so somebody with 60 banked can spend all 60. Naming a single
+        /// figure on the door promised less than the app gives, and the door is
+        /// the last place to undersell yourself.
 
         /// "Gym Time is on until 6:30 PM." Only the fact. The reps figure says
         /// what that does to the set, so this line does not have to.
@@ -117,18 +121,18 @@ public enum ShieldCopy {
         if let rule = deal.ruleLine { lines.append(rule) }
 
         if deal.banked > 0 {
-            if deal.isPassive {
-                lines.append("Spend \(deal.spendable) on \(deal.appLabel), or keep walking for more.")
-            } else {
-                lines.append("Spend \(deal.spendable) on \(deal.appLabel), or do \(deal.repsPhrase) for \(deal.minutes) more.")
-            }
+            // No figure here on purpose: spend as little or as much as you like,
+            // up to the whole balance.
+            lines.append(deal.isPassive
+                ? "Rex takes minutes. Spend what you like, or keep walking for more."
+                : "Rex takes minutes. Spend what you like, or do \(deal.repsPhrase) for \(deal.minutes) more.")
         } else {
             // With a rule running, the rule is the news; three sentences is a
             // paragraph, and nobody reads a paragraph on a locked door.
-            if deal.ruleName == nil { lines.append("That's the deal for \(deal.appLabel).") }
+            if deal.ruleName == nil { lines.append("Rex doesn't take cash.") }
             lines.append(deal.isPassive
-                ? "Your steps are banking it as you walk."
-                : "One set and you're in.")
+                ? "Your steps are already paying for it."
+                : "One set and he steps aside.")
         }
         return lines.joined(separator: " ")
     }
@@ -161,7 +165,7 @@ public enum ShieldCopy {
             return "Your steps are banking minutes for \(deal.appLabel). See where you're at."
         }
         if deal.banked > 0 {
-            return "\(minutes(deal.banked)) banked. Spend \(deal.spendable) on \(deal.appLabel), or do \(deal.repsPhrase) for \(deal.minutes) more."
+            return "\(minutes(deal.banked)) banked. Spend what you like on \(deal.appLabel), or do \(deal.repsPhrase) for \(deal.minutes) more."
         }
         return "\(deal.repsPhrase) and you're back in \(deal.appLabel)."
     }
