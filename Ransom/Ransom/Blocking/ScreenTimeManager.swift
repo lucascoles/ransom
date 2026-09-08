@@ -115,15 +115,34 @@ final class ScreenTimeManager {
     /// process before this one's grant is visible there, it reads "locked" and
     /// puts the shield back up on top of a grant that just happened. Removing the
     /// shield last means the extension can only ever lose that race.
+    /// Everything after the grant is armed against the time now on the clock,
+    /// not against the minutes just added.
+    ///
+    /// `UnlockLedger.grant` extends: five minutes left plus a fifteen-minute set
+    /// is twenty, which is the point of buying more before you run out. But the
+    /// two things that end an unlock were both armed at the *delta*. The usage
+    /// window's threshold fired after fifteen minutes of use and revoked a
+    /// session with five paid-for minutes still on it, and the "time's up"
+    /// notification went out five minutes early to say so.
+    ///
+    /// It stayed hidden because extending was hard to do: you had to open Ransom
+    /// mid-unlock and complete a whole set. It stops being hidden the moment
+    /// spending banked minutes during an unlock is one tap, which is what Home
+    /// now offers.
     func grantEarnedTime(minutes: Int) {
         ledger.grant(minutes: minutes)
         ledger.trace("app granted \(minutes)m")
         syncUnlockState()
         guard isAuthorized else { return }
+
+        // Rounded up, so the arithmetic never shortens an unlock: a ledger
+        // reading 19m01s is nineteen whole minutes plus change the user paid for.
+        let total = max(minutes, Int((ledger.remaining / 60).rounded(.up)))
+
         restartMonitoring()
-        startUnlockWindow(minutes: minutes)
+        startUnlockWindow(minutes: total)
         store.removeShield()
-        NotificationManager.scheduleTimeUpReminder(in: minutes)
+        NotificationManager.scheduleTimeUpReminder(in: total)
     }
 
     /// Ends earned time early — used by the "Lock it back up" button.
