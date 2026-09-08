@@ -33,8 +33,16 @@ struct ExerciseIcon: View {
 
     var body: some View {
         if hasBundledArt {
+            // No forced `.renderingMode(.template)`. It was right while the only
+            // bundled art was the push-up glyph, which is black line work meant
+            // to take the tint around it. The coin is full-colour gold, and
+            // templating flattened it to a solid dark disc: on the spend button
+            // it rendered as a black dot.
+            //
+            // The imageset declares its own intent - the push-up sets
+            // template-rendering-intent, the coin does not - so honouring the
+            // catalog gets both right and needs no branch here.
             Image(name)
-                .renderingMode(.template)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: size, height: size)

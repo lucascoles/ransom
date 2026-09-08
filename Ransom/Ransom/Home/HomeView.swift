@@ -297,11 +297,19 @@ struct HomeView: View {
                     .frame(width: 36)
 
                 VStack(spacing: 2) {
-                    Text("\(earnMinutes) min")
-                        .font(RansomFont.display(40))
-                        .foregroundStyle(Palette.brand)
-                        .contentTransition(.numericText(value: Double(earnMinutes)))
-                    Text("of your apps")
+                    // The coin sits with the figure rather than replacing the
+                    // word, because this is the moment the exchange rate is being
+                    // read: reps on the left, what they buy on the right.
+                    HStack(spacing: 6) {
+                        Image(Currency.symbolName)
+                            .resizable()
+                            .frame(width: 30, height: 30)
+                        Text(Currency.amount(earnMinutes))
+                            .font(RansomFont.display(40))
+                            .foregroundStyle(Palette.brand)
+                            .contentTransition(.numericText(value: Double(earnMinutes)))
+                    }
+                    Text(Currency.unit(earnMinutes))
                         .font(RansomFont.caption(12))
                         .foregroundStyle(Palette.inkSoft)
                 }
@@ -610,7 +618,7 @@ struct HomeView: View {
                     }
                 } label: {
                     VStack(spacing: 1) {
-                        Text("\(minutes)m")
+                        Text(Currency.amount(minutes))
                             .font(RansomFont.headline(16))
                         // Only the option that empties the bank gets labelled, so
                         // the label means something when it appears.
@@ -657,9 +665,10 @@ struct HomeView: View {
         if model.bankedMinutes > 0 || model.todayReps > 0 {
             HStack(spacing: 0) {
                 bankStat(
-                    value: "\(model.bankedMinutes)",
-                    label: "min banked",
-                    tint: model.bankedMinutes > 0 ? Palette.brand : Palette.inkFaint
+                    value: Currency.amount(model.bankedMinutes),
+                    label: "in the bank",
+                    tint: model.bankedMinutes > 0 ? Palette.flame : Palette.inkFaint,
+                    showsCoin: true
                 )
 
                 // Minutes earned today is gone from here for the same reason it
@@ -677,13 +686,20 @@ struct HomeView: View {
         }
     }
 
-    private func bankStat(value: String, label: String, tint: Color = Palette.ink) -> some View {
+    private func bankStat(value: String, label: String, tint: Color = Palette.ink, showsCoin: Bool = false) -> some View {
         VStack(spacing: 2) {
-            Text(value)
-                .font(RansomFont.counter(24))
-                .foregroundStyle(tint)
-                .contentTransition(.numericText())
-                .animation(.snappy(duration: 0.3), value: value)
+            HStack(spacing: 4) {
+                if showsCoin {
+                    Image(Currency.symbolName)
+                        .resizable()
+                        .frame(width: 18, height: 18)
+                }
+                Text(value)
+                    .font(RansomFont.counter(24))
+                    .foregroundStyle(tint)
+                    .contentTransition(.numericText())
+                    .animation(.snappy(duration: 0.3), value: value)
+            }
             Text(label)
                 .font(RansomFont.caption(11))
                 .foregroundStyle(Palette.inkSoft)

@@ -131,18 +131,25 @@ struct WorkoutCompleteView: View {
 
     private var statRow: some View {
         HStack(spacing: 12) {
-            miniStat(value: Currency.amount(minutes), label: "coins", tint: Palette.flame)
+            miniStat(value: Currency.amount(minutes), label: "coins", tint: Palette.flame, showsCoin: true)
             miniStat(value: "\(model.streak)", label: "day streak", tint: Palette.flame)
             miniStat(value: "\(model.todayReps)", label: "reps today", tint: Palette.ink)
         }
         .padding(.horizontal, Metrics.screenPadding)
     }
 
-    private func miniStat(value: String, label: String, tint: Color) -> some View {
+    private func miniStat(value: String, label: String, tint: Color, showsCoin: Bool = false) -> some View {
         VStack(spacing: 3) {
-            Text(value)
-                .font(RansomFont.title(24))
-                .foregroundStyle(tint)
+            HStack(spacing: 4) {
+                if showsCoin {
+                    Image(Currency.symbolName)
+                        .resizable()
+                        .frame(width: 20, height: 20)
+                }
+                Text(value)
+                    .font(RansomFont.title(24))
+                    .foregroundStyle(tint)
+            }
             Text(label)
                 .font(RansomFont.caption(12))
                 .foregroundStyle(Palette.inkSoft)
