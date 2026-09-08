@@ -84,10 +84,14 @@ struct NameStep: View {
 /// figures on the stats screen are quoted at a reference bodyweight and scaled
 /// from there, so without this every user gets the estimate for a 72 kg adult.
 ///
-/// Skippable on purpose. `WorkoutRecord.calories(forWeightKg:)` falls back to
-/// the reference weight rather than to zero, so declining costs a rough estimate
-/// and nothing else. A screen that can be skipped is also an honest answer to
-/// "why are you asking me this".
+/// The subtitle used to offer a skip. There is no skip button: `StepScaffold`
+/// gives this screen a Continue and nothing else, and the wheel always holds a
+/// value, so everybody answers whether they meant to or not. Offering an exit
+/// that does not exist is worse than not offering one.
+///
+/// `WorkoutRecord.calories(forWeightKg:)` still falls back to the reference
+/// weight rather than to zero, which is what keeps profiles made before this
+/// screen existed reading sensibly.
 struct WeightStep: View {
     @Binding var profile: UserProfile
     var onNext: () -> Void
@@ -95,7 +99,7 @@ struct WeightStep: View {
     var body: some View {
         StepScaffold(
             title: "Roughly what do you weigh?",
-            subtitle: "Only so the calorie count is yours and not an average. Skip it and Rex estimates.",
+            subtitle: "Only so the calorie count is yours and not an average.",
             onNext: onNext
         ) {
             VStack(spacing: 16) {
