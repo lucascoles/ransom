@@ -204,6 +204,26 @@ struct UserProfile: Codable, Equatable {
     var referral: ReferralSource?
     var createdAt: Date = Date()
 
+    /// Whether `baselineDailyMinutes` was answered about the whole phone.
+    ///
+    /// Nil in every profile written before the benchmark moved from the guarded
+    /// apps to the whole device, and nil is the point: those users answered a
+    /// different question. Their number counted the handful of apps they picked,
+    /// and what gets measured now is everything, so subtracting one from the
+    /// other says they have blown a budget they never set.
+    ///
+    /// Optional rather than a defaulted `Bool` because the synthesised decoder
+    /// only falls back to nil for optionals - a non-optional missing key throws,
+    /// and a profile that fails to decode is a user who loses their whole plan
+    /// on upgrade. A fresh profile gets `true` from the memberwise default,
+    /// which is every profile built by a version that asks the new question.
+    var baselineIsWholePhone: Bool? = true
+
+    /// Whether the baseline can honestly be compared against what is measured
+    /// today. Nothing is invented when it can't - the comparisons go quiet until
+    /// the user answers the new question.
+    var hasComparableBaseline: Bool { baselineIsWholePhone == true }
+
     /// The benchmark everything is measured against: their own figure when they
     /// gave one, otherwise the midpoint of the bucket they picked.
     var baselineDailyMinutes: Int {
@@ -355,11 +375,28 @@ struct RansomPlan: Equatable {
     /// possibly different movement. Squats are easier than push-ups, so it takes
     /// more of them; the ratio of the two weights is the whole conversion.
     func repsRequired(for exercise: Exercise) -> Int {
-        guard exercise != .steps, exercise.effortWeight > 0 else { return max(1, repsPerUnlock) }
-        guard exercise != self.exercise else { return max(1, repsPerUnlock) }
-        let scaled = Double(repsPerUnlock) * self.exercise.effortWeight / exercise.effortWeight
+        // Steps never touch effort weight, in either direction. They have a flat
+        // rate that was set directly for exactly this reason, and the only figure
+        // that can be quoted for them is the one the bank will honour: asking for
+        // anything else means the screen promises minutes the walk does not buy.
+        if exercise == .steps { return max(1, stepsPerMinute * minutesPerUnlock) }
+        guard exercise.effortWeight > 0 else { return max(1, repsPerUnlock) }
+        guard exercise != repMovement else { return max(1, repsPerUnlock) }
+        let scaled = Double(repsPerUnlock) * repMovement.effortWeight / exercise.effortWeight
         return max(3, Int(scaled.rounded()))
     }
+
+    /// The movement `repsPerUnlock` is counted in - the plan's own, unless that is
+    /// walking, which has no rep target to count.
+    var repMovement: Exercise { exercise.isPassive ? .pushUps : exercise }
+
+    /// One set of the plan's own movement, in whatever unit that movement uses.
+    ///
+    /// Every screen that quotes "N <movement> unlocks M minutes" has to go through
+    /// this rather than reading `repsPerUnlock` beside `exercise`, because for a
+    /// walking plan those two are in different units and the sentence they made
+    /// was false.
+    var setTarget: Int { repsRequired(for: exercise) }
 
     /// The amounts offered when spending from the bank.
     ///
@@ -392,14 +429,27 @@ struct RansomPlan: Equatable {
         return scaled
     }
 
-    /// The most a day's walking can be worth.
+    /// The most a day's walking can be worth: the first ten thousand steps of it.
     ///
-    /// Steps were withheld from the app for exactly this: the phone counts them
-    /// whether or not anybody is trying, so uncapped they turn an ordinary day of
-    /// walking about into an evening of scrolling, and the habit never has to
-    /// change. Two sets' worth is the ceiling - enough that a genuine walk is
-    /// recognised, not enough that anyone can live off it.
-    var stepMinutesCap: Int { minutesPerUnlock * 2 }
+    /// Steps were withheld from the app for exactly one reason: the phone counts
+    /// them whether or not anybody is trying, so uncapped they turn an ordinary
+    /// day of walking about into an evening of scrolling and the habit never has
+    /// to change. So there is still a ceiling.
+    ///
+    /// Where it sits is the part that had to change. It used to be two unlocks'
+    /// worth - thirty minutes, about three thousand steps on a standard plan -
+    /// which is reached before lunch, and a cap you hit before lunch stops being
+    /// a guard rail and starts being a reason not to walk any further. Ten
+    /// thousand is the figure people already carry in their heads as a day's
+    /// walking, so the ceiling now sits at the far end of a good day rather than
+    /// in the middle of an ordinary one.
+    var stepMinutesCap: Int {
+        guard stepsPerMinute > 0 else { return 0 }
+        return RansomPlan.cappedSteps / stepsPerMinute
+    }
+
+    /// A day's walking, as everybody already counts it.
+    static let cappedSteps = 10_000
 
     /// How many of a movement it takes to earn one minute. Quoted on the home
     /// screen so the exchange rate is never a mystery.
@@ -430,7 +480,7 @@ struct RansomPlan: Equatable {
         var total = 0.0
         for day in 0..<days {
             let unlocks = Double(expectedUnlocksPerDay) * (1 - reduction(onDay: day))
-            total += unlocks * Double(repsPerUnlock)
+            total += unlocks * Double(setTarget)
         }
         return Int(total.rounded())
     }
@@ -465,7 +515,16 @@ struct RansomPlan: Equatable {
         // unexplainable ("why does mine say 14?") and it was a guess made once, on
         // day one, about something that changes as you get stronger - and the tier
         // is already there to be moved up when it does.
-        let raw = Double(profile.intensity.baseReps) / exercise.effortWeight
+        //
+        // Counted in a camera movement even when the plan's own movement is
+        // walking. Effort weight exists to make a squat ask for a few more reps
+        // than a push-up; a step is not a small push-up, and pushing one through
+        // the same arithmetic is what produced a plan quoting five hundred steps
+        // for a fifteen-minute unlock while the bank paid a minute per hundred -
+        // the same walk described two ways, three times apart. Steps are priced
+        // off their own flat rate in `repsRequired(for:)` instead.
+        let repMovement = exercise.isPassive ? Exercise.pushUps : exercise
+        let raw = Double(profile.intensity.baseReps) / repMovement.effortWeight
         let reps = max(3, Int(raw.rounded()))
 
         let minutes = profile.intensity.minutesGranted
@@ -513,5 +572,18 @@ struct WorkoutRecord: Codable, Identifiable, Equatable {
     /// The app that triggered the set, when it came from a shield tap.
     var trigger: String?
 
-    var calories: Double { Double(reps) * exercise.caloriesPerRep }
+    /// Estimated burn for this set, scaled to the user's own bodyweight.
+    ///
+    /// Takes the weight rather than storing it, deliberately. A weight copied
+    /// onto every record would be a second source of truth that silently goes
+    /// stale the day somebody updates their profile, and it would put body data
+    /// into the workout history where nothing else needs it.
+    ///
+    /// A missing or implausible weight falls back to the reference figure
+    /// instead of producing a zero: an unanswered question should give an
+    /// average estimate, not claim the set burned nothing.
+    func calories(forWeightKg weightKg: Double) -> Double {
+        let weight = (weightKg > 20 && weightKg < 400) ? weightKg : Exercise.referenceWeightKg
+        return Double(reps) * exercise.caloriesPerRep * (weight / Exercise.referenceWeightKg)
+    }
 }

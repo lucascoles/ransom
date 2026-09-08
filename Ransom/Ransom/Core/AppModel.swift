@@ -73,7 +73,7 @@ final class AppModel {
     /// more for the fourth top-up than the first would have meant the exchange
     /// rate moving under the user while they were mid-set, which is the one thing
     /// a currency cannot do and stay trusted.
-    var repsPerSet: Int { plan.repsPerUnlock }
+    var repsPerSet: Int { plan.setTarget }
 
     /// Records a change to the rules and re-prices everything that depends on
     /// them, including the copy the shield extension will render.
@@ -135,7 +135,9 @@ final class AppModel {
 
     var totalReps: Int { history.reduce(0) { $0 + $1.reps } }
 
-    var totalCalories: Double { history.reduce(0) { $0 + $1.calories } }
+    var totalCalories: Double {
+        history.reduce(0) { $0 + $1.calories(forWeightKg: profile.weightKg) }
+    }
 
     var totalMinutesEarned: Int { history.reduce(0) { $0 + $1.minutesGranted } }
 
@@ -239,15 +241,37 @@ final class AppModel {
     /// What a day used to cost them, and what every saving is measured against.
     var baselineMinutes: Int { profile.baselineDailyMinutes }
 
+    /// Whether that baseline is about the same thing as what gets measured now.
+    ///
+    /// False for anyone who onboarded while the benchmark was the guarded apps
+    /// rather than the whole phone. Their figure counted four apps; today's
+    /// measurement counts the device, so every comparison between the two is a
+    /// claim about a quantity nobody ever gave us.
+    var hasComparableBaseline: Bool { profile.hasComparableBaseline }
+
     /// Minutes saved today against that baseline. Negative when they've spent more
     /// than they used to — which has to be sayable, or the number is just flattery.
-    var todaySavedMinutes: Int { baselineMinutes - todayScreenMinutes }
+    ///
+    /// Nil rather than a guess when the baseline was measured against something
+    /// else. There is no honest conversion from "three hours in Instagram" to a
+    /// whole-phone figure, and a saving invented to fill the gap would land on
+    /// the one screen that exists to prove the app works.
+    var todaySavedMinutes: Int? {
+        guard hasComparableBaseline else { return nil }
+        return baselineMinutes - todayScreenMinutes
+    }
 
     /// Minutes of the allowance still unspent. Never negative — going over is
     /// reported separately rather than as a negative amount of time left.
     var todayMinutesLeft: Int { max(0, todayAllowance - todayScreenMinutes) }
 
-    var isOverAllowance: Bool { todayScreenMinutes > todayAllowance }
+    /// Never claimed against an allowance built from the old benchmark. A goal of
+    /// two hours set as a share of somebody's guarded-app time, checked against a
+    /// whole-phone measurement, puts every one of those users permanently over
+    /// on their first launch after upgrading.
+    var isOverAllowance: Bool {
+        hasComparableBaseline && todayScreenMinutes > todayAllowance
+    }
 
     /// How much of today's allowance has been spent, 0-1. Unlike the rep goal this
     /// replaced, filling the ring is the *bad* outcome.
@@ -266,7 +290,10 @@ final class AppModel {
     /// numbers is a rule this app already has, and that calculation broke it in
     /// the one place claiming to prove the app works. Today can be measured, so
     /// today is what gets claimed.
-    var minutesBackToday: Int { max(0, baselineMinutes - todayScreenMinutes) }
+    var minutesBackToday: Int? {
+        guard let todaySavedMinutes else { return nil }
+        return max(0, todaySavedMinutes)
+    }
 
     /// The longest run of consecutive logged days, ever.
     var bestStreak: Int {
@@ -368,7 +395,7 @@ final class AppModel {
     private func syncPlanToExtensions() {
         let plan = self.plan
         ledger.mirrorConfig(
-            reps: plan.repsPerUnlock,
+            reps: plan.setTarget,
             minutes: plan.minutesPerUnlock,
             exercise: plan.exercise
         )

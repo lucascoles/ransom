@@ -136,7 +136,16 @@ public enum Exercise: String, CaseIterable, Codable, Identifiable, Sendable {
         }
     }
 
-    /// Rough calories burned per rep for an average adult. Used for the stats screen.
+    /// The bodyweight the per-rep figures below are quoted for.
+    ///
+    /// Push-ups and squats move your own body, so what a rep costs scales with
+    /// how much of you there is. These numbers describe somebody of this weight;
+    /// `WorkoutRecord.calories(forWeightKg:)` scales them to the actual user,
+    /// which is the only reason the intake screen is entitled to ask.
+    public static let referenceWeightKg: Double = 72
+
+    /// Rough calories burned per rep at `referenceWeightKg`. Used for the stats
+    /// screen, and an estimate rather than a measurement.
     public var caloriesPerRep: Double {
         switch self {
         case .pushUps: return 0.5

@@ -84,7 +84,9 @@ struct StatsView: View {
     // MARK: - Derived
 
     private var totalReps: Int { records.reduce(0) { $0 + $1.reps } }
-    private var totalCalories: Double { records.reduce(0) { $0 + $1.calories } }
+    private var totalCalories: Double {
+        records.reduce(0) { $0 + $1.calories(forWeightKg: model.profile.weightKg) }
+    }
     private var totalMinutes: Int { records.reduce(0) { $0 + $1.minutesGranted } }
 
     private var hoursEarned: String {
