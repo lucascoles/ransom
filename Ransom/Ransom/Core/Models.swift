@@ -261,13 +261,17 @@ struct UserProfile: Codable, Equatable {
     /// every tier including the locked ones: a difficulty someone
     /// can't pick yet is exactly the one they most want the number for, since
     /// that's the decision they're weighing up.
+    ///
+    /// Straight off the tier's table. Dividing push-ups by `effortWeight` here
+    /// quoted a walking-only profile "500 steps for 15 min" while the bank paid
+    /// a minute per hundred; the table's steps column is the bank's own figure.
     func setSize(at intensity: Intensity) -> Int {
-        max(3, Int((Double(intensity.baseReps) / primaryExercise.effortWeight).rounded()))
+        intensity.reps(for: primaryExercise)
     }
 
     /// "10 push-ups for 15 min", in the user's own movement.
     func setSummary(at intensity: Intensity) -> String {
-        "\(setSize(at: intensity)) \(primaryExercise.shortTitle.lowercased()) for \(intensity.minutesGranted) min"
+        "\(setSize(at: intensity).formatted()) \(primaryExercise.shortTitle.lowercased()) for \(intensity.minutesGranted) min"
     }
 
     var primaryExercise: Exercise {
@@ -305,10 +309,21 @@ struct UserProfile: Codable, Equatable {
 
 /// The concrete numbers Rex enforces, derived from the intake answers.
 struct RansomPlan: Equatable {
-    var repsPerUnlock: Int
+    /// The tier every set is priced from. Kept rather than flattened into a
+    /// single rep count, because Home lets the user swap movements mid-day and
+    /// each movement has its own column in the tier's table.
+    var intensity: Intensity
+    /// How many times over the tier's table a set costs right now. One
+    /// normally; a running focus rule sets it higher via `scaled(by:)`.
+    var costMultiplier: Int = 1
     var minutesPerUnlock: Int
     var dailyRepGoal: Int
     var exercise: Exercise
+
+    /// One set of the movement the plan counts in. Derived, so a rule that
+    /// doubles the price can never leave this and `repsRequired(for:)` quoting
+    /// two different numbers for the same set.
+    var repsPerUnlock: Int { repsRequired(for: repMovement) }
     /// Unlocks a day the plan expects, from the user's stated hours.
     var expectedUnlocksPerDay: Int
     /// Minutes of scrolling we expect the plan to remove per day.
@@ -355,9 +370,9 @@ struct RansomPlan: Equatable {
 
     /// Minutes earned by a given number of reps of a given movement.
     ///
-    /// Everything is priced in push-up equivalents, so a squat is worth a little
-    /// less than a push-up and a step a fraction of either — and all three pay into
-    /// the same bank at the same rate per unit of effort.
+    /// A full set of any movement is worth the same minutes; the tier's table
+    /// says how many of each movement make a set, and all three pay into the
+    /// same bank.
     func minutesEarned(reps: Int, exercise: Exercise) -> Int {
         guard reps > 0 else { return 0 }
         // Steps are priced flat rather than in push-up equivalents. Rounded down,
@@ -383,19 +398,20 @@ struct RansomPlan: Equatable {
         return Int(minutes.rounded())
     }
 
-    /// How many of `exercise` make one set, when the plan was priced for a
-    /// possibly different movement. Squats are easier than push-ups, so it takes
-    /// more of them; the ratio of the two weights is the whole conversion.
+    /// How many of `exercise` make one set. Read off the tier's own table for
+    /// that movement, times whatever a running rule has multiplied the price by.
+    ///
+    /// This used to convert the plan's push-up count through the ratio of two
+    /// effort weights, which is where the sets of six and thirteen squats came
+    /// from. The table has a whole number for every movement, so there is no
+    /// conversion left to do.
     func repsRequired(for exercise: Exercise) -> Int {
-        // Steps never touch effort weight, in either direction. They have a flat
-        // rate that was set directly for exactly this reason, and the only figure
-        // that can be quoted for them is the one the bank will honour: asking for
-        // anything else means the screen promises minutes the walk does not buy.
+        // Steps are priced from `stepsPerMinute`, which `scaled(by:)` has already
+        // multiplied, rather than from the table times the multiplier: the only
+        // figure that can be quoted for a walk is the one the bank will honour,
+        // and the bank pays per minute, not per set.
         if exercise == .steps { return max(1, stepsPerMinute * minutesPerUnlock) }
-        guard exercise.effortWeight > 0 else { return max(1, repsPerUnlock) }
-        guard exercise != repMovement else { return max(1, repsPerUnlock) }
-        let scaled = Double(repsPerUnlock) * repMovement.effortWeight / exercise.effortWeight
-        return max(3, Int(scaled.rounded()))
+        return max(1, intensity.reps(for: exercise) * max(1, costMultiplier))
     }
 
     /// The movement `repsPerUnlock` is counted in - the plan's own, unless that is
@@ -445,7 +461,7 @@ struct RansomPlan: Equatable {
     func scaled(by multiplier: Int) -> RansomPlan {
         guard multiplier > 1 else { return self }
         var scaled = self
-        scaled.repsPerUnlock *= multiplier
+        scaled.costMultiplier = costMultiplier * multiplier
         scaled.stepsPerMinute *= multiplier
         return scaled
     }
@@ -476,8 +492,8 @@ struct RansomPlan: Equatable {
     /// screen so the exchange rate is never a mystery.
     func repsPerMinute(for exercise: Exercise) -> Int {
         if exercise == .steps { return stepsPerMinute }
-        guard minutesPerUnlock > 0, exercise.effortWeight > 0 else { return 0 }
-        let perMinute = Double(repsPerUnlock) / Double(minutesPerUnlock) / exercise.effortWeight
+        guard minutesPerUnlock > 0 else { return 0 }
+        let perMinute = Double(repsRequired(for: exercise)) / Double(minutesPerUnlock)
         return max(1, Int(perMinute.rounded()))
     }
 
@@ -538,15 +554,13 @@ struct RansomPlan: Equatable {
         // is already there to be moved up when it does.
         //
         // Counted in a camera movement even when the plan's own movement is
-        // walking. Effort weight exists to make a squat ask for a few more reps
-        // than a push-up; a step is not a small push-up, and pushing one through
-        // the same arithmetic is what produced a plan quoting five hundred steps
-        // for a fifteen-minute unlock while the bank paid a minute per hundred -
-        // the same walk described two ways, three times apart. Steps are priced
-        // off their own flat rate in `repsRequired(for:)` instead.
+        // walking. A step is not a small push-up, and running one through the
+        // rep arithmetic once produced a plan quoting five hundred steps for a
+        // fifteen-minute unlock while the bank paid a minute per hundred - the
+        // same walk described two ways, three times apart. Steps are priced off
+        // their own flat rate in `repsRequired(for:)` instead.
         let repMovement = exercise.isPassive ? Exercise.pushUps : exercise
-        let raw = Double(profile.intensity.baseReps) / repMovement.effortWeight
-        let reps = max(3, Int(raw.rounded()))
+        let reps = profile.intensity.reps(for: repMovement)
 
         let minutes = profile.intensity.minutesGranted
         let expectedUnlocks = max(2, Int((dailyHours * 2.5).rounded()))
@@ -566,7 +580,7 @@ struct RansomPlan: Equatable {
         let savedPerDay = Int((dailyHours * 60 * targetReduction).rounded())
 
         return RansomPlan(
-            repsPerUnlock: reps,
+            intensity: profile.intensity,
             minutesPerUnlock: minutes,
             dailyRepGoal: dailyGoal,
             exercise: exercise,

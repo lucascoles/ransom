@@ -195,6 +195,21 @@ used to scale the rep target, so "Standard" meant 10 push-ups for one person and
 one about something that changes as you get stronger. Moving up a tier is how
 that is handled now. `FitnessLevel` and its intake step were removed entirely.
 
+**Every tier pays 15 minutes a set; the tier only sets the size of the set.**
+Chill used to pay 20 minutes for 5 push-ups and Beast 10 for 20, which rewarded
+the easy tier twice over. The rep table is explicit whole numbers on
+`Intensity` (push-ups 5 / 10 / 25, squats 10 / 20 / 50, steps 80 / 100 / 200 a
+minute) rather than push-ups divided by `Exercise.effortWeight`, which produced
+sets of 6.25 and 12.5 squats. Squats are double push-ups because that is roughly
+the strength ratio for untrained people; the old 0.8 came from calories, which
+is not the same thing. `effortWeight` survives only to order movements. Standard
+was deliberately left at ten: at a 4-hour baseline aiming at the suggested goal
+that is already ten sets and 100 push-ups a day if every minute is bought, and
+the camera refuses knee push-ups, so a bigger default fails the least-fit users
+on their first paid set. If the economy needs to bite harder, lower the minutes
+per set rather than raising Standard's reps. Each `stepsPerMinute` divides the
+10,000-step cap exactly so the "up to N minutes a day" copy is a round number.
+
 **The intake is 15 steps** and the order is deliberate: the user names their own
 apps and hours *before* the reality check, so the number is theirs, not ours.
 Seven screens were cut on 2026-09-08 (welcome, projection, age, body, bank,

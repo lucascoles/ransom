@@ -24,7 +24,11 @@ struct SettingsView: View {
         let until = Calendar.current.date(byAdding: .day, value: days, to: Date()) ?? Date()
         let formatted = until.formatted(.dateTime.weekday(.wide).day().month(.wide))
         guard let pendingIntensity else { return "" }
-        return "\(pendingIntensity.baseReps) push-up sets for \(days) days. You can move up again whenever you like, but you won't be able to drop back until \(formatted)."
+        // In their own movement. This quoted push-ups to everyone, so a squat
+        // user was told they were committing to a set they would never do.
+        let size = model.profile.setSize(at: pendingIntensity).formatted()
+        let move = model.profile.primaryExercise.shortTitle.lowercased()
+        return "Sets of \(size) \(move) for \(days) days. You can move up again whenever you like, but you won't be able to drop back until \(formatted)."
     }
 
     /// Reads the state of the current run in one line. When it has run out it
@@ -155,7 +159,7 @@ struct SettingsView: View {
             }
 
             ForEach(Intensity.allCases) { intensity in
-                let isEasier = intensity.baseReps < model.profile.intensity.baseReps
+                let isEasier = intensity < model.profile.intensity
                 let isLocked = model.profile.isCommitted && isEasier
                 let isCurrent = model.profile.intensity == intensity
 

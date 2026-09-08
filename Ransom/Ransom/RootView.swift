@@ -75,14 +75,16 @@ struct RootView: View {
                   let at = calendar.date(bySettingHour: 18, minute: 20, second: 0, of: day)
             else { continue }
             for set in 0..<sets {
-                let squats = (back + set) % 3 == 0
-                let reps = squats ? 12 : 10
+                // Full sets at the seeded profile's own tier, so the history
+                // reads as paid sets rather than a run of near-misses once the
+                // rep table changes.
+                let exercise: Exercise = (back + set) % 3 == 0 ? .squats : .pushUps
                 seeded.append(WorkoutRecord(
                     date: at.addingTimeInterval(Double(set) * 3_600),
-                    exercise: squats ? .squats : .pushUps,
-                    reps: reps,
+                    exercise: exercise,
+                    reps: model.plan.repsRequired(for: exercise),
                     durationSeconds: 40 + set * 6,
-                    minutesGranted: 15
+                    minutesGranted: model.plan.minutesPerUnlock
                 ))
             }
         }

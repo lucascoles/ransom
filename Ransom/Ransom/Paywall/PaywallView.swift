@@ -67,7 +67,7 @@ struct PaywallView: View {
                         )
                         feature(
                             icon: plan.exercise.symbol,
-                            title: "\(plan.setTarget) \(plan.exercise.shortTitle.lowercased()) unlocks \(plan.minutesPerUnlock) minutes",
+                            title: "\(plan.setTarget.formatted()) \(plan.exercise.shortTitle.lowercased()) banks \(plan.minutesPerUnlock) minutes",
                             detail: "Bank minutes whenever you like, spend them when you want them."
                         )
                         feature(
