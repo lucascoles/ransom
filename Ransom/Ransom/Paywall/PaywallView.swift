@@ -219,26 +219,25 @@ struct PaywallView: View {
 
                 Spacer(minLength: 4)
 
-                // Both plans quoted as a rate, so the column compares like with
-                // like. The annual's real charge is $49.99 once a year, which the
-                // subtitle states plainly - putting that figure here instead
-                // would sit "$49.99" directly above "$4.99" and make the yearly
-                // plan look ten times the price of the weekly one.
+                // Both plans priced per week, which is the only comparison that
+                // does any work: $0.96 against $4.99 is the argument for the
+                // annual plan, made at a glance and needing no arithmetic.
+                //
+                // The annual's real charge is $49.99 once a year and the subtitle
+                // states it plainly. Putting that figure here would sit "$49.99"
+                // directly above "$4.99" and make the yearly plan look ten times
+                // the price of the weekly one.
                 VStack(alignment: .trailing, spacing: 1) {
-                    Text(isAnnual ? (store.annualPerMonth ?? store.displayPrice(for: plan))
+                    Text(isAnnual ? (store.annualPerWeek ?? store.displayPrice(for: plan))
                                   : store.displayPrice(for: plan))
                         .font(RansomFont.title(20))
                         .foregroundStyle(Palette.ink)
-                    Text(isAnnual ? "/ month" : "/ week")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                    Text("/ week")
                         .font(RansomFont.caption(12))
                         .foregroundStyle(Palette.inkSoft)
                         .lineLimit(1)
-                    if isAnnual, let perWeek = store.annualPerWeek {
-                        Text("\(perWeek) a week")
-                            .font(RansomFont.caption(11))
-                            .foregroundStyle(Palette.inkFaint)
-                            .lineLimit(1)
-                    }
                 }
             }
             .padding(.horizontal, 16)

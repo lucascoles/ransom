@@ -108,14 +108,6 @@ final class SubscriptionManager {
         return (annual.price / 52).formatted(annual.priceFormatStyle)
     }
 
-    /// "$4.17" - the annual rate expressed per month, which is the figure people
-    /// carry in their heads for a subscription and the one the weekly plan is
-    /// being compared against.
-    var annualPerMonth: String? {
-        guard let annual = products[.annual] else { return "$4.17" }
-        return (annual.price / 12).formatted(annual.priceFormatStyle)
-    }
-
     /// How much less the annual costs than 52 weeks of the weekly rate. Computed
     /// from live StoreKit prices so it can't drift out of date if pricing changes.
     var annualSavingsPercent: Int? {
