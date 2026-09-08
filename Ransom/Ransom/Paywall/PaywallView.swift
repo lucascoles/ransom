@@ -197,15 +197,13 @@ struct PaywallView: View {
                     .foregroundStyle(isSelected ? Palette.brand : Palette.hairline)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 8) {
-                        Text(plan.title)
-                            .font(RansomFont.headline(17))
-                            .foregroundStyle(Palette.ink)
-
-                        if isAnnual, let saving = store.annualSavingsPercent {
-                            Pill(text: "SAVE \(saving)%", tint: Palette.onBrand, background: Palette.brand)
-                        }
-                    }
+                    // The annual row's headline is the offer itself. "Annual"
+                    // describes the billing period, which is the least
+                    // interesting thing about it and is said underneath anyway.
+                    Text(isAnnual ? annualHeadline : plan.title)
+                        .font(RansomFont.headline(17))
+                        .foregroundStyle(Palette.ink)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     Text(isAnnual ? annualSubtitle : weeklySubtitle)
                         .font(RansomFont.body(13))
@@ -214,13 +212,24 @@ struct PaywallView: View {
 
                 Spacer(minLength: 4)
 
+                // Both plans quoted as a rate, so the column compares like with
+                // like. The annual's real charge is $49.99 once a year, which the
+                // subtitle states plainly - putting that figure here instead
+                // would sit "$49.99" directly above "$4.99" and make the yearly
+                // plan look ten times the price of the weekly one.
                 VStack(alignment: .trailing, spacing: 1) {
-                    Text(store.displayPrice(for: plan))
+                    Text(isAnnual ? (store.annualPerMonth ?? store.displayPrice(for: plan))
+                                  : store.displayPrice(for: plan))
                         .font(RansomFont.title(20))
                         .foregroundStyle(Palette.ink)
-                    Text("/ \(plan.periodLabel)")
+                    Text(isAnnual ? "/ month" : "/ week")
                         .font(RansomFont.caption(12))
                         .foregroundStyle(Palette.inkSoft)
+                    if isAnnual, let perWeek = store.annualPerWeek {
+                        Text("\(perWeek) a week")
+                            .font(RansomFont.caption(11))
+                            .foregroundStyle(Palette.inkFaint)
+                    }
                 }
             }
             .padding(.horizontal, 16)
@@ -237,22 +246,30 @@ struct PaywallView: View {
         .pressable(scale: 0.985)
     }
 
+    /// "Start free and save 81%". The two reasons to pick this row, in the line
+    /// the eye lands on first.
+    private var annualHeadline: String {
+        let free = store.trialDescription(for: .annual) != nil
+        guard let saving = store.annualSavingsPercent else {
+            return free ? "Start free" : "Best value"
+        }
+        return free ? "Start free and save \(saving)%" : "Save \(saving)%"
+    }
+
     private var annualSubtitle: String {
         // The trial leads, because it is the part that decides whether anyone
         // taps at all. Both products carry the same three days free, but only the
         // weekly row ever said so - so the annual plan looked like the one where
         // you pay up front, which is the opposite of the truth and was quietly
         // pushing people onto the worse-value option.
-        let trial = store.trialDescription(for: .annual)
-        guard let perWeek = store.annualPerWeek else {
-            return trial.map { "\($0), then billed once a year" } ?? "Billed once a year"
-        }
-        return trial.map { "\($0), then just \(perWeek) a week" } ?? "Just \(perWeek) a week"
+        // The headline sells; this states what is actually charged and when, so
+        // nobody reaches the App Store sheet and meets a number they have not
+        // already seen.
+        "\(store.displayPrice(for: .annual)) billed annually"
     }
 
-    private var weeklySubtitle: String {
-        store.trialDescription(for: .weekly).map { "\($0), then billed weekly" } ?? "Billed every week"
-    }
+    /// No trial on this one by design, so it says what it costs and nothing else.
+    private var weeklySubtitle: String { "Billed every week" }
 
     private var footer: some View {
         VStack(spacing: 10) {

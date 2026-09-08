@@ -39,9 +39,18 @@ final class SubscriptionManager {
             }
         }
 
-        /// Mirrors the 3-day introductory offer configured on both products. Used
+        /// Mirrors the introductory offer configured on the annual product. Used
         /// only when StoreKit hasn't answered, alongside `fallbackPrice`.
-        var fallbackTrial: String { "\(Plan.fallbackTrialDays) days free" }
+        ///
+        /// Annual only, and that is the point. The trial is what makes the yearly
+        /// plan the one worth choosing; offering it on both made the weekly plan
+        /// free to try and the annual the one you commit to, which is backwards.
+        /// A fallback that promised a trial on either would also flash one on the
+        /// weekly row for the moment before StoreKit answers, and a promise shown
+        /// and then withdrawn is worse than one never made.
+        var fallbackTrial: String? {
+            self == .annual ? "\(Plan.fallbackTrialDays) days free" : nil
+        }
 
         /// The configured introductory offer, as a number, for when StoreKit
         /// hasn't answered. The one place the "3" is written.
@@ -99,6 +108,14 @@ final class SubscriptionManager {
         return (annual.price / 52).formatted(annual.priceFormatStyle)
     }
 
+    /// "$4.17" - the annual rate expressed per month, which is the figure people
+    /// carry in their heads for a subscription and the one the weekly plan is
+    /// being compared against.
+    var annualPerMonth: String? {
+        guard let annual = products[.annual] else { return "$4.17" }
+        return (annual.price / 12).formatted(annual.priceFormatStyle)
+    }
+
     /// How much less the annual costs than 52 weeks of the weekly rate. Computed
     /// from live StoreKit prices so it can't drift out of date if pricing changes.
     var annualSavingsPercent: Int? {
@@ -132,7 +149,9 @@ final class SubscriptionManager {
     /// Read off the same offer `trialDescription` reads, so the two can't
     /// disagree; nil when the plan carries no free trial.
     func trialDays(for plan: Plan) -> Int? {
-        guard let product = products[plan] else { return Plan.fallbackTrialDays }
+        guard let product = products[plan] else {
+            return plan == .annual ? Plan.fallbackTrialDays : nil
+        }
         guard let offer = product.subscription?.introductoryOffer,
               offer.paymentMode == .freeTrial else { return nil }
         let count = offer.period.value
