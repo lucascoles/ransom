@@ -34,7 +34,26 @@ struct HomeView: View {
     private var plan: RansomPlan { model.plan }
 
     /// What the Earn button is currently pointed at.
-    private var activeExercise: Exercise { chosenExercise ?? plan.exercise }
+    /// The movements the earn card can offer.
+    ///
+    /// Camera-counted only. Steps are earned by walking around with the phone in a
+    /// pocket, which is a different bargain entirely and has its own tab for it -
+    /// offering them here priced them as a set ("10 steps") and pointed the Earn
+    /// button at a camera with nothing to count.
+    private var swappable: [Exercise] {
+        model.profile.exercises
+            .filter { !$0.isPassive }
+            .sorted { $0.effortWeight > $1.effortWeight }
+    }
+
+    /// Falls back off a passive movement rather than trusting the plan blindly:
+    /// steps are a legitimate choice in Settings, and picking them there must not
+    /// leave this card offering a set of them with no way to swap back.
+    private var activeExercise: Exercise {
+        let chosen = chosenExercise ?? plan.exercise
+        guard chosen.isPassive else { return chosen }
+        return swappable.first ?? .pushUps
+    }
 
     /// Three is the ceiling. Past about forty-five minutes the thing being bought
     /// stops being a break and starts being the evening, which is the habit this
@@ -305,7 +324,7 @@ struct HomeView: View {
                 }
             }
 
-            if model.profile.exercises.count > 1 {
+            if swappable.count > 1 {
                 Text("Or swap the move")
                     .font(RansomFont.caption(12))
                     .foregroundStyle(Palette.inkFaint)
@@ -319,7 +338,7 @@ struct HomeView: View {
     /// Lets the user do a different movement without leaving home.
     private var swapRow: some View {
         HStack(spacing: 8) {
-            ForEach(Array(model.profile.exercises).sorted { $0.effortWeight > $1.effortWeight }) { exercise in
+            ForEach(swappable) { exercise in
                 Button {
                     Haptics.select()
                     // Choose, then go. Tapping a movement used to drop the user
@@ -331,8 +350,7 @@ struct HomeView: View {
                     }
                 } label: {
                     VStack(spacing: 3) {
-                        Image(systemName: exercise.symbol)
-                            .font(.system(size: 15, weight: .semibold))
+                        ExerciseIcon(name: exercise.symbol, size: 15)
                         Text("\(scaledTarget(for: exercise) * earnSets) \(exercise.shortTitle.lowercased())")
                             .font(RansomFont.caption(12))
                             .lineLimit(1)
@@ -534,9 +552,19 @@ struct HomeView: View {
     /// thing that had just worked. Separating them means earning is always on
     /// screen and always the loud button, and spending is a deliberate second act
     /// rather than the default next step.
+    /// Shown whenever there is a balance, including mid-unlock.
+    ///
+    /// It used to hide itself while time was running, on the reasoning that
+    /// somebody already inside their apps has nothing to spend on. That is
+    /// backwards: the moment you most want more minutes is when the ones you
+    /// have are running out, and hiding the button then meant the only way to
+    /// extend was to leave the app, open Ransom and complete a whole set.
+    ///
+    /// `UnlockLedger.grant` has always extended rather than replaced, so the
+    /// mechanism was there the whole time - only the button was missing.
     @ViewBuilder
     private var spendCard: some View {
-        if model.bankedMinutes > 0 && !screenTime.isCurrentlyUnlocked {
+        if model.bankedMinutes > 0 {
             VStack(spacing: 12) {
                 // No balance in the header: the "all" chip is the balance, and
                 // the bank row directly beneath says it again in full.
