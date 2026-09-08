@@ -2,9 +2,11 @@ import UIKit
 
 /// Rex's face, drawn with Core Graphics.
 ///
-/// The shield extension can't host SwiftUI, and shipping a bitmap would mean the
-/// mascot lived in two places. Drawing him here keeps one definition of the
-/// character and renders crisp at whatever size the shield asks for.
+/// The shield now shows the illustrated Rex (`ShieldIcon`), which is the
+/// character everywhere else in the app. This is the stand-in if that asset
+/// ever fails to load: an approximate Rex is better than an empty slot, but it
+/// is not on model (white eyes, no teeth, a three-spike crest) and should not be
+/// promoted back to the default.
 public enum RexBadge {
     public static func image(size: CGFloat = 160) -> UIImage {
         let bounds = CGRect(x: 0, y: 0, width: size, height: size)
@@ -21,8 +23,10 @@ public enum RexBadge {
             // Crest spikes
             crest.setFill()
             skinDark.setStroke()
+            // The middle spike used to be 16 tall from a base at 14, so its
+            // tip sat above the canvas and was clipped flat.
             for (index, x) in [30.0, 50.0, 70.0].enumerated() {
-                let height = index == 1 ? 16.0 : 12.0
+                let height = index == 1 ? 14.0 : 11.0
                 let spike = UIBezierPath()
                 spike.move(to: CGPoint(x: x * unit, y: (14 - height) * unit))
                 spike.addLine(to: CGPoint(x: (x + 8) * unit, y: 20 * unit))

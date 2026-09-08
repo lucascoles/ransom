@@ -2,54 +2,173 @@ import Foundation
 
 /// Rex's lines on the block screen. A friend at the door, not a bouncer.
 ///
-/// The shield is a fixed template - Apple gives an icon, a title, a subtitle and
-/// two buttons, and no way to lay out anything else - so every word here is
-/// carrying weight it would not have to carry on a screen we controlled.
+/// The shield is a fixed template. Apple gives an icon, a title, a subtitle and
+/// two buttons, and no way to lay out anything else, so each slot does one job:
+/// the title is the deal in numbers, the subtitle is the one thing to do about
+/// it, and the button names that thing. Nothing here explains the rules. The
+/// numbers are the rules, and somebody reaching for Instagram reads the numbers
+/// and nothing else.
 public enum ShieldCopy {
-    /// Why the app did not open, in the fewest words that still explain it.
-    /// Named for the app when the system tells us which one, because "Instagram
-    /// needs a set first" is a sentence about the user's own phone and
-    /// "This app is restricted" is a sentence about somebody's policy.
-    public static func headline(appName: String?) -> String {
-        guard let appName else { return "Reps first" }
-        return "\(appName) needs a set first"
-    }
 
-    /// What they have, and nothing else.
-    ///
-    /// This used to quote the exchange rate as well - "10 push-ups banks you 15
-    /// minutes" - which is a sentence about the app's rules, on a screen somebody
-    /// is reading in a moment of wanting something. The balance is the only part
-    /// of it that changes what they do next.
-    public static func subtitle(banked: Int) -> String {
-        switch banked {
-        case 0:  return "Nothing in the bank."
-        case 1:  return "1 minute banked."
-        default: return "\(banked) minutes banked."
+    /// Everything the block screen knows, gathered once so every line is written
+    /// from the same facts. Both shield extensions build one of these, which is
+    /// what stops the screen and the handoff notification quoting two prices.
+    public struct Deal: Equatable {
+        /// The app being reached for, when the system tells us. Web domains
+        /// arrive as "instagram.com", which reads fine in a sentence.
+        public var appName: String?
+        /// One set of the plan's movement, in that movement's own unit. Already
+        /// scaled for the movement and for any focus rule the app knew about.
+        public var reps: Int
+        /// The movement's display title as the app mirrored it: "Push-ups".
+        public var movement: String
+        /// Minutes one set banks.
+        public var minutes: Int
+        /// Minutes banked and not yet spent.
+        public var banked: Int
+        /// Steps accumulate on their own from the pedometer. There is no set to
+        /// start, so every line that says "do a set" needs another sentence.
+        public var isPassive: Bool
+        /// The focus rule running right now, if any, and when it lets go.
+        public var ruleName: String?
+        public var ruleEndMinutes: Int?
+
+        public init(appName: String?, reps: Int, movement: String, minutes: Int,
+                    banked: Int, isPassive: Bool,
+                    ruleName: String? = nil, ruleEndMinutes: Int? = nil) {
+            self.appName = appName
+            self.reps = reps
+            self.movement = movement
+            self.minutes = minutes
+            self.banked = banked
+            self.isPassive = isPassive
+            self.ruleName = ruleName
+            self.ruleEndMinutes = ruleEndMinutes
+        }
+
+        /// The deal as the App Group currently describes it.
+        public init(appName: String?,
+                    ledger: UnlockLedger = UnlockLedger(),
+                    rules: FocusRuleStore = FocusRuleStore(),
+                    now: Date = Date()) {
+            let movement = ledger.exerciseName
+            let exercise = Exercise.allCases.first { $0.title == movement }
+            let rule = rules.activeRule(at: now)
+            self.init(
+                appName: appName,
+                reps: ledger.repsPerUnlock,
+                movement: movement,
+                minutes: ledger.minutesPerUnlock,
+                banked: ledger.bankedMinutes,
+                isPassive: exercise?.isPassive ?? false,
+                ruleName: rule?.name,
+                ruleEndMinutes: rule?.endMinutes
+            )
+        }
+
+        // MARK: Fragments
+
+        /// "10 push-ups", "1 squat", "1,500 steps".
+        var repsPhrase: String {
+            var unit = movement.lowercased()
+            if reps == 1, unit.hasSuffix("s") { unit.removeLast() }
+            return "\(reps.formatted()) \(unit)"
+        }
+
+        /// The app by name, or a plain stand-in that still makes the sentence.
+        var appLabel: String { appName ?? "this app" }
+
+        /// How much of the bank one visit can take: a set's worth, or whatever is
+        /// left when the balance is short of one. `RansomPlan.spendOptions`
+        /// always offers the remainder, so a small balance is never a dead end.
+        var spendable: Int { min(banked, minutes) }
+
+        /// "Gym Time is on until 6:30 PM." Only the fact. The reps figure says
+        /// what that does to the set, so this line does not have to.
+        var ruleLine: String? {
+            guard let ruleName else { return nil }
+            guard let ruleEndMinutes,
+                  let end = Calendar.current.date(bySettingHour: ruleEndMinutes / 60,
+                                                  minute: ruleEndMinutes % 60,
+                                                  second: 0, of: Date())
+            else { return "\(ruleName) is on." }
+            return "\(ruleName) is on until \(end.formatted(date: .omitted, time: .shortened))."
         }
     }
 
-    /// The way out, named for the ones actually available.
+    // MARK: - The screen
+
+    /// The deal, in numbers. The eye lands on the first digit, so the number the
+    /// user has to act on comes first: the set when the bank is empty, the
+    /// balance when it is not.
+    public static func title(_ deal: Deal) -> String {
+        if deal.banked > 0 { return "\(minutes(deal.banked)) in the bank" }
+        return "\(deal.repsPhrase) for \(minutes(deal.minutes))"
+    }
+
+    /// What to do about it. One or two short sentences; the shield wraps them.
     ///
-    /// Offering "do my reps" to somebody with twenty minutes already banked
-    /// hides the easier answer behind a workout, and offering "spend" to
-    /// somebody with an empty bank is a button that cannot do anything. The
-    /// balance decides which sentence is true.
-    public static func primaryButton(banked: Int, minutes: Int) -> String {
-        banked >= minutes ? "Do reps or spend minutes" : "Do my reps"
+    /// This used to be the balance alone ("Nothing in the bank."), on the theory
+    /// that the balance is the only thing that changes what you do next. It is
+    /// not: the set is what decides whether you do anything at all, and a line
+    /// that only says what you have not got reads as a shrug.
+    public static func subtitle(_ deal: Deal) -> String {
+        var lines: [String] = []
+        if let rule = deal.ruleLine { lines.append(rule) }
+
+        if deal.banked > 0 {
+            if deal.isPassive {
+                lines.append("Spend \(deal.spendable) on \(deal.appLabel), or keep walking for more.")
+            } else {
+                lines.append("Spend \(deal.spendable) on \(deal.appLabel), or do \(deal.repsPhrase) for \(deal.minutes) more.")
+            }
+        } else {
+            // With a rule running, the rule is the news; three sentences is a
+            // paragraph, and nobody reads a paragraph on a locked door.
+            if deal.ruleName == nil { lines.append("That's the deal for \(deal.appLabel).") }
+            lines.append(deal.isPassive
+                ? "Your steps are banking it as you walk."
+                : "One set and you're in.")
+        }
+        return lines.joined(separator: " ")
     }
 
-    public static let secondaryButton = "Close"
-
-    /// Tapping the primary button cannot open Ransom - iOS gives an extension no
-    /// way to launch its host app - so the shield hands off through a
-    /// notification, and the tap on that is what actually opens the camera.
-    public static func handoff(banked: Int, minutes: Int) -> String {
-        banked >= minutes ? "Tap to spend or earn" : "Tap to start your set"
+    /// The way out, named for the one actually available.
+    ///
+    /// A tap here cannot open Ransom (an extension has no way to launch its host
+    /// app), so it closes the shield and posts the handoff notification. The
+    /// label still names the outcome rather than the mechanism: "Start my set" is
+    /// what the user is deciding to do, and the notification is just the next tap.
+    public static func primaryButton(_ deal: Deal) -> String {
+        if deal.banked > 0 { return deal.isPassive ? "Spend my minutes" : "Spend or earn" }
+        return deal.isPassive ? "See my steps" : "Start my set"
     }
 
-    public static func handoffBody(reps: Int, exercise: String, minutes: Int, banked: Int) -> String {
-        guard banked >= minutes else { return "\(reps) \(exercise.lowercased()) and you're back in." }
-        return "You have \(banked) minutes banked, or do \(reps) \(exercise.lowercased()) for \(minutes) more."
+    /// Walking away is allowed and gets no speech.
+    public static let secondaryButton = "Not now"
+
+    // MARK: - The handoff notification
+
+    /// Tapping the primary button cannot open Ransom, so the shield hands off
+    /// through a notification, and the tap on that is what actually opens the app.
+    public static func handoff(_ deal: Deal) -> String {
+        if deal.isPassive { return "Tap to open Ransom" }
+        return deal.banked > 0 ? "Tap to spend or earn" : "Tap to start your set"
+    }
+
+    public static func handoffBody(_ deal: Deal) -> String {
+        if deal.isPassive {
+            return "Your steps are banking minutes for \(deal.appLabel). See where you're at."
+        }
+        if deal.banked > 0 {
+            return "\(minutes(deal.banked)) banked. Spend \(deal.spendable) on \(deal.appLabel), or do \(deal.repsPhrase) for \(deal.minutes) more."
+        }
+        return "\(deal.repsPhrase) and you're back in \(deal.appLabel)."
+    }
+
+    // MARK: - Helpers
+
+    private static func minutes(_ count: Int) -> String {
+        count == 1 ? "1 minute" : "\(count) minutes"
     }
 }

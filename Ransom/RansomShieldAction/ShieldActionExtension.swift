@@ -71,15 +71,13 @@ final class ShieldActionExtension: ShieldActionDelegate {
     /// The handoff. A tap on this notification opens Ransom, which then sees the
     /// pending request and starts the set automatically.
     private func notifyUserToOpenRansom(ledger: UnlockLedger) {
-        let banked = ledger.bankedMinutes
-        let minutes = ledger.minutesPerUnlock
+        // The same facts the shield just rendered, so this can't quote a
+        // different set from the screen the user tapped on.
+        let deal = ShieldCopy.Deal(appName: ledger.pendingAppName, ledger: ledger)
 
         let content = UNMutableNotificationContent()
-        content.title = ShieldCopy.handoff(banked: banked, minutes: minutes)
-        content.body = ShieldCopy.handoffBody(reps: ledger.repsPerUnlock,
-                                              exercise: ledger.exerciseName,
-                                              minutes: minutes,
-                                              banked: banked)
+        content.title = ShieldCopy.handoff(deal)
+        content.body = ShieldCopy.handoffBody(deal)
         content.sound = .default
         // Time-sensitive so it breaks through a Focus. This notification is the
         // only route back to Ransom that Apple actually supports - an extension

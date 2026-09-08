@@ -41,36 +41,33 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     // MARK: - Shared builder
 
     private func makeConfiguration(appName: String?) -> ShieldConfiguration {
-        let ledger = UnlockLedger()
+        let deal = ShieldCopy.Deal(appName: appName)
+        let theme = ShieldTheme.current()
 
         return ShieldConfiguration(
-            backgroundBlurStyle: .systemUltraThinMaterialDark,
-            backgroundColor: RansomPalette.shieldBackground.withAlphaComponent(0.94),
+            backgroundBlurStyle: theme.blur,
+            backgroundColor: theme.background,
             // Rex is the whole point of this screen. The stock shield is an
             // hourglass and the word "Restricted", which reads as a punishment
-            // handed down by the phone; the same block with Rex on it reads as
-            // the thing the user asked for.
-            icon: RexBadge.image(size: 200),
+            // handed down by the phone; the same block with Rex standing in the
+            // doorway reads as the thing the user asked for.
+            icon: ShieldIcon.rex(),
             title: ShieldConfiguration.Label(
-                text: ShieldCopy.headline(appName: appName),
-                color: .white
+                text: ShieldCopy.title(deal),
+                color: theme.title
             ),
             subtitle: ShieldConfiguration.Label(
-                text: ShieldCopy.subtitle(banked: ledger.bankedMinutes),
-                color: UIColor(white: 1, alpha: 0.75)
+                text: ShieldCopy.subtitle(deal),
+                color: theme.subtitle
             ),
             primaryButtonLabel: ShieldConfiguration.Label(
-                text: ShieldCopy.primaryButton(banked: ledger.bankedMinutes,
-                                               minutes: ledger.minutesPerUnlock),
-                // White, not the near-black `onBrand`. On the shield's dark
-                // background the tangerine button is much darker than it is on
-                // paper, and ink on it reads as a disabled control.
-                color: .white
+                text: ShieldCopy.primaryButton(deal),
+                color: theme.buttonLabel
             ),
-            primaryButtonBackgroundColor: RansomPalette.brandDark,
+            primaryButtonBackgroundColor: theme.button,
             secondaryButtonLabel: ShieldConfiguration.Label(
                 text: ShieldCopy.secondaryButton,
-                color: UIColor(white: 1, alpha: 0.65)
+                color: theme.secondary
             )
         )
     }
