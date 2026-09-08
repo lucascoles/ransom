@@ -560,6 +560,7 @@ final class PoseRepCounter: NSObject {
            session.canAddInput(input) {
             session.addInput(input)
             hasCamera = true
+            widenFieldOfView(camera)
         }
 
         let output = AVCaptureVideoDataOutput()
@@ -591,6 +592,56 @@ final class PoseRepCounter: NSObject {
 
         session.commitConfiguration()
         return hasCamera
+    }
+
+    /// Fits as much of the user in frame as the hardware allows.
+    ///
+    /// Being close to the phone is the normal way to use this: it is propped on
+    /// the floor a few feet away while somebody does push-ups over it. The
+    /// counter's failure there is not subtle - the wrists and knees leave the
+    /// frame at the bottom of every rep, Vision reports nothing for them, and the
+    /// rep is never judged. Nothing counts, and the screen gives no reason.
+    ///
+    /// Three things narrow the view, and iOS turns all of them on by itself:
+    ///
+    /// 1. **Centre Stage** crops into the sensor to keep a subject framed. It is a
+    ///    system-wide setting the user may have enabled for video calls, it
+    ///    applies here whether or not this app asked for it, and cropping in is
+    ///    the exact opposite of what a body on the floor needs.
+    /// 2. **The default format** is chosen for image quality, not coverage. Front
+    ///    cameras publish several formats at the same resolution with genuinely
+    ///    different fields of view, and the widest is often not the default.
+    /// 3. **Residual zoom** carried over from whatever configured the device last.
+    ///
+    /// Widening costs nothing: pose estimation wants coverage far more than it
+    /// wants pixels, and the format search is constrained to keep at least 720
+    /// lines so the wrists still survive.
+    private func widenFieldOfView(_ camera: AVCaptureDevice) {
+        if AVCaptureDevice.isCenterStageEnabled {
+            AVCaptureDevice.centerStageControlMode = .app
+            AVCaptureDevice.isCenterStageEnabled = false
+        }
+
+        guard (try? camera.lockForConfiguration()) != nil else { return }
+        defer { camera.unlockForConfiguration() }
+
+        // The widest format that still has the pixels the wrists need. Formats are
+        // compared on their published field of view, so this picks up whatever the
+        // hardware actually offers rather than assuming a lens.
+        let usable = camera.formats.filter { format in
+            let d = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
+            return d.height >= 720 && d.width >= 1280
+        }
+        if let widest = usable.max(by: { $0.videoFieldOfView < $1.videoFieldOfView }),
+           widest.videoFieldOfView > camera.activeFormat.videoFieldOfView {
+            camera.activeFormat = widest
+        }
+
+        // A device handed back with zoom still applied silently undoes the format
+        // choice above.
+        if camera.videoZoomFactor != camera.minAvailableVideoZoomFactor {
+            camera.videoZoomFactor = camera.minAvailableVideoZoomFactor
+        }
     }
 
     private var activeCamera: AVCaptureDevice? {
@@ -757,6 +808,33 @@ final class PoseRepCounter: NSObject {
                 // at the bottom of every rep, which reads as reps that simply
                 // vanish.
                 isTooClose = seen > movement.tooCloseWidth
+            }
+        }
+
+        // A second opinion on distance, for the case the check above cannot see.
+        //
+        // That one can only speak when both shoulders are in shot - and the way
+        // people actually get too close is by pushing a shoulder out of frame.
+        // `seen` is then never computed, `isTooClose` keeps whatever it already
+        // held, and for anybody who was too close from the very first frame that
+        // is `false` forever. They get no reps and no explanation, which is the
+        // worst pair of things this screen can do at once.
+        //
+        // Essentials gone while the body is jammed against an edge says the same
+        // thing and needs no particular joint to say it. Only ever raises the
+        // flag; clearing it stays with the shoulder measurement above, which is
+        // the one that can tell "stepped back far enough" from "still hidden".
+        let essentials = movement.lenientJoints
+        if !essentials.isEmpty {
+            let missing = essentials.filter { raw($0) == nil }.count
+            if missing * 2 > essentials.count {
+                let confident = recognized.values
+                    .filter { $0.confidence > 0.15 }
+                    .map { $0.location }
+                let againstEdge = confident.contains {
+                    $0.x < 0.02 || $0.x > 0.98 || $0.y < 0.02 || $0.y > 0.98
+                }
+                if confident.count >= 3, againstEdge { isTooClose = true }
             }
         }
 

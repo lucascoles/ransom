@@ -69,19 +69,33 @@ struct FirstRepStep: View {
     init(profile: UserProfile, onNext: @escaping () -> Void) {
         self.profile = profile
         self.onNext = onNext
-        _exercise = State(initialValue: profile.primaryExercise)
-        _counter = State(initialValue: PoseRepCounter(exercise: profile.primaryExercise,
+        // Off a passive movement before anything is built on it. Someone who
+        // chose only walking has steps as their primary, and the counter refuses
+        // steps before it reads a frame - so this screen offered "5 steps", a
+        // camera that never started and a count stuck on zero, with skipping as
+        // the only way out.
+        let primary = profile.primaryExercise
+        let movement = primary.isPassive ? Exercise.pushUps : primary
+        _exercise = State(initialValue: movement)
+        _counter = State(initialValue: PoseRepCounter(exercise: movement,
                                                       target: FirstRepStep.target))
     }
 
     private var target: Int { FirstRepStep.target }
     private var reps: Int { counter.reps }
 
-    /// The camera is up and has something to show. When it isn't — permission
-    /// refused, or no camera — the screen falls back to Rex and taps, exactly as
-    /// the set screen does, so the intake never dead-ends.
+    /// Whether this set is meant to be counted by camera at all. When it isn't —
+    /// permission refused, or no camera — the screen falls back to Rex and taps,
+    /// exactly as the set screen does, so the intake never dead-ends.
+    ///
+    /// Decided on intent, not on warm-up. `tracking` only leaves `.idle` once the
+    /// capture session delivers its first frame, so gating on it drew the entire
+    /// no-camera fallback - ring, counter, Rex, setup hint - for the gap between
+    /// the countdown ending and the camera waking, then threw it away. A loading
+    /// state wearing the fallback's clothes reads as a screen you have to get
+    /// past. `isCounting` stays because a set that has not begun is a real gate.
     private var cameraIsLive: Bool {
-        isCounting && !counter.isBlocked && counter.tracking != .idle
+        isCounting && !counter.isBlocked
     }
 
     /// Rex only has push-up frames, so he mimes along for push-ups and coaches for
@@ -206,8 +220,7 @@ struct FirstRepStep: View {
                     counter = PoseRepCounter(exercise: option, target: Self.target)
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: option.symbol)
-                            .font(.system(size: 14, weight: .semibold))
+                        ExerciseIcon(name: option.symbol, size: 14)
                         Text(option.shortTitle)
                             .font(RansomFont.headline(15))
                     }
@@ -270,6 +283,10 @@ struct FirstRepStep: View {
         switch counter.tracking {
         case .searching:   return "Looking for you…"
         case .calibrating: return isFloorMovement ? "Hold still at the top to start" : "Stand tall and still to start"
+        // Named rather than left silent: with the fallback no longer covering the
+        // warm-up, this is the second or so of black frame before the first one
+        // arrives, and an unlabelled void there looks like a camera that failed.
+        case .idle:        return "Getting the camera ready…"
         default:           return nil
         }
     }
@@ -285,7 +302,7 @@ struct FirstRepStep: View {
             Text("First set done!")
                 .font(RansomFont.title(28))
                 .foregroundStyle(Palette.ink)
-            Text("Nice work. Month one is about \(plan.firstMonthReps.formatted()) more, \(plan.repsPerUnlock) at a time. You just did the hardest ones.")
+            Text("Nice work. Month one is about \(plan.firstMonthReps.formatted()) more, \(plan.setTarget) at a time. You just did the hardest ones.")
                 .font(RansomFont.body(16))
                 .foregroundStyle(Palette.inkSoft)
                 .multilineTextAlignment(.center)

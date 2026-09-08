@@ -55,10 +55,23 @@ struct WorkoutView: View {
     private var elapsedSeconds: Int { fallback?.elapsedSeconds ?? pose.elapsedSeconds }
     private var formHint: String? { fallback?.formHint ?? pose.formHint }
 
-    /// True once the camera session is up, which is when the self-view has
-    /// something to show.
+    /// Whether this set is being counted by the camera at all.
+    ///
+    /// Deliberately not "is the camera warmed up yet". It used to also require
+    /// `tracking != .idle`, which is only true once `AVCaptureSession` has
+    /// delivered its first frame - so for the second or so between the countdown
+    /// ending and the camera producing anything, the whole no-camera layout was
+    /// drawn: ring, counter, a Rex illustration and "prop the phone against a
+    /// wall", all of it then thrown away and replaced by the video. It read as a
+    /// screen the user had to get past, and it was really just a loading state
+    /// wearing the fallback UI's clothes.
+    ///
+    /// Deciding on intent instead means the camera layout is on screen from the
+    /// first frame of the set, with the preview filling in underneath it. The
+    /// sensor layout is now only ever shown to somebody who is genuinely not
+    /// being watched by a camera.
     private var cameraIsLive: Bool {
-        usingCamera && pose.tracking != .idle && !pose.isBlocked
+        usingCamera && !pose.isBlocked
     }
 
     var body: some View {
@@ -223,6 +236,9 @@ struct WorkoutView: View {
     /// skeleton on their body already says it.
     private var cameraStatus: String? {
         switch pose.tracking {
+        // The window is on screen before the session has delivered anything, so
+        // this covers the brief black frame rather than leaving it unexplained.
+        case .idle:        return "Getting the camera ready…"
         case .searching:   return "Looking for you…"
         case .calibrating: return exercise.armingCue
         default:           return nil
