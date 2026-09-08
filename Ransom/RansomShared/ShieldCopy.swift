@@ -128,9 +128,12 @@ public enum ShieldCopy {
         // figure on the spend side on purpose: `spendOptions` goes up to the
         // whole balance, so naming one would undersell it again.
         if deal.banked > 0 {
+            // "your reps" rather than the movement and count. With minutes in
+            // the bank this line is about the choice, not the price, and the
+            // shorter half keeps the sentence balanced against "your minutes".
             lines.append(deal.isPassive
                 ? "Keep walking or spend your minutes."
-                : "Do \(deal.repsPhrase) or spend your minutes.")
+                : "Do your reps or spend your minutes.")
         } else {
             lines.append(deal.isPassive
                 ? "Your steps are already paying for it."
