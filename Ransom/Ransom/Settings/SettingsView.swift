@@ -245,7 +245,7 @@ struct SettingsView: View {
                     .font(RansomFont.body(14))
                     .foregroundStyle(Palette.inkSoft)
                 Spacer()
-                Text("\(model.plan.repsPerUnlock) \(model.plan.exercise.shortTitle.lowercased()) → \(model.plan.minutesPerUnlock) min")
+                Text("\(model.plan.setTarget) \(model.plan.exercise.shortTitle.lowercased()) → \(model.plan.minutesPerUnlock) min")
                     .font(RansomFont.caption(13))
                     .foregroundStyle(Palette.brand)
             }
@@ -426,6 +426,17 @@ struct SettingsView: View {
                 .font(RansomFont.body(13))
                 .foregroundStyle(Palette.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
+
+            // App Review opens all three of these. They also have to be reachable
+            // from inside the app, not only from the store listing.
+            HStack(spacing: 18) {
+                Link("Privacy", destination: RansomLinks.privacy)
+                Link("Terms", destination: RansomLinks.terms)
+                Link("Support", destination: RansomLinks.support)
+            }
+            .font(RansomFont.caption(13))
+            .foregroundStyle(Palette.brand)
+            .padding(.top, 2)
 
             Button {
                 Haptics.warning()

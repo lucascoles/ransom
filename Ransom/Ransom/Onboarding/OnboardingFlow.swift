@@ -13,6 +13,11 @@ struct OnboardingFlow: View {
     /// "no" and re-ask the bedtime question. Only "yes" is recoverable from the
     /// profile, since a "no" writes nothing to `peakTimes`.
     @State private var scrollsInBed: Bool?
+    /// Same reason. "Something else" is the one pick on the apps step that writes
+    /// nothing to the profile, so kept in the step it was gone after a back tap -
+    /// and with it the only thing enabling Continue for someone whose app isn't
+    /// in the list.
+    @State private var picksOtherApp = false
     @State private var isMovingForward = true
 
     var body: some View {
@@ -76,7 +81,7 @@ struct OnboardingFlow: View {
             NameStep(profile: $draft, onNext: { advance(to: .apps) })
 
         case .apps:
-            AppsStep(profile: $draft, onNext: { advance(to: .scrollLoad) })
+            AppsStep(profile: $draft, picksOther: $picksOtherApp, onNext: { advance(to: .scrollLoad) })
 
         case .scrollLoad:
             ScrollLoadStep(profile: $draft, scrollsInBed: $scrollsInBed, onNext: { advance(to: .reality) })
@@ -119,7 +124,10 @@ struct OnboardingFlow: View {
             BuildingPlanStep(profile: draft, onNext: { advance(to: .plan) })
 
         case .plan:
-            PlanRevealStep(profile: draft, onNext: { advance(to: .paywall) })
+            PlanRevealStep(profile: draft, onNext: { advance(to: .review) })
+
+        case .review:
+            ReviewStep(onNext: { advance(to: .paywall) })
 
         case .paywall:
             PaywallView(
@@ -133,8 +141,17 @@ struct OnboardingFlow: View {
     // MARK: - Navigation
 
     private func advance(to next: OnboardingStep) {
+        // Auto-advancing steps call this once per tap, and a quick double tap
+        // got here twice: the second call pushed the destination onto its own
+        // history, so the first back tap from the next screen did nothing.
+        guard next != step else { return }
         isMovingForward = true
-        history.append(step)
+        // The building screen advances itself, so it can never be somewhere to go
+        // back to. Recorded, a back tap from the plan replayed the theatre and
+        // landed straight back on the plan, and nothing before it was reachable.
+        if step != .building {
+            history.append(step)
+        }
         step = next
     }
 
@@ -183,11 +200,18 @@ enum OnboardingStep: Int, CaseIterable, Hashable {
     case notifications
     case building
     case plan
+    // Asked once the plan is on screen and before any money is mentioned, so it
+    // lands on the one thing they have seen work rather than on a purchase they
+    // have not made yet.
+    case review
     case paywall
 
     var showsChrome: Bool {
         switch self {
-        case .coldOpen, .welcome, .building, .paywall, .firstRep: return false
+        // No bar and no back arrow on the review ask. There is nothing on it to
+        // revise - it already offers "Not now" - and a back arrow there pops to
+        // the plan reveal, whose Continue would ask for the rating a second time.
+        case .coldOpen, .welcome, .building, .review, .paywall, .firstRep: return false
         default: return true
         }
     }

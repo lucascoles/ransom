@@ -64,12 +64,20 @@ struct NameStep: View {
         profile.firstName.trimmingCharacters(in: .whitespaces)
     }
 
+    /// Trimmed on the way out, not only for display. Predictive text puts a
+    /// space after every accepted word, so "Sam " reached the plan title as
+    /// "Sam , your plan is ready" and Rex's lines as "minutes, Sam .".
+    private func finish() {
+        profile.firstName = trimmedName
+        onNext()
+    }
+
     var body: some View {
         StepScaffold(
             title: "What should Rex call you?",
             subtitle: "Optional. Rex just likes cheering people on by name.",
             buttonTitle: "Continue",
-            onNext: onNext
+            onNext: finish
         ) {
             VStack(spacing: 18) {
                 TextField("First name", text: $profile.firstName)
@@ -79,7 +87,7 @@ struct NameStep: View {
                     .autocorrectionDisabled()
                     .submitLabel(.done)
                     .focused($isFocused)
-                    .onSubmit(onNext)
+                    .onSubmit(finish)
                     .padding(.vertical, 6)
                     .ransomCard()
 
@@ -110,35 +118,6 @@ struct NameStep: View {
         }
     }
 }
-
-// MARK: - Gender
-
-struct GenderStep: View {
-    @Binding var profile: UserProfile
-    var onNext: () -> Void
-
-    var body: some View {
-        StepScaffold(
-            title: "Let's start simple",
-            subtitle: "This sets your rep target. Nothing else.",
-            showsButton: false,
-            onNext: onNext
-        ) {
-            VStack(spacing: 12) {
-                ForEach(Gender.allCases) { gender in
-                    ChoiceCard(
-                        title: gender.title,
-                        isSelected: profile.gender == gender
-                    ) {
-                        profile.gender = gender
-                        AutoAdvance.after(onNext)
-                    }
-                }
-            }
-        }
-    }
-}
-
 // MARK: - Age
 
 struct AgeStep: View {

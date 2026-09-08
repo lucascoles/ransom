@@ -97,6 +97,23 @@ struct RootView: View {
             } else {
                 OnboardingFlow()
                     .transition(.opacity)
+                    // Intake is light-only, deliberately.
+                    //
+                    // The flow is sixteen screens of cream paper, hand-placed
+                    // illustration and Rex art rendered on a light ground, and in
+                    // dark mode it comes apart: the artwork keeps its own
+                    // background while the canvas inverts around it. Every colour
+                    // here goes through `Palette`, so the app proper handles dark
+                    // mode correctly - this is about the pictures, which are
+                    // fixed-value PNGs and cannot adapt.
+                    //
+                    // `preferredColorScheme` overrides the window's interface
+                    // style, and `Color.adaptive` reads `userInterfaceStyle` off
+                    // the trait collection, so the whole palette resolves light
+                    // for these screens without any of them knowing about it.
+                    // It is scoped to this branch: finishing intake hands the
+                    // user back to the system setting.
+                    .preferredColorScheme(.light)
             }
         }
         .animation(.easeInOut(duration: 0.35), value: model.hasCompletedOnboarding)

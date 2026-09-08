@@ -98,7 +98,7 @@ struct IntensityStep: View {
                 // Live preview of what the choice actually means.
                 HStack(spacing: 0) {
                     previewStat(
-                        value: "\(plan.repsPerUnlock)",
+                        value: "\(plan.setTarget)",
                         label: profile.primaryExercise.shortTitle.lowercased()
                     )
                     Image(systemName: "arrow.right")
@@ -117,6 +117,17 @@ struct IntensityStep: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 8)
                     .padding(.top, 2)
+            }
+            .onAppear {
+                // The default tier arrives already highlighted, so its run has to
+                // arrive with it. Seeding only on tap left anyone who accepted
+                // Standard as shown with no commitment at all: the chips sat unlit
+                // under a selected card, and Settings then offered to soften the
+                // plan freely a minute after this screen promised it wouldn't.
+                if profile.commitmentDays == nil {
+                    profile.commitmentDays = CommitmentLength.five.days
+                    profile.commitmentStartedAt = Date()
+                }
             }
         }
     }
@@ -153,7 +164,7 @@ struct NotificationsStep: View {
 
             RexScene(
                 pose: .coach,
-                line: "I'll ping you when your minutes are up, and once a day if you've gone quiet. That's it. No spam, promise.",
+                line: "I'll ping you when your minutes are nearly up, and when they're gone. That's it. No spam, promise.",
                 size: 130,
                 typewriter: true
             )
@@ -163,7 +174,7 @@ struct NotificationsStep: View {
                 Text("Can Rex check in?")
                     .font(RansomFont.title(27))
                     .foregroundStyle(Palette.ink)
-                Text("A heads-up when your unlocked time ends, and one gentle nudge a day if you haven't moved yet.")
+                Text("A heads-up before your unlocked time runs out, and one when it ends. Nothing else, ever.")
                     .font(RansomFont.body(15))
                     .foregroundStyle(Palette.inkSoft)
                     .multilineTextAlignment(.center)
@@ -177,8 +188,7 @@ struct NotificationsStep: View {
                 PrimaryButton(title: "Yes, keep me posted", isLoading: isRequesting) {
                     isRequesting = true
                     Task {
-                        let granted = await NotificationManager.requestPermission()
-                        if granted { NotificationManager.scheduleDailyNudge() }
+                        await NotificationManager.requestPermission()
                         isRequesting = false
                         onNext()
                     }
@@ -190,100 +200,6 @@ struct NotificationsStep: View {
         }
     }
 }
-
-// MARK: - Referral
-
-struct ReferralStep: View {
-    @Binding var profile: UserProfile
-    var onNext: () -> Void
-
-    var body: some View {
-        StepScaffold(
-            title: "Where did you hear about Ransom?",
-            subtitle: "It helps us know where to show up.",
-            showsButton: false,
-            onNext: onNext
-        ) {
-            VStack(spacing: 12) {
-                ForEach(ReferralSource.allCases) { source in
-                    ChoiceCard(
-                        title: source.title,
-                        emoji: source.emoji,
-                        isSelected: profile.referral == source
-                    ) {
-                        profile.referral = source
-                        AutoAdvance.after(onNext)
-                    }
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Social proof
-
-struct SocialProofStep: View {
-    var onNext: () -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
-
-            HStack(spacing: 3) {
-                ForEach(0..<5, id: \.self) { _ in
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(Color(hex: 0xFFC531))
-                }
-            }
-
-            Text("Ransom works because it's annoying")
-                .font(RansomFont.title(26))
-                .foregroundStyle(Palette.ink)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 30)
-                .padding(.top, 14)
-
-            Text("In exactly the right way.")
-                .font(RansomFont.body(15))
-                .foregroundStyle(Palette.inkSoft)
-                .padding(.top, 4)
-
-            VStack(spacing: 12) {
-                testimonial(
-                    quote: "I've done 1,400 push-ups this month purely because I wanted to look at memes.",
-                    author: "Dara K."
-                )
-                testimonial(
-                    quote: "Cut two hours a day off my phone without deleting a single app.",
-                    author: "Marcus T."
-                )
-            }
-            .padding(.horizontal, Metrics.screenPadding)
-            .padding(.top, 28)
-
-            Spacer()
-
-            PrimaryButton(title: "Build my plan", action: onNext)
-                .padding(.horizontal, Metrics.screenPadding)
-                .padding(.bottom, 24)
-        }
-    }
-
-    private func testimonial(quote: String, author: String) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("“\(quote)”")
-                .font(RansomFont.body(15))
-                .foregroundStyle(Palette.ink)
-                .fixedSize(horizontal: false, vertical: true)
-            Text("\u{2013} \(author)")
-                .font(RansomFont.caption(12))
-                .foregroundStyle(Palette.inkSoft)
-        }
-        .ransomCard()
-    }
-}
-
 // MARK: - Building the plan
 
 /// The obligatory "we're doing maths about you" beat. It's theatre, but it's the
@@ -459,7 +375,7 @@ struct PlanRevealStep: View {
                     .font(RansomFont.display(56))
                     .foregroundStyle(Palette.green)
 
-                Text("\(capitalised(appsPhrase)), down from \(clock(baselineMinutes)) a day to your \(clock(goalMinutes)) target.")
+                Text("Your screen time, down from \(clock(baselineMinutes)) a day to your \(clock(goalMinutes)) target.")
                     .font(RansomFont.body(14))
                     .foregroundStyle(Palette.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
@@ -470,7 +386,7 @@ struct PlanRevealStep: View {
                 eyebrow("ONE SET")
 
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Text("\(plan.repsPerUnlock) \(exercise.shortTitle.lowercased())")
+                    Text("\(plan.setTarget) \(exercise.shortTitle.lowercased())")
                         .font(RansomFont.display(34))
                         .foregroundStyle(Palette.ink)
                     Image(systemName: "arrow.right")
@@ -537,7 +453,7 @@ struct PlanRevealStep: View {
     private var rexLine: String {
         let name = profile.firstName.isEmpty ? "" : ", \(profile.firstName)"
         if hasSaving {
-            return "\(plan.repsPerUnlock) \(exercise.title.lowercased()) banks \(plan.minutesPerUnlock) minutes\(name). Do a set whenever suits you, spend them when you want them. Let's go."
+            return "\(plan.setTarget) \(exercise.title.lowercased()) banks \(plan.minutesPerUnlock) minutes\(name). Do a set whenever suits you, spend them when you want them. Let's go."
         }
         return "Do a set whenever suits you\(name), and spend the minutes when you want them. Let's go."
     }
