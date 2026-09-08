@@ -902,6 +902,22 @@ final class PoseRepCounter: NSObject {
                 let span = Double(hypot(s.x - w.x, s.y - w.y)) / width
                 let longest = max(armSpanMax[side] ?? 0, span)
                 armSpanMax[side] = longest
+
+                // Learned while arming, used only after.
+                //
+                // Arming waits for `primary` to hold still, and `primary` is the
+                // minimum of every reading. A ratio against a maximum that is
+                // itself still climbing does not hold still: each new longest
+                // span snaps the angle back to 180 and the frame after reads
+                // lower, which is movement as far as the stillness check is
+                // concerned. Feeding this in during arming meant the counter
+                // never left "Get set" - it was measuring its own calibration.
+                //
+                // Holding a straight arm still at the top is exactly when the
+                // longest span is observed, so nothing is lost by learning here
+                // and speaking later.
+                guard isArmed else { return nil }
+
                 // Under about half a shoulder width the arm has not been seen
                 // extended yet and the ratio would read as a deep rep from the
                 // first frame.
