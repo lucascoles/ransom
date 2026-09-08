@@ -141,3 +141,94 @@ struct WeightStep: View {
         )
     }
 }
+
+
+// MARK: - Welcome
+
+struct WelcomeStep: View {
+    var onStart: () -> Void
+
+    @State private var appeared = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            RexIntroVideo(size: 320)
+                .scaleEffect(appeared ? 1 : 0.85)
+                .opacity(appeared ? 1 : 0)
+
+            VStack(spacing: 12) {
+                Text("Ransom")
+                    .font(RansomFont.display(46))
+                    .foregroundStyle(Palette.ink)
+
+                Text("Move a little. Scroll a little.")
+                    .font(RansomFont.title(21))
+                    .foregroundStyle(Palette.brand)
+
+                Text("A quick set of push-ups unlocks your apps. That's the whole idea - and you get stronger without ever planning a workout.")
+                    .font(RansomFont.body(16))
+                    .foregroundStyle(Palette.inkSoft)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 30)
+                    .padding(.top, 4)
+            }
+            .padding(.top, 10)
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 16)
+
+            Spacer()
+
+            VStack(spacing: 12) {
+                PrimaryButton(title: "Let's go", action: onStart)
+                Text("Takes about a minute.")
+                    .font(RansomFont.caption(12))
+                    .foregroundStyle(Palette.inkFaint)
+            }
+            .padding(.horizontal, Metrics.screenPadding)
+            .padding(.bottom, 28)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.75, dampingFraction: 0.7)) { appeared = true }
+        }
+    }
+}
+
+
+// MARK: - Age
+
+struct AgeStep: View {
+    @Binding var profile: UserProfile
+    var onNext: () -> Void
+
+    var body: some View {
+        StepScaffold(
+            title: "How old are you?",
+            subtitle: "Rex uses this to size your sets. That's all.",
+            onNext: onNext
+        ) {
+            VStack(spacing: 18) {
+                Picker("Age", selection: $profile.age) {
+                    ForEach(13...80, id: \.self) { age in
+                        Text("\(age)").font(RansomFont.title(22)).tag(age)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(height: 190)
+                .ransomCard(padding: 6)
+
+                RexScene(pose: .idle, line: ageQuip, size: 96)
+            }
+        }
+    }
+
+    private var ageQuip: String {
+        switch profile.age {
+        case ..<20:   return "Starting early. Future you says thanks."
+        case 20..<30: return "Perfect time to build a habit that sticks."
+        case 30..<45: return "Great time to start. I mean that."
+        default:      return "Steady beats hard. We'll go at your pace."
+        }
+    }
+}

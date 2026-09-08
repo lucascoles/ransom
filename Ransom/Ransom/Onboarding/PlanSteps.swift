@@ -597,3 +597,54 @@ private struct ProjectionChart: View {
         }
     }
 }
+
+
+// MARK: - Notifications
+
+struct NotificationsStep: View {
+    var onNext: () -> Void
+
+    @State private var isRequesting = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            RexScene(
+                pose: .coach,
+                line: "I'll ping you when your minutes are nearly up, and when they're gone. That's it. No spam, promise.",
+                size: 130,
+                typewriter: true
+            )
+            .padding(.horizontal, Metrics.screenPadding)
+
+            VStack(spacing: 10) {
+                Text("Can Rex check in?")
+                    .font(RansomFont.title(27))
+                    .foregroundStyle(Palette.ink)
+                Text("A heads-up before your unlocked time runs out, and one when it ends. Nothing else, ever.")
+                    .font(RansomFont.body(15))
+                    .foregroundStyle(Palette.inkSoft)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 30)
+            }
+            .padding(.top, 32)
+
+            Spacer()
+
+            VStack(spacing: 8) {
+                PrimaryButton(title: "Yes, keep me posted", isLoading: isRequesting) {
+                    isRequesting = true
+                    Task {
+                        await NotificationManager.requestPermission()
+                        isRequesting = false
+                        onNext()
+                    }
+                }
+                TextButton(title: "Not now", action: onNext)
+            }
+            .padding(.horizontal, Metrics.screenPadding)
+            .padding(.bottom, 24)
+        }
+    }
+}

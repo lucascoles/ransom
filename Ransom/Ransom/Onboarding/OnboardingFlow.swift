@@ -73,7 +73,10 @@ struct OnboardingFlow: View {
     private var content: some View {
         switch step {
         case .coldOpen:
-            ColdOpenStep(onFinish: { advance(to: .name) })
+            ColdOpenStep(onFinish: { advance(to: .welcome) })
+
+        case .welcome:
+            WelcomeStep(onStart: { advance(to: .name) })
 
         case .name:
             NameStep(profile: $draft, onNext: { advance(to: .apps) })
@@ -85,7 +88,13 @@ struct OnboardingFlow: View {
             ScrollLoadStep(profile: $draft, scrollsInBed: $scrollsInBed, onNext: { advance(to: .reality) })
 
         case .reality:
-            RealityCheckStep(profile: draft, onNext: { advance(to: .screenGoal) })
+            RealityCheckStep(profile: draft, onNext: { advance(to: .age) })
+
+        case .age:
+            AgeStep(profile: $draft, onNext: { advance(to: .projection) })
+
+        case .projection:
+            ProjectionStep(profile: draft, onNext: { advance(to: .screenGoal) })
 
         case .screenGoal:
             ScreenGoalStep(profile: $draft, onNext: { advance(to: .identity) })
@@ -97,7 +106,10 @@ struct OnboardingFlow: View {
             ExercisesStep(profile: $draft, onNext: { advance(to: .intensity) })
 
         case .intensity:
-            IntensityStep(profile: $draft, onNext: { advance(to: .weight) })
+            IntensityStep(profile: $draft, onNext: { advance(to: .bank) })
+
+        case .bank:
+            BankExplainerStep(profile: draft, onNext: { advance(to: .weight) })
 
         case .weight:
             WeightStep(profile: $draft, onNext: { advance(to: .blocking) })
@@ -106,7 +118,10 @@ struct OnboardingFlow: View {
             BlockingExplainerStep(profile: draft, onNext: { advance(to: .firstRep) })
 
         case .firstRep:
-            FirstRepStep(profile: draft, onNext: { advance(to: .building) })
+            FirstRepStep(profile: draft, onNext: { advance(to: .notifications) })
+
+        case .notifications:
+            NotificationsStep(onNext: { advance(to: .building) })
 
         case .building:
             BuildingPlanStep(profile: draft, onNext: { advance(to: .plan) })
@@ -178,12 +193,18 @@ enum OnboardingStep: Int, CaseIterable, Hashable {
     // Three taps naming the problem, before anything is asked for. Ends by
     // turning the story on the reader, which is the whole welcome.
     case coldOpen
+    case welcome
     case name
     // The confession comes first: the reality check only lands because the user
     // just named their own apps and their own hours.
     case apps
     case scrollLoad
     case reality
+    // Age sits ahead of the projection, not behind it. It used to come four
+    // screens later, so the "years of your waking life" figure was computed from
+    // the default 24 for every user who had not yet been asked.
+    case age
+    case projection
     // The goal lands while the cost of the current habit is still on screen.
     case screenGoal
     case identity
@@ -191,6 +212,8 @@ enum OnboardingStep: Int, CaseIterable, Hashable {
     // than filling in a form.
     case exercises
     case intensity
+    // The economy the pace buys into.
+    case bank
     // One picker, and skippable. Height used to be asked for here too and was
     // read by nothing; weight scales the calorie estimate, so without it every
     // user gets the figure for an average adult.
@@ -200,6 +223,9 @@ enum OnboardingStep: Int, CaseIterable, Hashable {
     // set is worth, so "your reps open them" is a sentence they can check.
     case blocking
     case firstRep
+    // Asked right after they've earned something, which is the one moment the
+    // permission reads as Rex keeping his side of the deal rather than a tax.
+    case notifications
     case building
     case plan
     // Asked while the plan is still on screen and before any money is mentioned,
@@ -213,7 +239,7 @@ enum OnboardingStep: Int, CaseIterable, Hashable {
 
     var showsChrome: Bool {
         switch self {
-        case .coldOpen, .building, .paywall, .firstRep, .review: return false
+        case .coldOpen, .welcome, .building, .paywall, .firstRep, .review: return false
         default: return true
         }
     }
