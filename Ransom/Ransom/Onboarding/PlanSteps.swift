@@ -104,13 +104,18 @@ struct IntensityStep: View {
                     Image(systemName: "arrow.right")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(Palette.inkFaint)
-                    previewStat(value: Currency.amount(plan.minutesPerUnlock), label: "coins banked")
+                    // Minutes here, not coins, and this is the one screen where
+                    // that is right. The user is choosing a pace and needs to
+                    // know what a set buys in terms they already have: minutes of
+                    // their apps. Coins are the app's word for the same thing and
+                    // they have not met it yet.
+                    previewStat(value: "\(plan.minutesPerUnlock)", label: "minutes earned")
                 }
                 .padding(.vertical, 6)
                 .ransomCard()
                 .padding(.top, 4)
 
-                Text("Same rate all day. Do as many sets as you like - the coins stack up in your bank and clear at midnight.")
+                Text("Same rate all day. Do as many sets as you like - the minutes stack up in your bank and clear at midnight.")
                     .font(RansomFont.body(13))
                     .foregroundStyle(Palette.inkSoft)
                     .multilineTextAlignment(.center)
