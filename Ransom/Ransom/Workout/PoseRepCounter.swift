@@ -424,10 +424,6 @@ final class PoseRepCounter: NSObject {
 
     private var isTooClose = false
 
-    /// The longest shoulder-to-wrist distance seen this set, per arm, in
-    /// shoulder widths. Calibrated by the user's own straightest rep rather than
-    /// assumed, and only ever grown, so a single bad frame cannot shrink it.
-    private var armSpanMax: [Int: Double] = [:]
 
     /// How much of the *smallest* countable travel counts as "started descending".
     ///
@@ -493,7 +489,6 @@ final class PoseRepCounter: NSObject {
         clearLegSamples()
         hintExpiresAt = nil
         isTooClose = false
-        armSpanMax = [:]
         disarm()
 
         // Steps belong to the pedometer: there is no body movement for a camera
@@ -872,68 +867,8 @@ final class PoseRepCounter: NSObject {
                 guard let s = measured(shoulder), let e = measured(elbow), let w = measured(wrist) else { return nil }
                 return angle(s, e, w)
             }
-            /// The same bend, measured without the elbow.
-            ///
-            /// The angle above needs three joints in a row, and the middle one is
-            /// exactly where this camera position fails: filmed head-on, an arm
-            /// pointing at the lens projects shoulder, elbow and wrist onto nearly
-            /// the same spot, and the angle between them is then computed from
-            /// noise. The comment above records what that cost - 173 degrees at
-            /// the bottom of a rep that visibly bent the other arm to 128.
-            ///
-            /// Shoulder to wrist is one distance between two joints, so it has no
-            /// middle to collapse. As the body drops, the wrist stays on the floor
-            /// and the shoulder comes down to meet it: the distance shortens
-            /// whether or not the elbow was ever visible.
-            ///
-            /// Converted into degrees rather than reported raw, so every threshold
-            /// downstream keeps working in the units it was tuned in. Treating the
-            /// arm as two equal segments of half its span gives, by the law of
-            /// cosines, cos(theta) = 1 - 2(d/L)^2 - exact at full extension and at
-            /// full compression, and close enough between.
-            ///
-            /// `L` is the longest span this arm has shown this set. It is a
-            /// measurement, not a guess: the arming phase will not let counting
-            /// start until a straight arm has been seen, so by the time this is
-            /// consulted the maximum is a real full extension.
-            func armSpan(_ shoulder: Joint, _ wrist: Joint, side: Int) -> Double? {
-                guard let width, width > 0.02,
-                      let s = measured(shoulder), let w = measured(wrist) else { return nil }
-                let span = Double(hypot(s.x - w.x, s.y - w.y)) / width
-                let longest = max(armSpanMax[side] ?? 0, span)
-                armSpanMax[side] = longest
-
-                // Learned while arming, used only after.
-                //
-                // Arming waits for `primary` to hold still, and `primary` is the
-                // minimum of every reading. A ratio against a maximum that is
-                // itself still climbing does not hold still: each new longest
-                // span snaps the angle back to 180 and the frame after reads
-                // lower, which is movement as far as the stillness check is
-                // concerned. Feeding this in during arming meant the counter
-                // never left "Get set" - it was measuring its own calibration.
-                //
-                // Holding a straight arm still at the top is exactly when the
-                // longest span is observed, so nothing is lost by learning here
-                // and speaking later.
-                guard isArmed else { return nil }
-
-                // Under about half a shoulder width the arm has not been seen
-                // extended yet and the ratio would read as a deep rep from the
-                // first frame.
-                guard longest > 0.5 else { return nil }
-                let ratio = min(1, span / longest)
-                return acos(max(-1, min(1, 1 - 2 * ratio * ratio))) * 180 / .pi
-            }
-
-            // Every reading of the same bend, from whichever joints were visible.
-            // The minimum on purpose, as before: both arms bend the same amount in
-            // reality and the camera only ever gets a clean look at one of them,
-            // so the deepest reading is the honest one.
             let arms = [arm(.leftShoulder, .leftElbow, .leftWrist),
-                        arm(.rightShoulder, .rightElbow, .rightWrist),
-                        armSpan(.leftShoulder, .leftWrist, side: 0),
-                        armSpan(.rightShoulder, .rightWrist, side: 1)].compactMap { $0 }
+                        arm(.rightShoulder, .rightElbow, .rightWrist)].compactMap { $0 }
             primary = arms.min()
 
             // --- Shoulder height, in shoulder-widths ---
