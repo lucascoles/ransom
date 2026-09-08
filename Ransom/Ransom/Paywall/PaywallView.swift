@@ -200,14 +200,21 @@ struct PaywallView: View {
                     // The annual row's headline is the offer itself. "Annual"
                     // describes the billing period, which is the least
                     // interesting thing about it and is said underneath anyway.
+                    // One line each, shrinking rather than wrapping. A plan row
+                    // is scanned in a second and compared against the row below
+                    // it; a headline that wraps pushes the rows out of step and
+                    // makes the pair harder to read than either line was long.
                     Text(isAnnual ? annualHeadline : plan.title)
                         .font(RansomFont.headline(17))
                         .foregroundStyle(Palette.ink)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
 
                     Text(isAnnual ? annualSubtitle : weeklySubtitle)
                         .font(RansomFont.body(13))
                         .foregroundStyle(Palette.inkSoft)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
 
                 Spacer(minLength: 4)
@@ -225,10 +232,12 @@ struct PaywallView: View {
                     Text(isAnnual ? "/ month" : "/ week")
                         .font(RansomFont.caption(12))
                         .foregroundStyle(Palette.inkSoft)
+                        .lineLimit(1)
                     if isAnnual, let perWeek = store.annualPerWeek {
                         Text("\(perWeek) a week")
                             .font(RansomFont.caption(11))
                             .foregroundStyle(Palette.inkFaint)
+                            .lineLimit(1)
                     }
                 }
             }
@@ -253,7 +262,9 @@ struct PaywallView: View {
         guard let saving = store.annualSavingsPercent else {
             return free ? "Start free" : "Best value"
         }
-        return free ? "Start free and save \(saving)%" : "Save \(saving)%"
+        // "and" was the only word here doing no work, and it was the one pushing
+        // this onto a second line.
+        return free ? "Start free, save \(saving)%" : "Save \(saving)%"
     }
 
     private var annualSubtitle: String {
