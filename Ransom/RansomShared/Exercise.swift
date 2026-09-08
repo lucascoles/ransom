@@ -78,8 +78,11 @@ public enum Exercise: String, CaseIterable, Codable, Identifiable, Sendable {
     public var pitch: String {
         switch self {
         case .pushUps: return "The classic. Chest, arms and core."
-        case .squats:  return "Legs and glutes. No floor needed."
-        case .steps:   return "Your phone already counts them. Capped, so it can't be your only move."
+        case .squats:  return "Legs and glutes."
+        // The cap is real and still applies, it is just not what somebody is
+        // deciding on this screen. They are picking a movement, and the reason to
+        // pick this one is that it needs nothing from them.
+        case .steps:   return "Your phone counts them all day."
         }
     }
 
