@@ -30,8 +30,8 @@ enum NotificationManager {
         scheduleWarning(minutes: minutes)
 
         let content = UNMutableNotificationContent()
-        content.title = "Time's up"
-        content.body = "Rex is back in the doorway. One more set to keep going."
+        content.title = ShieldCopy.Unlock.timeUpTitle
+        content.body = ShieldCopy.Unlock.timeUpBody()
         content.sound = .default
 
         let trigger = UNTimeIntervalNotificationTrigger(
@@ -51,8 +51,8 @@ enum NotificationManager {
         guard total > lead else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "\(warningLeadMinutes) minutes left"
-        content.body = "Rex is heading back to the door. Wrap it up or earn some more."
+        content.title = ShieldCopy.Unlock.warningTitle(leadMinutes: warningLeadMinutes)
+        content.body = ShieldCopy.Unlock.warningBody
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: total - lead, repeats: false)
         let request = UNNotificationRequest(identifier: warningID, content: content, trigger: trigger)

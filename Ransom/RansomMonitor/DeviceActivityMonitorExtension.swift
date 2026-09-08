@@ -113,8 +113,8 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         center.removeDeliveredNotifications(withIdentifiers: [RansomNotificationID.timeWarning])
 
         let content = UNMutableNotificationContent()
-        content.title = "Time's up"
-        content.body = "Rex is back in the doorway. One more set to keep going."
+        content.title = ShieldCopy.Unlock.timeUpTitle
+        content.body = ShieldCopy.Unlock.timeUpBody()
         content.sound = .default
         deliver(content, id: RansomNotificationID.timeUp)
     }

@@ -156,6 +156,33 @@ public enum ShieldCopy {
     /// Walking away is allowed and gets no speech.
     public static let secondaryButton = "Not now"
 
+    // MARK: - The two notifications an unlock raises
+
+    /// Both live here because both are sent from two places: the app schedules
+    /// them against the wall clock when minutes are granted, and the monitor
+    /// extension raises them when the minutes are actually spent. They already
+    /// share an identifier so iOS collapses them; sharing the words is what stops
+    /// the same event arriving worded two different ways.
+    public enum Unlock {
+        /// Derived from the lead time rather than written, so moving the warning
+        /// to ten minutes cannot leave a notification saying five.
+        public static func warningTitle(leadMinutes: Int) -> String {
+            leadMinutes == 1 ? "1 minute left" : "\(leadMinutes) minutes left"
+        }
+        public static let warningBody = "Rex is stretching. You know what that means."
+
+        public static let timeUpTitle = "Time's up"
+
+        /// The movement is the user's own, read from the App Group. Somebody who
+        /// picked squats being told Rex accepts push-ups is the app forgetting
+        /// what they chose, in the one message that is meant to sound like it
+        /// knows them.
+        public static func timeUpBody(ledger: UnlockLedger = UnlockLedger()) -> String {
+            let movement = ledger.exerciseName.lowercased()
+            return "Rex accepts \(movement). He does not accept excuses."
+        }
+    }
+
     // MARK: - The handoff notification
 
     /// Tapping the primary button cannot open Ransom, so the shield hands off
