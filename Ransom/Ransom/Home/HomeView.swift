@@ -618,8 +618,16 @@ struct HomeView: View {
                     }
                 } label: {
                     VStack(spacing: 1) {
-                        Text(Currency.amount(minutes))
+                        // The chips are what you get, the button is what you pay.
+                        // A coin is a minute, so the two numbers are the same one,
+                        // but a row of bare figures under "Spend from your bank"
+                        // reads as a price list rather than as amounts of app
+                        // time. Naming the minutes here is what makes the choice
+                        // legible: 5 minutes of Instagram is a decision, 5 is not.
+                        Text("\(minutes) min")
                             .font(RansomFont.headline(16))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                         // Only the option that empties the bank gets labelled, so
                         // the label means something when it appears.
                         if minutes == model.bankedMinutes && options.count > 1 {
