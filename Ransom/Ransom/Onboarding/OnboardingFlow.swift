@@ -127,18 +127,10 @@ struct OnboardingFlow: View {
             BuildingPlanStep(profile: draft, onNext: { advance(to: .plan) })
 
         case .plan:
-            // The reminder screen promises a trial. If StoreKit says the selected
-            // plan carries none, the promise would be false, so it is skipped.
             PlanRevealStep(profile: draft, onNext: { advance(to: .review) })
 
         case .review:
-            // Same skip as below: no trial, no promise to make about one.
-            ReviewStep(onNext: {
-                advance(to: store.trialDays(for: store.selectedPlan) == nil ? .paywall : .trialReminder)
-            })
-
-        case .trialReminder:
-            TrialReminderStep(onNext: { advance(to: .paywall) })
+            ReviewStep(onNext: { advance(to: .paywall) })
 
         case .paywall:
             PaywallView(
@@ -231,10 +223,6 @@ enum OnboardingStep: Int, CaseIterable, Hashable {
     // Asked while the plan is still on screen and before any money is mentioned,
     // so it reads as being pleased with what was built rather than as payment.
     case review
-    // The one thing people want answered before a money screen: will I get
-    // charged without noticing. Answered, with the notifications ask attached
-    // to the promise, before the paywall appears.
-    case trialReminder
     case paywall
 
     var showsChrome: Bool {

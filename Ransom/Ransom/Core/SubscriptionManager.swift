@@ -137,7 +137,7 @@ final class SubscriptionManager {
         return "\(count) \(unit) free"
     }
 
-    /// The trial length in days, for the reminder screen and the reminder itself.
+    /// The trial length in days, as StoreKit reports it.
     /// Read off the same offer `trialDescription` reads, so the two can't
     /// disagree; nil when the plan carries no free trial.
     func trialDays(for plan: Plan) -> Int? {
@@ -154,16 +154,6 @@ final class SubscriptionManager {
         case .year:  return count * 365
         @unknown default: return count
         }
-    }
-
-    /// Whether buying this plan now would start the free trial rather than
-    /// charge straight away. Asked before the purchase, because the answer flips
-    /// to "no" the moment it goes through. Optimistic when StoreKit has not
-    /// answered, matching `trialDescription`.
-    func isEligibleForTrial(_ plan: Plan) async -> Bool {
-        guard let subscription = products[plan]?.subscription else { return true }
-        guard trialDays(for: plan) != nil else { return false }
-        return await subscription.isEligibleForIntroOffer
     }
 
     /// The line Apple requires and users deserve: what you pay, when, and how often.
