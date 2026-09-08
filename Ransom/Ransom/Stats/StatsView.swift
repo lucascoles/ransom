@@ -39,6 +39,10 @@ struct StatsView: View {
                 ScreenTimeReportCard()
                     .padding(.top, 4)
 
+                // Directly under the figure it is about. The number above says
+                // how long today has been; this says whether that is good.
+                ScreenTimeComparisonCard()
+
                 ScreenTimeTrendCard()
 
                 headlineCard
