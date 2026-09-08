@@ -165,9 +165,9 @@ struct RootView: View {
             if model.profile.exercises.contains(.steps) {
                 NavigationStack {
                     StepsView()
-                        .navigationTitle("Walking")
+                        .navigationTitle("Steps")
                 }
-                .tabItem { Label("Walking", systemImage: "figure.walk") }
+                .tabItem { Label("Steps", systemImage: "figure.walk") }
                 .tag(3)
             }
 

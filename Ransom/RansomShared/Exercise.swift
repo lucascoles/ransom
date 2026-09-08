@@ -286,7 +286,7 @@ public enum Intensity: String, CaseIterable, Codable, Identifiable, Sendable, Co
     /// Chill was 75, which made those 133 and 1,125.
     public var stepsPerMinute: Int {
         switch self {
-        case .chill:    return 80
+        case .chill:    return 50
         case .standard: return 100
         case .beast:    return 200
         }
