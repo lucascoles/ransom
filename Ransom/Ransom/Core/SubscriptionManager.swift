@@ -41,7 +41,11 @@ final class SubscriptionManager {
 
         /// Mirrors the 3-day introductory offer configured on both products. Used
         /// only when StoreKit hasn't answered, alongside `fallbackPrice`.
-        var fallbackTrial: String { "3 days free" }
+        var fallbackTrial: String { "\(Plan.fallbackTrialDays) days free" }
+
+        /// The configured introductory offer, as a number, for when StoreKit
+        /// hasn't answered. The one place the "3" is written.
+        static let fallbackTrialDays = 3
 
         var periodLabel: String {
             switch self {
@@ -122,6 +126,33 @@ final class SubscriptionManager {
         @unknown default: unit = "days"
         }
         return "\(count) \(unit) free"
+    }
+
+    /// The trial length in days, for the reminder screen and the reminder itself.
+    /// Read off the same offer `trialDescription` reads, so the two can't
+    /// disagree; nil when the plan carries no free trial.
+    func trialDays(for plan: Plan) -> Int? {
+        guard let product = products[plan] else { return Plan.fallbackTrialDays }
+        guard let offer = product.subscription?.introductoryOffer,
+              offer.paymentMode == .freeTrial else { return nil }
+        let count = offer.period.value
+        switch offer.period.unit {
+        case .day:   return count
+        case .week:  return count * 7
+        case .month: return count * 30
+        case .year:  return count * 365
+        @unknown default: return count
+        }
+    }
+
+    /// Whether buying this plan now would start the free trial rather than
+    /// charge straight away. Asked before the purchase, because the answer flips
+    /// to "no" the moment it goes through. Optimistic when StoreKit has not
+    /// answered, matching `trialDescription`.
+    func isEligibleForTrial(_ plan: Plan) async -> Bool {
+        guard let subscription = products[plan]?.subscription else { return true }
+        guard trialDays(for: plan) != nil else { return false }
+        return await subscription.isEligibleForIntroOffer
     }
 
     /// The line Apple requires and users deserve: what you pay, when, and how often.

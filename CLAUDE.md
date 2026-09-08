@@ -195,8 +195,14 @@ used to scale the rep target, so "Standard" meant 10 push-ups for one person and
 one about something that changes as you get stronger. Moving up a tier is how
 that is handled now. `FitnessLevel` and its intake step were removed entirely.
 
-**The intake is 17 steps** and the order is deliberate: the user names their own
+**The intake is 15 steps** and the order is deliberate: the user names their own
 apps and hours *before* the reality check, so the number is theirs, not ours.
+Seven screens were cut on 2026-09-08 (welcome, projection, age, body, bank,
+review, notifications) and two added: `blocking`, a visual explainer that asks for Screen
+Time with the user's own apps on screen, and `trialReminder`, which promises a
+heads-up before the trial ends, asks for notifications, and says "No payment due
+now" before the paywall does. `ProjectionStep` and `ReviewStep` still exist as
+code but are not in the flow.
 The identity step ("I'm someone who gets stronger without going to a gym") is
 echoed back on the plan screen and the paywall. The first-rep step asks for five
 reps before anything is paid for, and is skippable without scolding.

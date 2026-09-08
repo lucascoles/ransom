@@ -337,9 +337,21 @@ struct RansomPlan: Equatable {
     /// The curve ends on the user's own target, not a constant. With a fixed third
     /// the plan screen's chart landed on the goal only when the user kept the
     /// suggested one, and contradicted it the moment they dragged the slider.
+    ///
+    /// An S-curve rather than a straight ramp: a slow first few days while the
+    /// habit is still the habit, the steep part in weeks two and three, then a
+    /// settle onto the target. That is the shape a habit actually changes in,
+    /// and it is what the plan screen's chart draws. Smoothstep integrates to
+    /// exactly one half over the ramp, the same as the straight line did, so
+    /// the month-one hours quoted on the plan and the paywall did not move.
     private func reduction(onDay day: Int) -> Double {
-        targetReduction * min(1, Double(day) / 28)
+        let t = min(1, max(0, Double(day) / Double(RansomPlan.rampDays)))
+        return targetReduction * t * t * (3 - 2 * t)
     }
+
+    /// How long the curve takes to reach the target. The plan screen quotes the
+    /// calendar date this many days out.
+    static let rampDays = 28
 
     /// Minutes earned by a given number of reps of a given movement.
     ///

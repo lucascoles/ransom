@@ -151,55 +151,6 @@ struct IntensityStep: View {
     }
 }
 
-// MARK: - Notifications
-
-struct NotificationsStep: View {
-    var onNext: () -> Void
-
-    @State private var isRequesting = false
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
-
-            RexScene(
-                pose: .coach,
-                line: "I'll ping you when your minutes are nearly up, and when they're gone. That's it. No spam, promise.",
-                size: 130,
-                typewriter: true
-            )
-            .padding(.horizontal, Metrics.screenPadding)
-
-            VStack(spacing: 10) {
-                Text("Can Rex check in?")
-                    .font(RansomFont.title(27))
-                    .foregroundStyle(Palette.ink)
-                Text("A heads-up before your unlocked time runs out, and one when it ends. Nothing else, ever.")
-                    .font(RansomFont.body(15))
-                    .foregroundStyle(Palette.inkSoft)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 30)
-            }
-            .padding(.top, 32)
-
-            Spacer()
-
-            VStack(spacing: 8) {
-                PrimaryButton(title: "Yes, keep me posted", isLoading: isRequesting) {
-                    isRequesting = true
-                    Task {
-                        await NotificationManager.requestPermission()
-                        isRequesting = false
-                        onNext()
-                    }
-                }
-                TextButton(title: "Not now", action: onNext)
-            }
-            .padding(.horizontal, Metrics.screenPadding)
-            .padding(.bottom, 24)
-        }
-    }
-}
 // MARK: - Building the plan
 
 /// The obligatory "we're doing maths about you" beat. It's theatre, but it's the
@@ -345,7 +296,10 @@ struct PlanRevealStep: View {
             // No number on this button. The commitment length and the trial length
             // are different clocks, and "Start my 5-day run" straight into a 3-day
             // trial read as a bait and switch. The paywall states the trial terms.
-            buttonTitle: "Start my plan",
+            // "FREE" is the one word that belongs here: the next two screens are
+            // the trial, and the plan is the first place that can say it is free.
+            buttonTitle: "Continue for FREE",
+            footnote: "No payment due now",
             onNext: onNext
         ) {
             VStack(spacing: 14) {
@@ -412,39 +366,56 @@ struct PlanRevealStep: View {
     /// than re-deriving the curve here. An earlier version of this chart carried its
     /// own copy of the curve's constant, so retuning the plan would have silently
     /// left the picture telling a different story to the numbers above it.
+    ///
+    /// A goal with a date on it. "Down to 4h 35m by Oct 6" is a thing that can
+    /// be true or false on a particular morning; "over four weeks" is not. The
+    /// curve is sampled daily so the S-shape of the plan's ramp is visible: a
+    /// slow first few days, the drop, the settle onto the target.
     private var projectionCard: some View {
         let baseline = plan.hoursPerDay
-        let points = (0...4).map { projectedHours(onDay: $0 * 7) }
+        let points = (0...RansomPlan.rampDays).map { projectedHours(onDay: $0) }
+        let target = points.last ?? baseline
         let monthHours = Int(plan.firstMonthHoursSaved.rounded())
 
         return VStack(alignment: .leading, spacing: 12) {
-            Text("Your screen time from here")
-                .font(RansomFont.headline(16))
-                .foregroundStyle(Palette.ink)
+            VStack(alignment: .leading, spacing: 3) {
+                eyebrow("YOUR GOAL")
+                Text("Down to \(formatted(target)) a day by \(targetDate)")
+                    .font(RansomFont.headline(17))
+                    .foregroundStyle(Palette.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             ProjectionChart(points: points, progress: stage >= 2 ? 1 : 0)
-                .frame(height: 78)
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.9), value: stage)
+                .frame(height: 110)
+                .padding(.top, 4)
+                .animation(reduceMotion ? nil : .easeOut(duration: 1.1), value: stage)
 
             HStack {
-                Text("Today · \(formatted(baseline))")
+                Text("Now · \(formatted(baseline))")
                     .font(RansomFont.caption(12))
                     .foregroundStyle(Palette.inkSoft)
                 Spacer()
-                Text("Week 4 · \(formatted(points.last ?? baseline)), your target")
+                Text("Goal · \(formatted(target))")
                     .font(RansomFont.caption(12))
                     .foregroundStyle(Palette.green)
             }
 
-            // The assumption, stated. The projection screen earlier does the same:
-            // a month figure that can be checked is worth more than a bigger one
-            // that can't, and this is the number the paywall repeats next.
-            Text("Assumes you ease down to your target over four weeks. That's about \(monthHours)h back in your first month.")
+            // The assumption, stated. A month figure that can be checked is worth
+            // more than a bigger one that can't, and this is the number the
+            // paywall repeats next.
+            Text("Assumes you ease down to your target over \(RansomPlan.rampDays) days. That's about \(monthHours)h back in your first month.")
                 .font(RansomFont.caption(12))
                 .foregroundStyle(Palette.inkFaint)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .ransomCard()
+    }
+
+    /// The calendar day the curve reaches the target, as "Oct 6".
+    private var targetDate: String {
+        let date = Calendar.current.date(byAdding: .day, value: RansomPlan.rampDays, to: Date()) ?? Date()
+        return date.formatted(.dateTime.month(.abbreviated).day())
     }
 
     /// The mechanism, in Rex's voice. Deliberately the only place the set size
@@ -595,6 +566,17 @@ private struct ProjectionChart: View {
                     coordinates.dropFirst().forEach { path.addLine(to: $0) }
                 }
                 .stroke(Palette.green, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+
+                // Both ends marked: "now" and "goal" are the two numbers the
+                // labels beneath name, and a dot on each is what ties them to
+                // the line.
+                if let first = coordinates.first {
+                    Circle()
+                        .fill(Palette.surface)
+                        .frame(width: 10, height: 10)
+                        .overlay(Circle().strokeBorder(Palette.green, lineWidth: 2.5))
+                        .position(first)
+                }
 
                 if let last = coordinates.last {
                     Circle()

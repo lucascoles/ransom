@@ -317,11 +317,17 @@ struct BankExplainerStep: View {
                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 12) {
-                    bullet("\(plan.repsPerUnlock) \(exercise.title.lowercased()) fills it by \(plan.minutesPerUnlock) minutes.")
+                    bullet("\(plan.setTarget) \(exercise.title.lowercased()) fills it by \(plan.minutesPerUnlock) minutes.")
                     // The cap is part of the offer, not fine print. "Walking pays"
                     // without "up to here" is the version that reads as a loophole
                     // and gets found the first evening somebody tests it.
-                    bullet("Walking pays too, up to \(plan.stepMinutesCap) minutes a day.")
+                    //
+                    // Only for people who chose walking. Steps are banked from the
+                    // Walking tab, which does not exist for anyone else, so this
+                    // was a promise made to people it could not be kept for.
+                    if profile.exercises.contains(.steps) {
+                        bullet("Walking pays too, up to \(plan.stepMinutesCap) minutes a day.")
+                    }
                     bullet("Open a blocked app and it spends from the bank.")
                 }
             }

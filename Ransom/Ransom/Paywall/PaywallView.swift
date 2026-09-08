@@ -263,6 +263,19 @@ struct PaywallView: View {
                     .multilineTextAlignment(.center)
             }
 
+            // The line the trial-reminder screen just made, repeated where the
+            // price is. Only when there is a trial to make it true of.
+            if store.trialDescription(for: store.selectedPlan) != nil {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 15))
+                        .foregroundStyle(Palette.green)
+                    Text("No payment due now")
+                        .font(RansomFont.headline(14))
+                        .foregroundStyle(Palette.ink)
+                }
+            }
+
             PrimaryButton(title: ctaTitle, isLoading: isWorking) {
                 buy()
             }
@@ -305,9 +318,18 @@ struct PaywallView: View {
         errorMessage = nil
         isWorking = true
         Task {
-            let success = await store.purchase(store.selectedPlan)
+            let plan = store.selectedPlan
+            // Read before the purchase: the answer flips to "no" once it goes
+            // through, and a reminder about a trial that never started is worse
+            // than none.
+            let startsTrial = await store.isEligibleForTrial(plan)
+            let success = await store.purchase(plan)
             isWorking = false
             if success {
+                // The promise the trial-reminder screen made, kept.
+                if startsTrial, let days = store.trialDays(for: plan) {
+                    NotificationManager.scheduleTrialEndingReminder(trialDays: days)
+                }
                 complete()
             } else if case .failed(let message) = store.purchaseState {
                 errorMessage = message

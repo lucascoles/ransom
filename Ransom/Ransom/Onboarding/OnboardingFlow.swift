@@ -5,6 +5,7 @@ import SwiftUI
 struct OnboardingFlow: View {
     @Environment(AppModel.self) private var model
     @Environment(ScreenTimeManager.self) private var screenTime
+    @Environment(SubscriptionManager.self) private var store
 
     @State private var draft = UserProfile.launchSeed ?? UserProfile()
     @State private var step: OnboardingStep = OnboardingStep.launchStep ?? .coldOpen
@@ -72,10 +73,7 @@ struct OnboardingFlow: View {
     private var content: some View {
         switch step {
         case .coldOpen:
-            ColdOpenStep(onFinish: { advance(to: .welcome) })
-
-        case .welcome:
-            WelcomeStep(onStart: { advance(to: .name) })
+            ColdOpenStep(onFinish: { advance(to: .name) })
 
         case .name:
             NameStep(profile: $draft, onNext: { advance(to: .apps) })
@@ -87,47 +85,45 @@ struct OnboardingFlow: View {
             ScrollLoadStep(profile: $draft, scrollsInBed: $scrollsInBed, onNext: { advance(to: .reality) })
 
         case .reality:
-            RealityCheckStep(profile: draft, onNext: { advance(to: .projection) })
-
-        case .projection:
-            ProjectionStep(profile: draft, onNext: { advance(to: .screenGoal) })
+            RealityCheckStep(profile: draft, onNext: { advance(to: .screenGoal) })
 
         case .screenGoal:
             ScreenGoalStep(profile: $draft, onNext: { advance(to: .identity) })
 
         case .identity:
-            IdentityStep(profile: $draft, onNext: { advance(to: .age) })
-
-        case .age:
-            AgeStep(profile: $draft, onNext: { advance(to: .body) })
-
-        case .body:
-            BodyStep(profile: $draft, onNext: { advance(to: .exercises) })
-
+            IdentityStep(profile: $draft, onNext: { advance(to: .exercises) })
 
         case .exercises:
             ExercisesStep(profile: $draft, onNext: { advance(to: .intensity) })
 
         case .intensity:
-            IntensityStep(profile: $draft, onNext: { advance(to: .bank) })
+            IntensityStep(profile: $draft, onNext: { advance(to: .weight) })
 
-        case .bank:
-            BankExplainerStep(profile: draft, onNext: { advance(to: .firstRep) })
+        case .weight:
+            WeightStep(profile: $draft, onNext: { advance(to: .blocking) })
+
+        case .blocking:
+            BlockingExplainerStep(profile: draft, onNext: { advance(to: .firstRep) })
 
         case .firstRep:
-            FirstRepStep(profile: draft, onNext: { advance(to: .notifications) })
-
-        case .notifications:
-            NotificationsStep(onNext: { advance(to: .building) })
+            FirstRepStep(profile: draft, onNext: { advance(to: .building) })
 
         case .building:
             BuildingPlanStep(profile: draft, onNext: { advance(to: .plan) })
 
         case .plan:
+            // The reminder screen promises a trial. If StoreKit says the selected
+            // plan carries none, the promise would be false, so it is skipped.
             PlanRevealStep(profile: draft, onNext: { advance(to: .review) })
 
         case .review:
-            ReviewStep(onNext: { advance(to: .paywall) })
+            // Same skip as below: no trial, no promise to make about one.
+            ReviewStep(onNext: {
+                advance(to: store.trialDays(for: store.selectedPlan) == nil ? .paywall : .trialReminder)
+            })
+
+        case .trialReminder:
+            TrialReminderStep(onNext: { advance(to: .paywall) })
 
         case .paywall:
             PaywallView(
@@ -170,61 +166,66 @@ struct OnboardingFlow: View {
 }
 
 /// Each screen in the intake, in order. `progress` drives the top bar.
+///
+/// Fifteen screens. Seven were cut in one pass because each was either saying
+/// something a neighbour already said (welcome after the cold open, the
+/// projection after the reality check, the bank after the pace step) or asking
+/// for something nothing used (age, height and weight). The rating ask went
+/// because it sat between the plan and the trial, and asked people to rate an
+/// app they had not opened yet. The notifications ask was folded into the
+/// trial-reminder screen, where the permission finally has a reason attached.
 enum OnboardingStep: Int, CaseIterable, Hashable {
-    // Three taps naming the problem, before anything is asked for.
+    // Three taps naming the problem, before anything is asked for. Ends by
+    // turning the story on the reader, which is the whole welcome.
     case coldOpen
-    case welcome
     case name
     // The confession comes first: the reality check only lands because the user
     // just named their own apps and their own hours.
     case apps
     case scrollLoad
     case reality
-    // The number that changes the room, straight after they've named their hours.
-    case projection
     // The goal lands while the cost of the current habit is still on screen.
     case screenGoal
     case identity
     // Calibration sits after the hook, so it reads as building the fix rather
     // than filling in a form.
-    case age
-    case body
     case exercises
     case intensity
-    // The economy the pace buys into. The commitment itself now lives on the
-    // pace step, since a tier and its run are one decision.
-    case bank
+    // One picker, and skippable. Height used to be asked for here too and was
+    // read by nothing; weight scales the calorie estimate, so without it every
+    // user gets the figure for an average adult.
+    case weight
+    // What happens to the apps they named, drawn, with the Screen Time ask on
+    // the same screen. Asked here because the pace step has just said what a
+    // set is worth, so "your reps open them" is a sentence they can check.
+    case blocking
     case firstRep
-    // Asking here, right after they've earned something, is the one moment the
-    // permission reads as Rex keeping his side of the deal rather than a tax.
-    case notifications
     case building
     case plan
-    // Asked once the plan is on screen and before any money is mentioned, so it
-    // lands on the one thing they have seen work rather than on a purchase they
-    // have not made yet.
+    // Asked while the plan is still on screen and before any money is mentioned,
+    // so it reads as being pleased with what was built rather than as payment.
     case review
+    // The one thing people want answered before a money screen: will I get
+    // charged without noticing. Answered, with the notifications ask attached
+    // to the promise, before the paywall appears.
+    case trialReminder
     case paywall
 
     var showsChrome: Bool {
         switch self {
-        // No bar and no back arrow on the review ask. There is nothing on it to
-        // revise - it already offers "Not now" - and a back arrow there pops to
-        // the plan reveal, whose Continue would ask for the rating a second time.
-        case .coldOpen, .welcome, .building, .review, .paywall, .firstRep: return false
+        case .coldOpen, .building, .paywall, .firstRep, .review: return false
         default: return true
         }
     }
 
     /// Work already done before the bar appears.
     ///
-    /// The cold open is three taps the user has genuinely made, and the welcome
-    /// screen a fourth — but neither shows chrome, so without this the bar surfaces
-    /// at the first question sitting near zero and the flow reads as though nothing
-    /// has happened yet. Crediting what they've actually done is both truer and
-    /// kinder: the first bar lands around a sixth of the way along instead of a
-    /// tenth. Raise it to flatter harder; the bar still reaches exactly 100% at the
-    /// paywall either way, because the credit is added to both halves.
+    /// The cold open is three taps the user has genuinely made, but it shows no
+    /// chrome, so without this the bar surfaces at the first question sitting
+    /// near zero and the flow reads as though nothing has happened yet.
+    /// Crediting what they've actually done is both truer and kinder. The bar
+    /// still reaches exactly 100% at the paywall, because the credit is added to
+    /// both halves.
     private static let creditBeforeChrome = 1.0
 
     var progress: Double {
@@ -233,12 +234,12 @@ enum OnboardingStep: Int, CaseIterable, Hashable {
         return (Double(rawValue) + Self.creditBeforeChrome) / total
     }
 
-    /// Opens the app on one named screen instead of the welcome step, so a
+    /// Opens the app on one named screen instead of the cold open, so a
     /// screenshot run can capture the whole flow without driving the UI:
     ///
     ///     xcrun simctl launch DEVICE com.ransom.app -RansomStartStep identity
     ///
-    /// Debug builds only — a release build always starts at `.welcome`.
+    /// Debug builds only. A release build always starts at `.coldOpen`.
     static var launchStep: OnboardingStep? {
         #if DEBUG
         guard let name = UserDefaults.standard.string(forKey: "RansomStartStep") else { return nil }

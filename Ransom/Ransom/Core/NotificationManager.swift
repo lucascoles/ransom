@@ -83,4 +83,45 @@ enum NotificationManager {
         UNUserNotificationCenter.current()
             .removePendingNotificationRequests(withIdentifiers: [dailyID])
     }
+
+    /// Whether the permission has been asked for yet. The trial-reminder step
+    /// only raises the system prompt when it has not: asking twice does nothing
+    /// on iOS, and a button that promises a prompt it cannot show looks broken.
+    static func isPermissionUndetermined() async -> Bool {
+        await UNUserNotificationCenter.current().notificationSettings()
+            .authorizationStatus == .notDetermined
+    }
+
+    // MARK: - Trial
+
+    private static let trialEndingID = "ransom.notification.trial-ending"
+
+    /// The reminder the intake promises one screen before the paywall: a
+    /// heads-up the day before the free trial ends, so nobody is charged by
+    /// surprise.
+    ///
+    /// Scheduled off the trial length StoreKit reports, never a written number,
+    /// and only after a purchase that actually started a trial. Fires at 10am the
+    /// day before the trial ends. A trial too short to have a "day before" gets
+    /// it the next morning, which is still ahead of the charge.
+    static func scheduleTrialEndingReminder(trialDays: Int, from start: Date = Date()) {
+        let calendar = Calendar.current
+        let daysAhead = max(1, trialDays - 1)
+        guard let day = calendar.date(byAdding: .day, value: daysAhead, to: start),
+              let fireAt = calendar.date(bySettingHour: 10, minute: 0, second: 0, of: day),
+              fireAt > start
+        else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Your free trial ends tomorrow"
+        content.body = "Rex said he'd give you a heads-up. Here it is. Keep going, or cancel in Settings. No surprises."
+        content.sound = .default
+
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fireAt)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        let request = UNNotificationRequest(identifier: trialEndingID, content: content, trigger: trigger)
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [trialEndingID])
+        center.add(request)
+    }
 }

@@ -388,7 +388,9 @@ struct RealityCheckStep: View {
 
             Spacer()
 
-            PrimaryButton(title: "Show me how it works", action: onNext)
+            // Leads straight to the goal slider now, so the button names that
+            // rather than promising a "how it works" the next screen isn't.
+            PrimaryButton(title: "Let's fix that", action: onNext)
                 .padding(.horizontal, Metrics.screenPadding)
                 .padding(.bottom, 24)
         }

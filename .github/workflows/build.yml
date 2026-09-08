@@ -100,8 +100,8 @@ jobs:
           UDID="${{ steps.sim.outputs.udid }}"
           mkdir -p screenshots
           i=0
-          for STEP in welcome name apps scrollLoad reality identity age body fitness \
-                      exercises intensity firstRep notifications building plan paywall; do
+          for STEP in coldOpen name apps scrollLoad reality screenGoal identity \
+                      exercises intensity blocking firstRep building plan trialReminder paywall; do
             i=$((i+1))
             xcrun simctl terminate "$UDID" com.ransom.app 2>/dev/null || true
             xcrun simctl launch "$UDID" com.ransom.app -RansomStartStep "$STEP" || {
