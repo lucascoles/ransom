@@ -153,7 +153,11 @@ final class ScreenTimeManager {
     }
 
     private func restartMonitoring() {
-        guard isAuthorized, !store.isEmpty else {
+        // Deliberately not gated on a selection any more. The benchmark is total
+        // screen time, so the meter has to run from the moment Screen Time is
+        // granted - including before any app has been chosen, and on the days
+        // somebody guards nothing at all.
+        guard isAuthorized else {
             isMonitoring = false
             return
         }
@@ -163,15 +167,27 @@ final class ScreenTimeManager {
         var events: [DeviceActivityEvent.Name: DeviceActivityEvent] = [:]
 
         // The usage ladder. iOS will not tell the app how long the user has been
-        // in these apps, but it will call the monitor extension each time they
+        // on their phone, but it will call the monitor extension each time they
         // cross a threshold, so a rung per quarter hour turns an unanswerable
         // question into a series of callbacks. See `UsageMeter`.
+        //
+        // **Empty token sets on purpose.** A `DeviceActivityEvent` with no
+        // applications, categories or web domains has `includesAllActivity` set,
+        // which is what makes this the whole phone rather than the guarded apps.
+        // It used to be scoped to `selection`, and that quietly made the app's
+        // central number mean something different from the question that asked
+        // for it: onboarding took a figure for the whole phone and then compared
+        // it against usage of four apps, so "minutes saved" counted every minute
+        // spent in Maps and Messages as a win.
+        //
+        // Blocking is unaffected. The shield reads `selection` separately; this
+        // event set only measures.
         for minutes in UsageMeter.milestones {
             events[DeviceActivityEvent.Name(UsageMeter.eventName(forMinutes: minutes))] =
                 DeviceActivityEvent(
-                    applications: selection.applicationTokens,
-                    categories: selection.categoryTokens,
-                    webDomains: selection.webDomainTokens,
+                    applications: [],
+                    categories: [],
+                    webDomains: [],
                     threshold: DateComponents(minute: minutes)
                 )
         }

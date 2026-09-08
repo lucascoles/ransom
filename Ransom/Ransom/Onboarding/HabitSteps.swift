@@ -15,11 +15,12 @@ import SwiftUI
 /// the main screen, which is where the subtitle sends them.
 struct AppsStep: View {
     @Binding var profile: UserProfile
+    /// Owned by the flow, like the bedtime answer: it is the one pick here that
+    /// leaves no trace in the profile, so as step state it was lost on a back tap.
+    @Binding var picksOther: Bool
     var onNext: () -> Void
 
     @Environment(ScreenTimeManager.self) private var screenTime
-
-    @State private var picksOther = false
 
     /// Counted off `screenTime.selection` rather than the store, because only the
     /// mirrored selection is observable: reading the store would leave this tile
@@ -162,8 +163,8 @@ struct ScrollLoadStep: View {
 
     var body: some View {
         StepScaffold(
-            title: "How much time do they get?",
-            subtitle: "A rough guess is fine. Most people land higher than they expect.",
+            title: "How much time do you spend on your phone?",
+            subtitle: "A day, across everything. Most people guess low.",
             isButtonEnabled: hasAnswer && scrollsInBed != nil,
             onNext: onNext
         ) {
@@ -334,7 +335,10 @@ struct RealityCheckStep: View {
         let hours = minutesPerDay / 60
         let rest = minutesPerDay % 60
         if hours == 0 { return "\(rest) minutes" }
-        return rest == 0 ? "\(hours) hours" : "\(hours)h \(rest)m"
+        // The slider's floor is exactly one hour, so "1 hours" was the first
+        // thing anyone at the low end read on this screen.
+        if rest == 0 { return hours == 1 ? "1 hour" : "\(hours) hours" }
+        return "\(hours)h \(rest)m"
     }
 
     var body: some View {
@@ -344,7 +348,7 @@ struct RealityCheckStep: View {
             RexImage(pose: revealed ? .coach : .sad, size: 150)
 
             VStack(spacing: 6) {
-                Text("At \(dailyLabel) a day, that's")
+                Text("At \(dailyLabel) a day on your phone, that's")
                     .font(RansomFont.body(16))
                     .foregroundStyle(Palette.inkSoft)
 
@@ -432,7 +436,7 @@ struct ScreenGoalStep: View {
     var body: some View {
         StepScaffold(
             title: "Where do you want to land?",
-            subtitle: "Your daily limit for those apps. Rex helps you get there.",
+            subtitle: "Your daily screen time target. Rex helps you get there.",
             isButtonEnabled: profile.goalDailyMinutes != nil,
             onNext: onNext
         ) {
@@ -443,7 +447,7 @@ struct ScreenGoalStep: View {
                         .foregroundStyle(Palette.brand)
                         .contentTransition(.numericText(value: Double(goal)))
                         .animation(.snappy(duration: 0.2), value: goal)
-                    Text("a day in the apps you picked")
+                    Text("a day on your phone, total")
                         .font(RansomFont.body(14))
                         .foregroundStyle(Palette.inkSoft)
                 }
@@ -487,6 +491,13 @@ struct ScreenGoalStep: View {
             // Committing the suggestion on arrival is what enables Continue: the
             // default is a real answer, and dragging is how you disagree with it.
             if profile.goalDailyMinutes == nil {
+                profile.goalDailyMinutes = profile.suggestedGoalMinutes
+            }
+            // Re-suggested when the hours step was revisited and lowered under
+            // it. A 6h 40m goal kept against a 1h day sits past the end of the
+            // slider, reads as saving nothing, and the baseline it was picked
+            // against no longer exists to justify it.
+            if let goal = profile.goalDailyMinutes, goal > max(60, baseline) {
                 profile.goalDailyMinutes = profile.suggestedGoalMinutes
             }
         }
