@@ -10,7 +10,13 @@ import Foundation
 /// `RansomLinks.allReachable` gives you a single thing to check before submitting.
 public enum RansomLinks {
     /// Change this one line to move the whole set to a different host.
-    private static let host = "https://ransom.app"
+    ///
+    /// **Not ransom.app.** That domain resolves to servers we do not control and
+    /// serves nothing over HTTPS - it belongs to someone else. The app used to
+    /// point three live links at it, which would have sent App Review to a
+    /// stranger's website. Pages are served from the repo's `docs/` directory
+    /// instead, so the URLs and the pages ship together and cannot drift apart.
+    private static let host = "https://lucascoles.github.io/ransom"
 
     public static let privacy = URL(string: "\(host)/privacy")!
     public static let terms = URL(string: "\(host)/terms")!
