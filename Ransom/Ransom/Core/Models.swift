@@ -400,17 +400,26 @@ struct RansomPlan: Equatable {
 
     /// The amounts offered when spending from the bank.
     ///
-    /// Steps of one set's worth, so spending is quoted in the same unit as
-    /// earning: on Beast a set is ten minutes and the choices are 10/20/30, on
-    /// Chill it's twenty and they're 20/40/60. Someone who has done three sets
-    /// sees three sets' worth on offer, which needs no explaining.
+    /// Fixed steps, and the first one is deliberately small.
     ///
-    /// "All" is appended whenever the balance doesn't already land on a step, so
-    /// there is always a way to spend the remainder rather than stranding four
-    /// minutes nobody can reach.
+    /// These used to be multiples of one set's worth, so the smallest thing you
+    /// could buy was a whole unlock: 15 minutes on Standard, 20 on Chill. That
+    /// quoted spending in the same unit as earning, which reads tidily and works
+    /// against the entire product. Somebody who wants to answer one message has
+    /// to buy a quarter of an hour, and a quarter of an hour of Instagram is not
+    /// what they came for. The floor on the cheapest purchase was setting the
+    /// floor on the session.
+    ///
+    /// Five is enough to reply to something and not enough to settle in.
+    ///
+    /// "All" is still appended whenever the balance doesn't already land on a
+    /// step, so there is always a way to spend the remainder rather than
+    /// stranding four minutes nobody can reach.
+    static let spendSteps = [5, 15, 30]
+
     func spendOptions(banked: Int) -> [Int] {
-        guard banked > 0, minutesPerUnlock > 0 else { return [] }
-        var options = (1...3).map { $0 * minutesPerUnlock }.filter { $0 <= banked }
+        guard banked > 0 else { return [] }
+        var options = RansomPlan.spendSteps.filter { $0 <= banked }
         if options.isEmpty { return [banked] }
         if !options.contains(banked) { options.append(banked) }
         return options
