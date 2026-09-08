@@ -167,7 +167,13 @@ struct WelcomeStep: View {
                     .font(RansomFont.title(21))
                     .foregroundStyle(Palette.brand)
 
-                Text("A quick set of push-ups unlocks your apps. That's the whole idea - and you get stronger without ever planning a workout.")
+                // Not push-ups. This screen runs before the exercise step, so
+                // naming a movement here promises one the user has not picked
+                // yet and may never pick: squats and walking are both on offer
+                // two screens later. Every other line in the flow reads the
+                // movement off the profile; this one could not, so it says the
+                // category instead.
+                Text("A quick set of exercise unlocks your apps. That's the whole idea - and you get stronger without ever planning a workout.")
                     .font(RansomFont.body(16))
                     .foregroundStyle(Palette.inkSoft)
                     .multilineTextAlignment(.center)
