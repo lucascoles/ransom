@@ -107,12 +107,6 @@ final class RepEngine {
         reps = 0
     }
 
-    /// The always-available fallback. Also how the "tap to count" mode works.
-    func registerManualRep() {
-        guard phase == .counting else { return }
-        commitRep(minimumGap: 0.15)
-    }
-
     // MARK: - Proximity (push-ups)
 
     private func startProximity() {
