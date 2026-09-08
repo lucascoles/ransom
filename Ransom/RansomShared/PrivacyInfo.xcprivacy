@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Ransom does no tracking. There is no analytics SDK, no advertising
+	     identifier and no third-party code in the app at all. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<!-- Nothing is collected, because nothing leaves the phone. Rep counting is
+	     Vision running on-device on frames that are never written to disk; screen
+	     time is read through Family Controls and stored in the app group; the
+	     only network call in the codebase is a Link to Apple's own subscription
+	     management page. -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<!-- UserDefaults is the app group. The app, the shield, the shield
+			     action and the monitor extension all read and write the same
+			     suite so a rep paid in one process is spendable in another.
+			     CA92.1 is exactly that reason: access to information from the
+			     app itself and its own app group containers. -->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
