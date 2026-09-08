@@ -618,24 +618,8 @@ struct HomeView: View {
                     }
                 } label: {
                     VStack(spacing: 1) {
-                        // A coin against the figure, so a chip reads as a
-                        // denomination rather than a bare number. The word stays
-                        // on the button below: something on this card has to say
-                        // what these are, and the button is where it can be a
-                        // sentence rather than a label.
-                        HStack(spacing: 4) {
-                            Image(Currency.symbolName)
-                                .resizable()
-                                .frame(width: 15, height: 15)
-                                // Chosen chips are white on tangerine, and a gold
-                                // coin on tangerine is nearly the same value. A
-                                // touch of shadow keeps its edge without
-                                // repainting it.
-                                .shadow(color: isChosen ? .black.opacity(0.28) : .clear,
-                                        radius: 1, x: 0, y: 0.5)
-                            Text(Currency.amount(minutes))
-                                .font(RansomFont.headline(16))
-                        }
+                        Text(Currency.amount(minutes))
+                            .font(RansomFont.headline(16))
                         // Only the option that empties the bank gets labelled, so
                         // the label means something when it appears.
                         if minutes == model.bankedMinutes && options.count > 1 {
@@ -644,12 +628,6 @@ struct HomeView: View {
                         }
                     }
                     .foregroundStyle(isChosen ? .white : Palette.ink)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(
-                        minutes == model.bankedMinutes && options.count > 1
-                            ? "Spend all \(Currency.coins(minutes))"
-                            : "Spend \(Currency.coins(minutes))"
-                    )
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .background(
