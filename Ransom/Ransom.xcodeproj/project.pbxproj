@@ -11,6 +11,7 @@
 		1A0000000000000000000061 /* RansomShieldAction.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1A0000000000000000000022 /* RansomShieldAction.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		1A0000000000000000000062 /* RansomMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1A0000000000000000000023 /* RansomMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		1A0000000000000000000A07 /* RansomReport.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 1A0000000000000000000A02 /* RansomReport.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D34BC120A6FD0D126B52BDBB /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1473E192EF5051D0E54007D6 /* Foundation.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -42,6 +43,13 @@
 			remoteGlobalIDString = 1A0000000000000000000A06;
 			remoteInfo = RansomReport;
 		};
+		6340039975543651B5AA0738 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1A0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1A0000000000000000000040;
+			remoteInfo = Ransom;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -72,6 +80,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1473E192EF5051D0E54007D6 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		1A0000000000000000000020 /* Ransom.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ransom.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A0000000000000000000021 /* RansomShield.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RansomShield.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A0000000000000000000022 /* RansomShieldAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RansomShieldAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -85,37 +94,57 @@
 		1A0000000000000000000036 /* RansomMonitor-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "RansomMonitor-Info.plist"; sourceTree = "<group>"; };
 		1A0000000000000000000037 /* Ransom.storekit */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Ransom.storekit; sourceTree = "<group>"; };
 		1A0000000000000000000A02 /* RansomReport.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RansomReport.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E657D7E6D852F5C6C25CD38A /* RansomTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RansomTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		1A0000000000000000000010 /* Ransom */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = Ransom;
 			sourceTree = "<group>";
 		};
 		1A0000000000000000000011 /* RansomShared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = RansomShared;
 			sourceTree = "<group>";
 		};
 		1A0000000000000000000012 /* RansomShield */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = RansomShield;
 			sourceTree = "<group>";
 		};
 		1A0000000000000000000013 /* RansomShieldAction */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = RansomShieldAction;
 			sourceTree = "<group>";
 		};
 		1A0000000000000000000014 /* RansomMonitor */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = RansomMonitor;
 			sourceTree = "<group>";
 		};
 		1A0000000000000000000A01 /* RansomReport */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = RansomReport;
+			sourceTree = "<group>";
+		};
+		8E9B021137EDBF59C1C41DFB /* RansomTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = RansomTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -156,6 +185,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1EA027B14ADBA8839C4CA56D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D34BC120A6FD0D126B52BDBB /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -170,6 +207,8 @@
 				1A0000000000000000000004 /* Config */,
 				1A0000000000000000000003 /* Products */,
 				398A0E6D304C8B82008E36E6 /* Recovered References */,
+				6D404A1CDE58725DEBF8AF6B /* Frameworks */,
+				8E9B021137EDBF59C1C41DFB /* RansomTests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -180,6 +219,7 @@
 				1A0000000000000000000021 /* RansomShield.appex */,
 				1A0000000000000000000022 /* RansomShieldAction.appex */,
 				1A0000000000000000000023 /* RansomMonitor.appex */,
+				E657D7E6D852F5C6C25CD38A /* RansomTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -206,6 +246,22 @@
 				1A0000000000000000000A01 /* RansomReport */,
 			);
 			name = "Recovered References";
+			sourceTree = "<group>";
+		};
+		6D404A1CDE58725DEBF8AF6B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D27231176798E69AE60900A9 /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		D27231176798E69AE60900A9 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				1473E192EF5051D0E54007D6 /* Foundation.framework */,
+			);
+			name = iOS;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -322,6 +378,27 @@
 			productReference = 1A0000000000000000000A02 /* RansomReport.appex */;
 			productType = "com.apple.product-type.extensionkit-extension";
 		};
+		49B180953A8EDC203FCE37F6 /* RansomTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D74EACC9F5E8CBF1D444A85C /* Build configuration list for PBXNativeTarget "RansomTests" */;
+			buildPhases = (
+				6746074A54F4622C9A8F1D55 /* Sources */,
+				1EA027B14ADBA8839C4CA56D /* Frameworks */,
+				B3690E276E1A706890BC5999 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				473C660F01B16DBCAC62B38C /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				8E9B021137EDBF59C1C41DFB /* RansomTests */,
+			);
+			name = RansomTests;
+			productName = RansomTests;
+			productReference = E657D7E6D852F5C6C25CD38A /* RansomTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -365,6 +442,7 @@
 				1A0000000000000000000042 /* RansomShieldAction */,
 				1A0000000000000000000A06 /* RansomReport */,
 				1A0000000000000000000043 /* RansomMonitor */,
+				49B180953A8EDC203FCE37F6 /* RansomTests */,
 			);
 		};
 /* End PBXProject section */
@@ -399,6 +477,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		1A0000000000000000000A05 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B3690E276E1A706890BC5999 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -443,6 +528,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6746074A54F4622C9A8F1D55 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -465,6 +557,12 @@
 			isa = PBXTargetDependency;
 			target = 1A0000000000000000000A06 /* RansomReport */;
 			targetProxy = 1A0000000000000000000A0A /* PBXContainerItemProxy */;
+		};
+		473C660F01B16DBCAC62B38C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = Ransom;
+			target = 1A0000000000000000000040 /* Ransom */;
+			targetProxy = 6340039975543651B5AA0738 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -788,6 +886,41 @@
 			};
 			name = Release;
 		};
+		582163891FA2BD009127E55C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ransom.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ransom.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Ransom";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		EED9B7AD9064C5913AB79CFA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ransom.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ransom.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Ransom";
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -841,6 +974,15 @@
 			buildConfigurations = (
 				1A0000000000000000000A0C /* Debug */,
 				1A0000000000000000000A0D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D74EACC9F5E8CBF1D444A85C /* Build configuration list for PBXNativeTarget "RansomTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				582163891FA2BD009127E55C /* Release */,
+				EED9B7AD9064C5913AB79CFA /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
