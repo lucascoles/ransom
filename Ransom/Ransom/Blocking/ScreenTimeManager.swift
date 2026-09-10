@@ -248,10 +248,27 @@ final class ScreenTimeManager {
             intervalEnd: calendar.dateComponents([.hour, .minute, .second], from: end),
             repeats: false
         )
+        // **Empty token sets on purpose**, exactly as the usage ladder does it:
+        // this threshold measures the whole phone, not the guarded apps.
+        //
+        // It used to be scoped to `selection`, and that is what let time run out
+        // without the shield coming back. The minutes are sold on the wall clock
+        // - the countdown says so, and `scheduleTimeUpReminder` fires a plain
+        // interval notification at exactly that moment - but a threshold scoped
+        // to the guarded apps only accrues while the user is *inside* one of
+        // them. Ten minutes of Messages in the middle of a fifteen minute unlock
+        // left the threshold five minutes short, so "Time's up" arrived on
+        // schedule and nothing put Rex back on the door. The apps stayed open
+        // until something else reconciled, which in practice meant opening
+        // Ransom.
+        //
+        // Measuring all activity makes the threshold track the same clock the
+        // user was sold, and fires it while the phone is still in their hand,
+        // which is the moment it needs to land.
         let event = DeviceActivityEvent(
-            applications: selection.applicationTokens,
-            categories: selection.categoryTokens,
-            webDomains: selection.webDomainTokens,
+            applications: [],
+            categories: [],
+            webDomains: [],
             threshold: DateComponents(minute: max(1, minutes))
         )
         try? center.startMonitoring(.unlockWindow, during: schedule,
