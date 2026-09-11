@@ -84,7 +84,14 @@ struct WorkoutView: View {
                     reps: reps,
                     minutes: grantedMinutes,
                     trigger: trigger,
+                    // Same guard as Home: spending is irreversible and an
+                    // unlock with no permission or no chosen apps opens nothing,
+                    // so the coins stay banked instead.
                     onUseNow: {
+                        guard screenTime.canUnlock else {
+                            dismiss()
+                            return
+                        }
                         let spent = model.spendFromBank(minutes: grantedMinutes)
                         if spent > 0 { screenTime.grantEarnedTime(minutes: spent) }
                         dismiss()

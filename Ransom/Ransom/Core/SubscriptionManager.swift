@@ -76,6 +76,20 @@ final class SubscriptionManager {
     private(set) var purchaseState: PurchaseState = .idle
     private(set) var isLoadingProducts = true
 
+    /// Whether this Apple Account can still use each plan's introductory offer.
+    ///
+    /// An offer configured on a product exists for everybody; only first-time
+    /// subscribers may actually take it. `product.subscription?.introductoryOffer`
+    /// answers the first question and the paywall was reading it as though it
+    /// answered the second, so a lapsed subscriber - or anyone who used "Erase
+    /// all data" and went through intake again, or a sandbox account that had
+    /// already consumed the trial - was shown "3 days free" and charged at once.
+    /// That is the misrepresentation guideline 3.1.2(c) exists to stop.
+    ///
+    /// Absent an answer this stays empty and `trialDescription` says nothing
+    /// about a trial, because silence is recoverable and a false promise is not.
+    private(set) var introOfferEligible: [Plan: Bool] = [:]
+
     /// Annual is pre-selected: it's the better deal for the user and the better
     /// retention outcome for us. The single highest-leverage thing to A/B here is
     /// flipping this to `.weekly`.
@@ -119,10 +133,12 @@ final class SubscriptionManager {
         return Int((NSDecimalNumber(decimal: ratio).doubleValue * 100).rounded())
     }
 
-    /// Mentions a trial only when the loaded product actually carries one; falls back
-    /// to the configured 3-day offer when StoreKit hasn't answered yet.
+    /// Mentions a trial only when the product carries one **and this account may
+    /// still use it**. Falls back to the configured offer only while StoreKit has
+    /// not answered at all.
     func trialDescription(for plan: Plan) -> String? {
         guard let product = products[plan] else { return plan.fallbackTrial }
+        guard introOfferEligible[plan] == true else { return nil }
         guard let offer = product.subscription?.introductoryOffer,
               offer.paymentMode == .freeTrial else { return nil }
         let count = offer.period.value
@@ -185,8 +201,23 @@ final class SubscriptionManager {
                 byPlan[plan] = product
             }
         }
+        // Eligibility is a separate question from whether the offer exists, and
+        // it is a network call per product, so it is asked here rather than at
+        // every paywall render.
+        var eligible: [Plan: Bool] = [:]
+        for (plan, product) in byPlan {
+            guard let subscription = product.subscription,
+                  subscription.introductoryOffer != nil else {
+                eligible[plan] = false
+                continue
+            }
+            eligible[plan] = await subscription.isEligibleForIntroOffer
+        }
+        let resolved = eligible
+
         await MainActor.run {
             products = byPlan
+            introOfferEligible = resolved
             isLoadingProducts = false
         }
     }

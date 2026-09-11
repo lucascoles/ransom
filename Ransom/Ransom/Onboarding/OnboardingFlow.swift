@@ -127,10 +127,7 @@ struct OnboardingFlow: View {
             BuildingPlanStep(profile: draft, onNext: { advance(to: .plan) })
 
         case .plan:
-            PlanRevealStep(profile: draft, onNext: { advance(to: .review) })
-
-        case .review:
-            ReviewStep(onNext: { advance(to: .paywall) })
+            PlanRevealStep(profile: draft, onNext: { advance(to: .paywall) })
 
         case .paywall:
             PaywallView(
@@ -222,12 +219,11 @@ enum OnboardingStep: Int, CaseIterable, Hashable {
     case plan
     // Asked while the plan is still on screen and before any money is mentioned,
     // so it reads as being pleased with what was built rather than as payment.
-    case review
     case paywall
 
     var showsChrome: Bool {
         switch self {
-        case .coldOpen, .welcome, .building, .paywall, .firstRep, .review: return false
+        case .coldOpen, .welcome, .building, .paywall, .firstRep: return false
         default: return true
         }
     }

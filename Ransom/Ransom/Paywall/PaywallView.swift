@@ -197,44 +197,71 @@ struct PaywallView: View {
                     .foregroundStyle(isSelected ? Palette.brand : Palette.hairline)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    // The annual row's headline is the offer itself. "Annual"
-                    // describes the billing period, which is the least
-                    // interesting thing about it and is said underneath anyway.
-                    // One line each, shrinking rather than wrapping. A plan row
-                    // is scanned in a second and compared against the row below
-                    // it; a headline that wraps pushes the rows out of step and
-                    // makes the pair harder to read than either line was long.
-                    Text(isAnnual ? annualHeadline : plan.title)
-                        .font(RansomFont.headline(17))
-                        .foregroundStyle(Palette.ink)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
+                    // The billing period, plainly. This used to be the offer
+                    // itself - "Start free, save 81%" - which is a pricing claim,
+                    // and pricing claims are exactly what guideline 3.1.2(c)
+                    // requires to sit *below* the amount charged.
+                    HStack(spacing: 7) {
+                        Text(plan.title)
+                            .font(RansomFont.headline(17))
+                            .foregroundStyle(Palette.ink)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+
+                        // The saving still gets said, as a badge rather than as
+                        // the headline. A percentage is calculated pricing, so it
+                        // may sit beside the plan name but not above the charge.
+                        if isAnnual, let saving = store.annualSavingsPercent {
+                            Text("SAVE \(saving)%")
+                                .font(RansomFont.caption(10))
+                                .foregroundStyle(Palette.onBrand)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(Palette.brand))
+                        }
+                    }
 
                     Text(isAnnual ? annualSubtitle : weeklySubtitle)
                         .font(RansomFont.body(13))
                         .foregroundStyle(Palette.inkSoft)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
+
+                    // Calculated pricing, kept deliberately small and faint. It
+                    // is the argument for the annual plan, but it is not what
+                    // anybody is charged, so it may not outrank the figure that
+                    // is.
+                    if isAnnual, let perWeek = store.annualPerWeek {
+                        Text("Works out at \(perWeek) per week")
+                            .font(RansomFont.caption(11))
+                            .foregroundStyle(Palette.inkFaint)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
                 }
 
                 Spacer(minLength: 4)
 
-                // Both plans priced per week, which is the only comparison that
-                // does any work: $0.96 against $4.99 is the argument for the
-                // annual plan, made at a glance and needing no arithmetic.
+                // **The amount actually charged, and the largest thing in the
+                // row.** This slot used to hold the per-week figure at 20pt with
+                // the real charge stated underneath at 13pt, on the reasoning
+                // that "$49.99" above "$4.99" made the yearly plan look six times
+                // the price of the weekly one. It does - and App Review rejected
+                // build 5 for it under guideline 3.1.2(c), which requires the
+                // billed amount to be the most clear and conspicuous pricing
+                // element, with trials, introductory pricing and calculated
+                // per-week figures subordinate in position and size.
                 //
-                // The annual's real charge is $49.99 once a year and the subtitle
-                // states it plainly. Putting that figure here would sit "$49.99"
-                // directly above "$4.99" and make the yearly plan look ten times
-                // the price of the weekly one.
+                // The comparison the per-week figure was making still gets made,
+                // one line down and two sizes smaller, which is where a number
+                // nobody is charged belongs.
                 VStack(alignment: .trailing, spacing: 1) {
-                    Text(isAnnual ? (store.annualPerWeek ?? store.displayPrice(for: plan))
-                                  : store.displayPrice(for: plan))
-                        .font(RansomFont.title(20))
+                    Text(store.displayPrice(for: plan))
+                        .font(RansomFont.title(22))
                         .foregroundStyle(Palette.ink)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                    Text("/ week")
+                        .minimumScaleFactor(0.7)
+                    Text(isAnnual ? "per year" : "per week")
                         .font(RansomFont.caption(12))
                         .foregroundStyle(Palette.inkSoft)
                         .lineLimit(1)
@@ -254,28 +281,19 @@ struct PaywallView: View {
         .pressable(scale: 0.985)
     }
 
-    /// "Start free and save 81%". The two reasons to pick this row, in the line
-    /// the eye lands on first.
-    private var annualHeadline: String {
-        let free = store.trialDescription(for: .annual) != nil
-        guard let saving = store.annualSavingsPercent else {
-            return free ? "Start free" : "Best value"
-        }
-        // "and" was the only word here doing no work, and it was the one pushing
-        // this onto a second line.
-        return free ? "Start free, save \(saving)%" : "Save \(saving)%"
-    }
-
+    /// States the trial only when this user can actually have it.
+    ///
+    /// The weekly plan carries no introductory offer at all, and even on the
+    /// annual one an offer exists on the product for everybody while only
+    /// first-time subscribers are eligible to use it. Saying "3 days free" to
+    /// somebody who is about to be charged immediately is the misrepresentation
+    /// 3.1.2(c) is about, so this asks `store` whether the offer is live for
+    /// this account rather than whether it exists.
     private var annualSubtitle: String {
-        // The trial leads, because it is the part that decides whether anyone
-        // taps at all. Both products carry the same three days free, but only the
-        // weekly row ever said so - so the annual plan looked like the one where
-        // you pay up front, which is the opposite of the truth and was quietly
-        // pushing people onto the worse-value option.
-        // The headline sells; this states what is actually charged and when, so
-        // nobody reaches the App Store sheet and meets a number they have not
-        // already seen.
-        "\(store.displayPrice(for: .annual)) billed annually"
+        if let trial = store.trialDescription(for: .annual) {
+            return "\(trial), then billed yearly"
+        }
+        return "Billed yearly"
     }
 
     /// No trial on this one by design, so it says what it costs and nothing else.

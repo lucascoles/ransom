@@ -97,9 +97,12 @@ struct HomeView: View {
                 spendCard
                 bankCard
 
-                // The second screenful is for looking, and opens with the one
-                // number nothing else on the phone can show them.
-                ReachesCard()
+                // ReachesCard (the "you reached for your apps N times today" tally) is out
+                // of v1. The counts come from BlockCountStore, which the shield extension
+                // writes, and it is not recording reliably yet - a card that says 0 when the
+                // user knows they reached ten times reads as broken. Put it back once the
+                // shield's tally is trustworthy; the view itself is untouched in
+                // Home/ReachesCard.swift.
 
                 // Only once it can show something. Unauthorized, it was a second
                 // card asking for the same permission as the setup card above.
@@ -583,12 +586,21 @@ struct HomeView: View {
 
                 spendPicker
 
+                // Only debits when there is something to open. The bank is spent
+                // before the unlock is attempted and nothing refunds it, so a
+                // spend with no permission or no chosen apps used to cost real
+                // coins and unlock nothing.
                 SecondaryButton(title: "Spend \(Currency.coins(spendChoice))", icon: Currency.symbolName) {
+                    guard screenTime.canUnlock else {
+                        Haptics.warning()
+                        return
+                    }
                     Haptics.success()
                     let spent = model.spendFromBank(minutes: spendChoice)
                     if spent > 0 { screenTime.grantEarnedTime(minutes: spent) }
                     spendAmount = nil
                 }
+                .disabled(!screenTime.canUnlock)
             }
             .ransomCard()
         }

@@ -277,6 +277,7 @@ struct PlanRevealStep: View {
     var onNext: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(SubscriptionManager.self) private var store
 
     /// How much of the screen has arrived. The hero lands alone first so it is
     /// read as the point; the chart and Rex follow as support, not competition.
@@ -284,6 +285,9 @@ struct PlanRevealStep: View {
 
     private var plan: RansomPlan { RansomPlan.make(from: profile) }
     private var exercise: Exercise { profile.primaryExercise }
+
+    /// Whether the plan this screen leads to can actually be started free.
+    private var offersTrial: Bool { store.trialDescription(for: store.selectedPlan) != nil }
 
     private var baselineMinutes: Int { profile.baselineDailyMinutes }
     /// Their hours minus their target. Read off the plan rather than recomputed,
@@ -301,10 +305,16 @@ struct PlanRevealStep: View {
             // No number on this button. The commitment length and the trial length
             // are different clocks, and "Start my 5-day run" straight into a 3-day
             // trial read as a bait and switch. The paywall states the trial terms.
-            // "FREE" is the one word that belongs here: the next two screens are
-            // the trial, and the plan is the first place that can say it is free.
-            buttonTitle: "Continue for FREE",
-            footnote: "No payment due now",
+            //
+            // "FREE" is said only when it is true of this account. It used to be
+            // unconditional, one screen before any price is shown - so somebody
+            // with no trial left, or anyone who went on to pick the weekly plan
+            // (which has never carried an offer), was promised free and then
+            // charged. Guideline 3.1.2(c) calls that misleading marketing in the
+            // purchase flow, and the purchase flow starts here, not at the
+            // paywall.
+            buttonTitle: offersTrial ? "Continue for FREE" : "See your plan",
+            footnote: offersTrial ? "No payment due now" : nil,
             onNext: onNext
         ) {
             VStack(spacing: 14) {

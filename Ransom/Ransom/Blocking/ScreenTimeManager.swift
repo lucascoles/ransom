@@ -129,11 +129,34 @@ final class ScreenTimeManager {
     /// mid-unlock and complete a whole set. It stops being hidden the moment
     /// spending banked minutes during an unlock is one tap, which is what Home
     /// now offers.
-    func grantEarnedTime(minutes: Int) {
+    /// Whether spending would actually open anything.
+    ///
+    /// Without Screen Time permission, or with no apps chosen, there is no shield
+    /// to lift - so an unlock is an unlock of nothing. The check is public
+    /// because the spend buttons need it too: the bank is debited before this is
+    /// called, and coins spent on nothing are not refundable from here.
+    var canUnlock: Bool { isAuthorized && !store.isEmpty }
+
+    /// Opens the apps for `minutes`. Returns false, having changed nothing, when
+    /// there is nothing to open.
+    ///
+    /// The guard used to sit *below* `ledger.grant`, which meant an unauthorized
+    /// user got the full illusion of an unlock: the bank debited, the countdown
+    /// running on Home, Rex promising a nudge when time was up - and no shield
+    /// had ever been raised, so nothing was unlocked and nothing would lock. The
+    /// ledger is the app's source of truth about whether time is running, and
+    /// writing to it before knowing the unlock can happen is what made the lie
+    /// convincing.
+    @discardableResult
+    func grantEarnedTime(minutes: Int) -> Bool {
+        guard canUnlock else {
+            ledger.trace("refused grant of \(minutes)m: authorized=\(isAuthorized) apps=\(store.count)")
+            return false
+        }
+
         ledger.grant(minutes: minutes)
         ledger.trace("app granted \(minutes)m")
         syncUnlockState()
-        guard isAuthorized else { return }
 
         // Rounded up, so the arithmetic never shortens an unlock: a ledger
         // reading 19m01s is nineteen whole minutes plus change the user paid for.
@@ -143,6 +166,7 @@ final class ScreenTimeManager {
         startUnlockWindow(minutes: total)
         store.removeShield()
         NotificationManager.scheduleTimeUpReminder(in: total)
+        return true
     }
 
     /// Ends earned time early — used by the "Lock it back up" button.
