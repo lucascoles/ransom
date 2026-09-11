@@ -303,7 +303,7 @@ struct PlanRevealStep: View {
             subtitle: profile.identity.map { "Built to help you \($0.shortForm)." }
                 ?? "Here's how your days are about to look.",
             // No number on this button. The commitment length and the trial length
-            // are different clocks, and "Start my 5-day run" straight into a 3-day
+            // are different clocks, and "Start my 5-day run" straight into a 7-day
             // trial read as a bait and switch. The paywall states the trial terms.
             //
             // "FREE" is said only when it is true of this account. It used to be

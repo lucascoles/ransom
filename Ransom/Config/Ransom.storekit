@@ -17,14 +17,14 @@
         {
           "adHocOffers": [],
           "codeOffers": [],
-          "displayPrice": "49.99",
+          "displayPrice": "24.99",
           "familyShareable": false,
           "groupNumber": 1,
           "internalID": "6742001",
           "introductoryOffer": {
             "internalID": "6742002",
             "paymentMode": "free",
-            "subscriptionPeriod": "P3D"
+            "subscriptionPeriod": "P1W"
           },
           "localizations": [
             {
@@ -42,7 +42,7 @@
         {
           "adHocOffers": [],
           "codeOffers": [],
-          "displayPrice": "4.99",
+          "displayPrice": "3.99",
           "familyShareable": false,
           "groupNumber": 2,
           "internalID": "6742003",

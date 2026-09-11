@@ -245,7 +245,7 @@ struct PaywallView: View {
                 // **The amount actually charged, and the largest thing in the
                 // row.** This slot used to hold the per-week figure at 20pt with
                 // the real charge stated underneath at 13pt, on the reasoning
-                // that "$49.99" above "$4.99" made the yearly plan look six times
+                // that "$24.99" above "$3.99" made the yearly plan look six times
                 // the price of the weekly one. It does - and App Review rejected
                 // build 5 for it under guideline 3.1.2(c), which requires the
                 // billed amount to be the most clear and conspicuous pricing

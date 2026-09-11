@@ -34,8 +34,8 @@ final class SubscriptionManager {
         /// Fallback copy for when StoreKit can't be reached.
         var fallbackPrice: String {
             switch self {
-            case .weekly: return "$4.99"
-            case .annual: return "$49.99"
+            case .weekly: return "$3.99"
+            case .annual: return "$24.99"
             }
         }
 
@@ -53,8 +53,8 @@ final class SubscriptionManager {
         }
 
         /// The configured introductory offer, as a number, for when StoreKit
-        /// hasn't answered. The one place the "3" is written.
-        static let fallbackTrialDays = 3
+        /// hasn't answered. The one place the "7" is written.
+        static let fallbackTrialDays = 7
 
         var periodLabel: String {
             switch self {
@@ -115,18 +115,18 @@ final class SubscriptionManager {
         products[plan]?.displayPrice ?? plan.fallbackPrice
     }
 
-    /// "$0.96" — the annual rate expressed per week, which is the only fair way to
+    /// "$0.48" — the annual rate expressed per week, which is the only fair way to
     /// compare it to the weekly plan.
     var annualPerWeek: String? {
-        guard let annual = products[.annual] else { return "$0.96" }
+        guard let annual = products[.annual] else { return "$0.48" }
         return (annual.price / 52).formatted(annual.priceFormatStyle)
     }
 
     /// How much less the annual costs than 52 weeks of the weekly rate. Computed
     /// from live StoreKit prices so it can't drift out of date if pricing changes.
     var annualSavingsPercent: Int? {
-        let weeklyPrice = products[.weekly]?.price ?? 4.99
-        let annualPrice = products[.annual]?.price ?? 49.99
+        let weeklyPrice = products[.weekly]?.price ?? 3.99
+        let annualPrice = products[.annual]?.price ?? 24.99
         let yearOfWeekly = weeklyPrice * 52
         guard yearOfWeekly > 0, annualPrice < yearOfWeekly else { return nil }
         let ratio = (yearOfWeekly - annualPrice) / yearOfWeekly
@@ -176,8 +176,12 @@ final class SubscriptionManager {
     func disclosure(for plan: Plan) -> String {
         let price = displayPrice(for: plan)
         let period = plan.periodLabel
+        // "Auto-renews" is said in both branches. The trial branch used to leave
+        // it out, so the one line people read before the free period was the
+        // one line that didn't say the charge repeats - which guideline 3.1.2
+        // requires the purchase flow to state.
         if let trial = trialDescription(for: plan) {
-            return "\(trial), then \(price) per \(period). Cancel anytime."
+            return "\(trial), then \(price) per \(period). Auto-renews. Cancel anytime."
         }
         return "\(price) per \(period), auto-renewing. Cancel anytime."
     }
