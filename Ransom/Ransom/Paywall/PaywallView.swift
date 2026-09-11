@@ -355,7 +355,7 @@ struct PaywallView: View {
     }
 
     private var ctaTitle: String {
-        store.trialDescription(for: store.selectedPlan) == nil ? "Subscribe" : "Start free trial"
+        store.trialDescription(for: store.selectedPlan) == nil ? "Subscribe" : "Start my free trial"
     }
 
     // MARK: - Actions
