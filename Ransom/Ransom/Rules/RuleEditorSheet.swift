@@ -32,7 +32,7 @@ struct RuleEditorSheet: View {
     private var isEditing: Bool { rule != nil }
 
     private var exercise: Exercise { model.plan.exercise }
-    private var baseReps: Int { model.basePlan.repsPerUnlock }
+    private var baseReps: Int { model.basePlan.setTarget }
     private var ruledReps: Int { baseReps * FocusRule.difficultyMultiplier }
 
     var body: some View {
