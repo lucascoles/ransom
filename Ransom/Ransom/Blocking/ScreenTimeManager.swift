@@ -261,42 +261,47 @@ final class ScreenTimeManager {
 
         let calendar = Calendar.current
         let now = Date()
-        // Apple refuses a schedule shorter than fifteen minutes. The event
-        // threshold still fires at the real figure and the ledger's wall-clock
-        // expiry is the other half of the enforcement, so a longer window costs
-        // nothing - it just gives the threshold somewhere to live.
-        let end = now.addingTimeInterval(TimeInterval(max(15, minutes) * 60))
+        // The window ends at the ledger's own expiry, to the second. That end is
+        // the enforcement: `intervalDidEnd` fires on the wall clock, the same
+        // clock the countdown and the "Time's up" notification use, whether the
+        // phone is in use or asleep in a pocket.
+        let paid = ledger.remaining > 0 ? ledger.remaining : TimeInterval(minutes * 60)
+        let end = now.addingTimeInterval(paid)
+        // **Backdated, not padded.** Apple refuses a schedule shorter than
+        // fifteen minutes, so a five minute unlock used to get a window running
+        // fifteen minutes into the future, and a usage threshold was registered
+        // inside it to fire at the real figure. That threshold is gone, for two
+        // reasons found on a real phone:
+        //
+        // - Scoped to the guarded apps, it only counted time spent inside them,
+        //   so "Time's up" arrived and the shield did not come back.
+        // - Scoped to the whole phone (ea7fd98), it fired within seconds of the
+        //   window starting - iOS 26 delivers `eventDidReachThreshold` almost
+        //   immediately after `startMonitoring`, a regression Apple DTS has
+        //   confirmed and which is still present on 26.6 - so buying five more
+        //   minutes revoked them before the user reached the app.
+        //
+        // Starting the interval in the past gives Apple its fifteen minutes and
+        // still ends it exactly when the time is up. A start earlier than now is
+        // an interval already in progress, which iOS accepts and reports with an
+        // immediate `intervalDidStart` - the daily schedule, anchored to
+        // midnight, relies on the same thing every time it restarts mid-day. The
+        // hour/minute/second components also wrap midnight on their own: 23:48
+        // to 00:03 is read as an interval that started twelve minutes ago.
+        let start = min(now, end.addingTimeInterval(-(15 * 60 + 10)))
 
         let schedule = DeviceActivitySchedule(
-            intervalStart: calendar.dateComponents([.hour, .minute, .second], from: now),
+            intervalStart: calendar.dateComponents([.hour, .minute, .second], from: start),
             intervalEnd: calendar.dateComponents([.hour, .minute, .second], from: end),
             repeats: false
         )
-        // **Empty token sets on purpose**, exactly as the usage ladder does it:
-        // this threshold measures the whole phone, not the guarded apps.
-        //
-        // It used to be scoped to `selection`, and that is what let time run out
-        // without the shield coming back. The minutes are sold on the wall clock
-        // - the countdown says so, and `scheduleTimeUpReminder` fires a plain
-        // interval notification at exactly that moment - but a threshold scoped
-        // to the guarded apps only accrues while the user is *inside* one of
-        // them. Ten minutes of Messages in the middle of a fifteen minute unlock
-        // left the threshold five minutes short, so "Time's up" arrived on
-        // schedule and nothing put Rex back on the door. The apps stayed open
-        // until something else reconciled, which in practice meant opening
-        // Ransom.
-        //
-        // Measuring all activity makes the threshold track the same clock the
-        // user was sold, and fires it while the phone is still in their hand,
-        // which is the moment it needs to land.
-        let event = DeviceActivityEvent(
-            applications: [],
-            categories: [],
-            webDomains: [],
-            threshold: DateComponents(minute: max(1, minutes))
-        )
-        try? center.startMonitoring(.unlockWindow, during: schedule,
-                                    events: [.earnedTimeSpent: event])
+        do {
+            try center.startMonitoring(.unlockWindow, during: schedule)
+            ledger.trace("window \(start.formatted(date: .omitted, time: .standard))-\(end.formatted(date: .omitted, time: .standard)) paid=\(Int(paid))s")
+        } catch {
+            // Used to be `try?`, which left a failed window unenforced and silent.
+            ledger.trace("window FAILED: \(error)")
+        }
     }
 
     func stopMonitoring() {

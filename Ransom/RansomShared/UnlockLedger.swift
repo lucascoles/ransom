@@ -54,7 +54,7 @@ public struct UnlockLedger {
     public func trace(_ line: String) {
         var lines = defaults.stringArray(forKey: RansomCore.Key.monitorTrace) ?? []
         lines.append("\(Date().formatted(date: .omitted, time: .standard)) \(line)")
-        defaults.set(Array(lines.suffix(40)), forKey: RansomCore.Key.monitorTrace)
+        defaults.set(Array(lines.suffix(150)), forKey: RansomCore.Key.monitorTrace)
     }
 
     public func revoke() {

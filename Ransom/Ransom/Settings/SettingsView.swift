@@ -69,6 +69,9 @@ struct SettingsView: View {
                 scheduleCard
                 blockingCard
                 aboutCard
+                #if DEBUG
+                MonitorTraceCard()
+                #endif
             }
             .padding(.horizontal, Metrics.screenPadding)
             .padding(.bottom, 28)
@@ -478,3 +481,51 @@ struct SettingsView: View {
         .buttonStyle(.plain)
     }
 }
+
+#if DEBUG
+/// The monitor extension's own account of what it did, newest last.
+///
+/// `UnlockLedger.trace` has been writing these lines to the App Group all along
+/// and nothing ever displayed them, so every blocking bug was diagnosed by
+/// reasoning about what the extension *probably* did. Xcode's container download
+/// does not include the App Group, so this is the only way to get the log off
+/// a phone. Debug builds only.
+private struct MonitorTraceCard: View {
+    @State private var lines: [String] = []
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Monitor log")
+                    .font(RansomFont.headline(16))
+                    .foregroundStyle(Palette.ink)
+                Spacer()
+                Button("Refresh") { load() }
+                    .font(RansomFont.caption(13))
+                Button("Clear") {
+                    RansomCore.defaults.removeObject(forKey: RansomCore.Key.monitorTrace)
+                    load()
+                }
+                .font(RansomFont.caption(13))
+            }
+            if lines.isEmpty {
+                Text("Nothing logged yet.")
+                    .font(RansomFont.caption(12))
+                    .foregroundStyle(Palette.inkFaint)
+            } else {
+                Text(lines.joined(separator: "\n"))
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Palette.inkSoft)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .ransomCard()
+        .onAppear(perform: load)
+    }
+
+    private func load() {
+        lines = RansomCore.defaults.stringArray(forKey: RansomCore.Key.monitorTrace) ?? []
+    }
+}
+#endif

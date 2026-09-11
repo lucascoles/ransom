@@ -81,6 +81,17 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         // minutes the user is currently spending.
         guard event == .earnedTimeSpent, activity == .unlockWindow else { return }
 
+        // New builds no longer register this event: the unlock window's own end
+        // is the enforcement now. A window registered by an older build can
+        // still deliver it, and on iOS 26 it can arrive seconds after the window
+        // started. Paid time left on the clock means it is not real - the same
+        // arbiter `intervalDidEnd` uses.
+        let left = Int(ledger.remaining)
+        guard left <= 60 else {
+            ledger.trace("ignored early threshold, \(left)s left")
+            return
+        }
+
         // The user has burned through the minutes they earned. Whether anything
         // was actually revoked has to be read *before* revoking: a threshold that
         // fires against an already-expired unlock has nothing to announce, and
