@@ -9,27 +9,43 @@ import Foundation
 /// Lives in the App Group because the shield and the monitor extension enforce
 /// it in their own processes. A day off that only the app knew about would show
 /// a home screen saying "you're free today" over apps that were still shielded.
+///
+/// The app writes the whole `WeekSchedule`, pending week included, so a day off
+/// that is still waiting begins on time in every process without any of them
+/// being told. The extensions only ever read.
 public struct ScheduleStore {
-    private var defaults: UserDefaults { RansomCore.defaults }
+    private let defaults: UserDefaults
 
-    public init() {}
+    public init(defaults: UserDefaults = RansomCore.defaults) {
+        self.defaults = defaults
+    }
 
-    /// `Calendar` weekday numbers, 1 = Sunday. Empty means every day, which is
-    /// also what a profile that predates this setting decodes to - so the
-    /// default is the behaviour everyone already had.
-    public var activeDays: Set<Int> {
+    public var schedule: WeekSchedule {
         get {
-            guard let raw = defaults.array(forKey: RansomCore.Key.activeDays) as? [Int] else { return [] }
-            return Set(raw)
+            let days = (defaults.array(forKey: RansomCore.Key.activeDays) as? [Int]).map(Set.init) ?? []
+            // Both halves or neither. A pending set with no date, or a date with
+            // no set, is not a pending week and is read as none - which is also
+            // what an install from before pending weeks existed has.
+            guard let pending = (defaults.array(forKey: RansomCore.Key.pendingDays) as? [Int]).map(Set.init),
+                  let from = defaults.object(forKey: RansomCore.Key.pendingFrom) as? Date
+            else {
+                return WeekSchedule(days: days)
+            }
+            return WeekSchedule(days: days, pendingDays: pending, pendingFrom: from)
         }
         nonmutating set {
-            defaults.set(Array(newValue).sorted(), forKey: RansomCore.Key.activeDays)
+            defaults.set(Array(newValue.days).sorted(), forKey: RansomCore.Key.activeDays)
+            if let pending = newValue.pendingDays, let from = newValue.pendingFrom {
+                defaults.set(Array(pending).sorted(), forKey: RansomCore.Key.pendingDays)
+                defaults.set(from, forKey: RansomCore.Key.pendingFrom)
+            } else {
+                defaults.removeObject(forKey: RansomCore.Key.pendingDays)
+                defaults.removeObject(forKey: RansomCore.Key.pendingFrom)
+            }
         }
     }
 
     public func isActive(on date: Date = Date(), calendar: Calendar = .current) -> Bool {
-        let days = activeDays
-        guard !days.isEmpty else { return true }
-        return days.contains(calendar.component(.weekday, from: date))
+        schedule.isActive(on: date, calendar: calendar)
     }
 }

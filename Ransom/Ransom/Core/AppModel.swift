@@ -117,6 +117,15 @@ final class AppModel {
         if UserDefaults.standard.bool(forKey: "RansomWalking") {
             profile.exercises.insert(.steps)
         }
+        // `-RansomStartedDaysAgo 3` backdates the profile, which is the only way
+        // to see the days-on-duty card past its two-day grace without waiting
+        // two days. Persists like the rest of the profile, so a test phone's
+        // "days since start" reads the backdated figure afterwards.
+        let startedDaysAgo = UserDefaults.standard.integer(forKey: "RansomStartedDaysAgo")
+        if startedDaysAgo > 0,
+           let backdated = Calendar.current.date(byAdding: .day, value: -startedDaysAgo, to: Date()) {
+            profile.createdAt = backdated
+        }
         #endif
 
         syncPlanToExtensions()
@@ -401,8 +410,22 @@ final class AppModel {
         )
         // They flagged late-night scrolling during intake; charge for it.
         ledger.nightSurchargeEnabled = profile.peakTimes.contains(.lateNight)
-        // The extensions enforce the days off, so they have to be told about them.
-        ScheduleStore().activeDays = profile.activeDays
+        // The extensions enforce the days off, so they have to be told about
+        // them - the week that is waiting as well as the one on duty, so a day
+        // off begins on its date whether or not the app is opened that day.
+        ScheduleStore().schedule = profile.schedule
+    }
+
+    /// Folds a quieter week that has begun into the days on duty.
+    ///
+    /// Nothing depends on this: every reader resolves the pending week by date.
+    /// It only stops the profile carrying a change that has already happened,
+    /// and it writes nothing when there is nothing to fold, so calling it on
+    /// every foreground does not persist on every foreground.
+    func settleSchedule(now: Date = Date()) {
+        let settled = profile.schedule.settled(at: now)
+        guard settled != profile.schedule else { return }
+        profile.schedule = settled
     }
 
     private func persist() {

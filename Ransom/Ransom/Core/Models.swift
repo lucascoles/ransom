@@ -191,11 +191,16 @@ struct UserProfile: Codable, Equatable {
     var measuredDailyMinutes: Int?
     /// The daily ceiling they set for themselves, in minutes.
     var goalDailyMinutes: Int?
-    /// How long they committed to the plan for, and when the clock started.
-    /// Nil before the commitment step, and never cleared afterwards.
     /// Weekdays Ransom guards, as `Calendar` numbers with 1 = Sunday. Empty is
     /// every day, which is what every profile written before this decodes to.
     var activeDays: Set<Int> = []
+    /// A quieter week asked for during a run, waiting for its date. Nil when
+    /// nothing is waiting, which is also what every profile written before days
+    /// off could wait decodes to. Read and written through `schedule`.
+    var pendingActiveDays: Set<Int>?
+    var pendingActiveDaysFrom: Date?
+    /// How long they committed to the plan for, and when the clock started.
+    /// Nil before the commitment step, and never cleared afterwards.
     var commitmentDays: Int?
     var commitmentStartedAt: Date?
     var exercises: Set<Exercise> = [.pushUps]
@@ -255,6 +260,33 @@ struct UserProfile: Codable, Equatable {
         guard let commitmentEndsAt else { return 0 }
         let days = Calendar.current.dateComponents([.day], from: Date(), to: commitmentEndsAt).day ?? 0
         return max(0, days + 1)
+    }
+
+    /// The days on duty as one value, pending week included. The three stored
+    /// fields stay separate so an old profile decodes; this is the shape
+    /// everything reads and writes.
+    var schedule: WeekSchedule {
+        get {
+            WeekSchedule(days: activeDays, pendingDays: pendingActiveDays, pendingFrom: pendingActiveDaysFrom)
+        }
+        set {
+            activeDays = newValue.days
+            pendingActiveDays = newValue.pendingDays
+            pendingActiveDaysFrom = newValue.pendingFrom
+        }
+    }
+
+    /// When a change to the days takes effect. Built from the run and the
+    /// profile's age; see `ScheduleChangeRule` for the rule itself.
+    ///
+    /// Anchored to `createdAt` rather than the run's start on purpose: extending
+    /// the run resets `commitmentStartedAt`, and a grace that came back with it
+    /// would make "extend, then take today off" a two-tap escape.
+    var scheduleRule: ScheduleChangeRule {
+        ScheduleChangeRule(
+            lockEndsAt: commitmentEndsAt,
+            graceEndsAt: ScheduleChangeRule.graceEnd(forProfileCreatedAt: createdAt)
+        )
     }
 
     /// What one set costs at a given tier, in this user's movement. Shown on

@@ -197,6 +197,8 @@ struct RootView: View {
 
     private func refresh() {
         screenTime.refreshAuthorization()
+        // A day off asked for last week may have begun while the app was closed.
+        model.settleSchedule()
         // Earned time may have run out while the app was closed.
         screenTime.reconcile()
         screenTime.startMonitoring()

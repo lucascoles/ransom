@@ -292,10 +292,20 @@ struct SettingsView: View {
     /// Guarding your apps Monday to Friday and taking Saturday back is not
     /// cheating - an app that is all or nothing is one people switch off entirely
     /// rather than turn down. But it is obviously the softest thing in here to
-    /// reach for mid-craving, so it locks with everything else: harder whenever
-    /// you like, easier never, until the run is over.
+    /// reach for mid-craving, so it follows the difficulty's rule: harder
+    /// whenever you like, easier only after a week's wait while the run is
+    /// live. Nothing here refuses a tap. A day off asked for mid-craving is
+    /// simply a day off next week, which is no use to the craving at all.
+    ///
+    /// The picker was fully locked for the run before this, and the intake never
+    /// asks about days, so everyone began on all seven with no way back to the
+    /// week they would actually have chosen. See `ScheduleChangeRule`.
     private var scheduleCard: some View {
-        let locked = model.profile.isCommitted
+        let rule = model.profile.scheduleRule
+        let schedule = model.profile.schedule
+        let now = Date()
+        let waits = !rule.allowsLooseningNow(at: now)
+        let inGrace = rule.isLocked(at: now) && rule.isInGrace(at: now)
 
         return VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -303,82 +313,120 @@ struct SettingsView: View {
                     .font(RansomFont.headline(16))
                     .foregroundStyle(Palette.ink)
                 Spacer()
-                if locked {
+                if schedule.hasPending {
+                    Image(systemName: "hourglass")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Palette.brand)
+                } else if waits {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(Palette.inkFaint)
                 }
             }
 
-            Text(locked
-                 ? "Locked until your run ends. You picked these, and picking a quieter week from inside a craving is the thing this stops."
+            Text(waits
+                 ? "Turn a day on and Rex is on duty right away. Turn a day off and it waits a week. Picking a quieter week from inside a craving is the thing this stops."
                  : "Tap a day to take it off. Rex stands down and your apps open normally.")
                 .font(RansomFont.body(14))
                 .foregroundStyle(Palette.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
 
+            // Said before it runs out, not after. The whole point of the grace
+            // is that a week nobody chose can still be chosen, and a grace
+            // nobody is told about is one nobody uses.
+            if inGrace {
+                Text("Fresh start, so change these freely until \(Self.graceFormat(rule.graceEndsAt)). After that a day off waits a week.")
+                    .font(RansomFont.caption(12))
+                    .foregroundStyle(Palette.brand)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             HStack(spacing: 6) {
                 ForEach(1...7, id: \.self) { weekday in
-                    dayToggle(weekday, locked: locked)
+                    dayToggle(weekday, schedule: schedule, now: now)
                 }
             }
 
-            Text(scheduleSummary)
+            Text(scheduleSummary(schedule, now: now))
                 .font(RansomFont.caption(12))
-                .foregroundStyle(model.profile.activeDays.isEmpty ? Palette.inkFaint : Palette.brand)
+                .foregroundStyle(schedule.days(at: now).isEmpty && !schedule.hasPending ? Palette.inkFaint : Palette.brand)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .ransomCard()
     }
 
-    private func dayToggle(_ weekday: Int, locked: Bool) -> some View {
+    private func dayToggle(_ weekday: Int, schedule: WeekSchedule, now: Date) -> some View {
         // Empty means every day, so an untouched picker shows all seven on and
         // reads as "always" rather than as a control nobody has filled in.
-        let days = model.profile.activeDays
-        let isOn = days.isEmpty || days.contains(weekday)
+        let onNow = WeekSchedule.normalized(schedule.days(at: now)).contains(weekday)
+        let onLater = WeekSchedule.normalized(schedule.targetDays).contains(weekday)
+        // On duty today, and asked off from next week: drawn as an outline so it
+        // reads as neither fully on nor already off, which is the truth.
+        let isComingOff = onNow && !onLater
 
         return Button {
-            guard !locked else {
-                Haptics.warning()
-                return
-            }
             Haptics.tick()
-            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { toggleDay(weekday) }
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { toggleDay(weekday, now: now) }
         } label: {
             Text(Self.dayInitials[weekday - 1])
                 .font(RansomFont.headline(14))
-                .foregroundStyle(isOn ? Palette.onBrand : Palette.inkSoft)
+                .foregroundStyle(onLater ? Palette.onBrand : (isComingOff ? Palette.brand : Palette.inkSoft))
                 .frame(maxWidth: .infinity)
                 .frame(height: 42)
-                .background(Circle().fill(isOn ? Palette.brand : Palette.surfaceAlt))
+                .background(Circle().fill(onLater ? Palette.brand : Palette.surfaceAlt))
+                .overlay(Circle().strokeBorder(Palette.brand, lineWidth: isComingOff ? 2 : 0))
         }
         .buttonStyle(.plain)
-        .opacity(locked ? 0.55 : 1)
     }
 
     private static let dayInitials = ["S", "M", "T", "W", "T", "F", "S"]
 
-    private func toggleDay(_ weekday: Int) {
-        var days = model.profile.activeDays.isEmpty ? Set(1...7) : model.profile.activeDays
-        if days.contains(weekday) { days.remove(weekday) } else { days.insert(weekday) }
+    /// Edits where the week is headed, and lets the rule say when it gets there.
+    private func toggleDay(_ weekday: Int, now: Date) {
+        let schedule = model.profile.schedule
+        var target = WeekSchedule.normalized(schedule.targetDays)
+        if target.contains(weekday) { target.remove(weekday) } else { target.insert(weekday) }
         // Every day off is just the app switched off, which Settings already has a
         // clearer way to say. The last day on stays on.
-        guard !days.isEmpty else {
+        guard !target.isEmpty else {
             Haptics.warning()
             return
         }
-        model.profile.activeDays = days.count == 7 ? [] : days
+        let change = model.profile.scheduleRule.applying(target, to: schedule, now: now)
+        model.profile.schedule = change.schedule
         // Take effect now rather than at the next thing that happens to reconcile.
         // Turning today off and finding your apps still shielded reads as the
-        // setting not working.
+        // setting not working. A day off that is waiting changes nothing today,
+        // and reconciling is cheap, so there is no case to special-case.
         screenTime.reconcile()
     }
 
-    private var scheduleSummary: String {
-        let days = model.profile.activeDays
-        guard !days.isEmpty, days.count < 7 else { return "On every day." }
+    /// What is on duty, and what is on its way. The date is the whole message
+    /// when a day off is waiting: "Sat off" is a promise, "Sat off from the
+    /// 21st" is a fact they can plan around.
+    private func scheduleSummary(_ schedule: WeekSchedule, now: Date) -> String {
+        let current = Self.offDays(schedule.days(at: now))
+        guard let pending = schedule.pendingDays, let from = schedule.pendingFrom, from > now else {
+            return current.map { "Off on \($0)." } ?? "On every day."
+        }
+        let later = "Off on \(Self.offDays(pending) ?? "") from \(Self.fromFormat(from))."
+        return current.map { "\(later) Off on \($0) until then." } ?? "\(later) On every day until then."
+    }
+
+    /// "Sat, Sun", or nil when nothing is off.
+    private static func offDays(_ days: Set<Int>) -> String? {
+        let on = WeekSchedule.normalized(days)
         let symbols = Calendar.current.shortWeekdaySymbols
-        let off = (1...7).filter { !days.contains($0) }.map { symbols[$0 - 1] }
-        return "Off on \(off.joined(separator: ", "))."
+        let off = (1...7).filter { !on.contains($0) }.map { symbols[$0 - 1] }
+        return off.isEmpty ? nil : off.joined(separator: ", ")
+    }
+
+    private static func fromFormat(_ date: Date) -> String {
+        date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
+    }
+
+    private static func graceFormat(_ date: Date) -> String {
+        date.formatted(.dateTime.weekday(.abbreviated).hour().minute())
     }
 
     private var blockingCard: some View {

@@ -62,6 +62,10 @@ public enum RansomCore {
         /// Weekdays Ransom guards. Empty is every day. Read by the shield and the
         /// monitor as well as the app - see `ScheduleStore`.
         public static let activeDays = "ransom.schedule.activeDays"
+        /// A quieter week waiting for its date, and the date. Absent on any
+        /// install from before days off could wait - see `WeekSchedule`.
+        public static let pendingDays = "ransom.schedule.pendingDays"
+        public static let pendingFrom = "ransom.schedule.pendingFrom"
         /// Minutes credited from steps today, and the day that belongs to. The
         /// cap is enforced against this - see `RansomPlan.stepMinutesCap`.
         public static let stepMinutes = "ransom.steps.minutesToday"
