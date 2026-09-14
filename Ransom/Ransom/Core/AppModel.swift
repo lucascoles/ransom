@@ -39,6 +39,10 @@ final class AppModel {
     /// re-reading on return is the only moment it can have changed.
     var usageRevision = 0
 
+    /// Set when intake finishes, so Root can show the welcome over Home. Not
+    /// persisted: it is a moment, and a relaunch should never replay it.
+    var showWelcome = false
+
     /// Bumped whenever the rules change or the clock crosses a window's edge, so
     /// the views that quote a price redraw. `FocusRuleStore` reads the App Group
     /// and is not observable on its own.

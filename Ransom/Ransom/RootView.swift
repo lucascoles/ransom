@@ -128,6 +128,16 @@ struct RootView: View {
             )
         }
         .onAppear(perform: bootstrap)
+        .overlay {
+            if model.showWelcome {
+                WelcomeCelebration {
+                    withAnimation(.easeInOut(duration: 0.35)) { model.showWelcome = false }
+                }
+                .transition(.opacity)
+                .zIndex(1)
+            }
+        }
+        .animation(.easeInOut(duration: 0.35), value: model.showWelcome)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { refresh() }
         }
@@ -184,6 +194,12 @@ struct RootView: View {
 
     private func bootstrap() {
         refresh()
+
+        #if DEBUG
+        // `-RansomWelcome 1` shows the post-paywall welcome on launch, so it can
+        // be looked at without buying the subscription again.
+        if UserDefaults.standard.bool(forKey: "RansomWelcome") { model.showWelcome = true }
+        #endif
 
         guard !hasWiredDarwinObserver else { return }
         hasWiredDarwinObserver = true

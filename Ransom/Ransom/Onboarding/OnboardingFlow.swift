@@ -165,6 +165,8 @@ struct OnboardingFlow: View {
     private func finishOnboarding() {
         model.profile = draft
         model.hasCompletedOnboarding = true
+        // Saved first, celebrated second: see `WelcomeCelebration`.
+        model.showWelcome = true
         Haptics.success()
     }
 }
