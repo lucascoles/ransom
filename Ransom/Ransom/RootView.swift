@@ -133,7 +133,10 @@ struct RootView: View {
                 WelcomeCelebration {
                     withAnimation(.easeInOut(duration: 0.35)) { model.showWelcome = false }
                 }
-                .transition(.opacity)
+                // Appears at once and only fades on the way out. Fading in let
+                // Home show through for a third of a second, blended with the
+                // paywall leaving underneath it.
+                .transition(.asymmetric(insertion: .identity, removal: .opacity))
                 .zIndex(1)
             }
         }
