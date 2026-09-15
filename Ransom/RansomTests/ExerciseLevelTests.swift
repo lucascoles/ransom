@@ -64,14 +64,30 @@ struct ExerciseLevelTests {
         #expect(ExerciseLevel.tint(level: 40) == ExerciseLevel.tints.last)
     }
 
-    @Test("Each movement colours the muscles it works")
-    func regionsFollowTheirMovement() {
-        #expect(BodyRegion.chest.trainedBy(walking: true) == .pushUps)
-        #expect(BodyRegion.core.trainedBy(walking: false) == .pushUps)
-        #expect(BodyRegion.thighs.trainedBy(walking: true) == .squats)
-        #expect(BodyRegion.calves.trainedBy(walking: true) == .steps)
-        // Nobody walking for minutes: squats work the calves too.
-        #expect(BodyRegion.calves.trainedBy(walking: false) == .squats)
+    @Test("Walking works the thighs as well as the calves")
+    func walkingWorksTheLegs() {
+        // 100,000 steps is 500 reps' worth: calves at full weight, thighs at half.
+        let walker: [Exercise: Int] = [.steps: 100_000]
+        #expect(BodyRegion.calves.level(volumes: walker) == 7)   // 500
+        #expect(BodyRegion.thighs.level(volumes: walker) == 5)   // 250
+        #expect(BodyRegion.chest.level(volumes: walker) == 0)
+    }
+
+    @Test("A region adds up every movement that works it")
+    func regionsCombineMovements() {
+        // Thighs: 120 squats, plus 60,000 steps (300 reps) at half = 270.
+        let both: [Exercise: Int] = [.squats: 120, .steps: 60_000]
+        #expect(BodyRegion.thighs.level(volumes: both) == 5)
+        // Core: push-ups hold the plank, squats brace; 150 x 0.4 + 120 x 0.3 = 96.
+        #expect(BodyRegion.core.level(volumes: [.pushUps: 150, .squats: 120]) == 3)
+    }
+
+    @Test("Push-ups alone leave the legs grey")
+    func pushUpsOnly() {
+        let volumes: [Exercise: Int] = [.pushUps: 500]
+        #expect(BodyRegion.chest.level(volumes: volumes) == 7)
+        #expect(BodyRegion.thighs.level(volumes: volumes) == 0)
+        #expect(BodyRegion.calves.level(volumes: volumes) == 0)
     }
 
     @Test("The step log keeps each day's highest reading and adds the days")

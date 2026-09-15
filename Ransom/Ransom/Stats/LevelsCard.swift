@@ -2,14 +2,15 @@ import CoreMotion
 import SwiftUI
 
 /// A body in the middle, a level ring for each movement beside the muscles it
-/// works, and the muscles wearing their level's colour.
+/// works most, and every muscle wearing the colour of its own level.
 ///
 /// The Progress tab's lifetime number used to be one figure in a card, which
 /// says how much has been done and nothing about where it is going. A level
 /// per movement does both: the count is the lifetime, the ring is how close the
-/// next level is, and the body shows what all of it has trained. Every level
-/// gives the muscles it covers a new colour (`ExerciseLevel.tints`); untrained
-/// is the figure's own grey.
+/// next level is, and the body shows what all of it has trained: each region
+/// levels up from every movement that works it (`BodyRegion.weight`), and
+/// every level is a new colour (`ExerciseLevel.tints`). Untrained is the
+/// figure's own grey.
 ///
 /// The figure is one illustration cut into layers (`media/levels-figure` in the
 /// marketing folder has the colour-coded original and the script that cuts
@@ -23,7 +24,7 @@ struct LevelsCard: View {
     @State private var lifetimeSteps = StepLog().lifetime
 
     /// Whether this person walks for minutes, or has walked before. Decides
-    /// whether steps get a ring, and whether the calves are theirs.
+    /// whether steps get a ring.
     private var walks: Bool {
         model.profile.exercises.contains(.steps) || lifetimeSteps > 0
     }
@@ -37,6 +38,11 @@ struct LevelsCard: View {
 
     private func count(_ exercise: Exercise) -> Int {
         exercise == .steps ? lifetimeSteps : model.lifetimeReps(of: exercise)
+    }
+
+    /// Lifetime volume of every movement, for the body's regions.
+    private var volumes: [Exercise: Int] {
+        Dictionary(uniqueKeysWithValues: Exercise.allCases.map { ($0, count($0)) })
     }
 
     private func progress(_ exercise: Exercise) -> ExerciseLevel.Progress {
@@ -82,7 +88,7 @@ struct LevelsCard: View {
             let w = geo.size.width, h = geo.size.height
             ZStack {
                 BodyFigure(tint: { region in
-                    ExerciseLevel.tint(level: progress(region.trainedBy(walking: walks)).level)
+                    ExerciseLevel.tint(level: region.level(volumes: volumes))
                 })
                 .frame(height: h)
                 .position(x: w / 2, y: h / 2)
@@ -142,7 +148,7 @@ struct LevelsCard: View {
 private struct BodyFigure: View {
     let tint: (BodyRegion) -> UInt32?
 
-    static let aspect: CGFloat = 352.0 / 900.0
+    static let aspect: CGFloat = 326.0 / 900.0
     static let untrained = Color(red: 0.84, green: 0.85, blue: 0.83)
     static let line = Color(red: 0.10, green: 0.11, blue: 0.10)
 

@@ -86,21 +86,50 @@ enum ExerciseLevel {
     }
 }
 
-/// The parts of the figure on Progress that can change colour, and which
-/// movement's level each one wears.
+/// The parts of the figure on Progress that can change colour, and how much
+/// each movement works them.
+///
+/// A region's level comes from every movement that trains it, not one. Walking
+/// is mostly calves but it works the thighs too; squats are mostly thighs but
+/// work the calves and core; push-ups are chest first, then the front of the
+/// shoulders and the triceps, with the core holding the plank. Each movement's
+/// volume is converted to reps (steps at `ExerciseLevel.stepsPerRep`), weighted
+/// per region, added up, and climbs the same ladder as the rings.
+///
+/// So the rings and the body answer different questions: a ring is how much of
+/// one movement, the body is how much each muscle has been worked by all of
+/// them together.
 enum BodyRegion: CaseIterable {
     case chest, shoulders, arms, core, thighs, calves
 
-    /// Push-ups work the chest, shoulders, arms and core; squats the thighs;
-    /// walking the calves. Without steps the calves go with squats, which work
-    /// them too, rather than staying grey forever for somebody who never walks
-    /// for minutes.
-    func trainedBy(walking: Bool) -> Exercise {
-        switch self {
-        case .chest, .shoulders, .arms, .core: return .pushUps
-        case .thighs:                          return .squats
-        case .calves:                          return walking ? .steps : .squats
+    /// How much one rep of a movement counts toward this region. 1 is the
+    /// movement's main job; 0 is not at all.
+    func weight(for exercise: Exercise) -> Double {
+        switch (exercise, self) {
+        case (.pushUps, .chest):     return 1.0
+        case (.pushUps, .shoulders): return 0.7
+        case (.pushUps, .arms):      return 0.7
+        case (.pushUps, .core):      return 0.4
+        case (.squats, .thighs):     return 1.0
+        case (.squats, .calves):     return 0.4
+        case (.squats, .core):       return 0.3
+        case (.steps, .calves):      return 1.0
+        case (.steps, .thighs):      return 0.5
+        default:                     return 0
         }
+    }
+
+    /// The region's level from lifetime volumes: reps for push-ups and squats,
+    /// steps for walking.
+    func level(volumes: [Exercise: Int]) -> Int {
+        let reps = volumes.reduce(0.0) { total, entry in
+            let (exercise, count) = entry
+            let asReps = exercise == .steps
+                ? Double(count) / Double(ExerciseLevel.stepsPerRep)
+                : Double(count)
+            return total + asReps * weight(for: exercise)
+        }
+        return ExerciseLevel.progress(count: Int(reps), for: .pushUps).level
     }
 
     var assetName: String {
