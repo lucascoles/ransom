@@ -54,6 +54,26 @@ struct ExerciseLevelTests {
         }
     }
 
+    @Test("Every level-up changes the colour, and level 0 has none")
+    func tintsChangeEachLevel() {
+        #expect(ExerciseLevel.tint(level: 0) == nil)
+        for level in 1..<ExerciseLevel.tints.count {
+            #expect(ExerciseLevel.tint(level: level) != ExerciseLevel.tint(level: level + 1))
+        }
+        // Past the table, gold stays.
+        #expect(ExerciseLevel.tint(level: 40) == ExerciseLevel.tints.last)
+    }
+
+    @Test("Each movement colours the muscles it works")
+    func regionsFollowTheirMovement() {
+        #expect(BodyRegion.chest.trainedBy(walking: true) == .pushUps)
+        #expect(BodyRegion.core.trainedBy(walking: false) == .pushUps)
+        #expect(BodyRegion.thighs.trainedBy(walking: true) == .squats)
+        #expect(BodyRegion.calves.trainedBy(walking: true) == .steps)
+        // Nobody walking for minutes: squats work the calves too.
+        #expect(BodyRegion.calves.trainedBy(walking: false) == .squats)
+    }
+
     @Test("The step log keeps each day's highest reading and adds the days")
     func stepLog() {
         let defaults = UserDefaults(suiteName: "StepLogTests-\(UUID())")!

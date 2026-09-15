@@ -1,16 +1,20 @@
 import CoreMotion
 import SwiftUI
 
-/// Rex in the middle, a level ring for each movement around him.
+/// A body in the middle, a level ring for each movement beside the muscles it
+/// works, and the muscles wearing their level's colour.
 ///
 /// The Progress tab's lifetime number used to be one figure in a card, which
 /// says how much has been done and nothing about where it is going. A level
 /// per movement does both: the count is the lifetime, the ring is how close the
-/// next level is, and the line underneath names the one that is about to go.
+/// next level is, and the body shows what all of it has trained. Every level
+/// gives the muscles it covers a new colour (`ExerciseLevel.tints`); untrained
+/// is the figure's own grey.
 ///
-/// Laid out for up to six movements, because more are coming. Positions are a
-/// table by count rather than maths around a circle: Rex is taller than he is
-/// wide, and rings evenly spaced on a circle land on his head and his feet.
+/// The figure is one illustration cut into layers (`media/levels-figure` in the
+/// marketing folder has the colour-coded original and the script that cuts
+/// it): an outline, the skin, and a mask per `BodyRegion`, each a template
+/// image tinted here.
 struct LevelsCard: View {
     @Environment(AppModel.self) private var model
 
@@ -18,28 +22,32 @@ struct LevelsCard: View {
     /// the log is UserDefaults, which SwiftUI cannot watch.
     @State private var lifetimeSteps = StepLog().lifetime
 
+    /// Whether this person walks for minutes, or has walked before. Decides
+    /// whether steps get a ring, and whether the calves are theirs.
+    private var walks: Bool {
+        model.profile.exercises.contains(.steps) || lifetimeSteps > 0
+    }
+
     private var movements: [Exercise] {
         // Push-ups and squats are always on offer (the swap row), so they always
-        // have a ring. Steps only for somebody walking for minutes, or who has
-        // walked before - an empty ring for a feature nobody turned on is noise.
-        var list: [Exercise] = [.pushUps, .squats]
-        if model.profile.exercises.contains(.steps) || lifetimeSteps > 0 { list.append(.steps) }
-        return list
+        // have a ring. An empty steps ring for somebody who never turned walking
+        // on would be noise.
+        walks ? [.pushUps, .squats, .steps] : [.pushUps, .squats]
     }
 
     private func count(_ exercise: Exercise) -> Int {
         exercise == .steps ? lifetimeSteps : model.lifetimeReps(of: exercise)
     }
 
-    private var levels: [(exercise: Exercise, progress: ExerciseLevel.Progress)] {
-        movements.map { ($0, ExerciseLevel.progress(count: count($0), for: $0)) }
+    private func progress(_ exercise: Exercise) -> ExerciseLevel.Progress {
+        ExerciseLevel.progress(count: count(exercise), for: exercise)
     }
 
     /// The level closest to going, as a share of the level it is in. A share
     /// rather than a raw count, or steps - thousands to go - would never be
     /// named next to push-ups with twelve.
     private var closest: (exercise: Exercise, progress: ExerciseLevel.Progress)? {
-        levels.max { $0.progress.fraction < $1.progress.fraction }
+        movements.map { ($0, progress($0)) }.max { $0.1.fraction < $1.1.fraction }
     }
 
     var body: some View {
@@ -65,71 +73,39 @@ struct LevelsCard: View {
         .task { await backfillSteps() }
     }
 
-    // MARK: - Rex and the rings
+    // MARK: - The body and the rings
+
+    private static let stageHeight: CGFloat = 310
 
     private var stage: some View {
-        let spots = Self.layout(count: levels.count)
-        return GeometryReader { geo in
+        GeometryReader { geo in
             let w = geo.size.width, h = geo.size.height
             ZStack {
-                RexImage(pose: .flex, size: Self.rexSize, isAlive: false)
-                    .position(x: w / 2, y: h * spots.rexY)
+                BodyFigure(tint: { region in
+                    ExerciseLevel.tint(level: progress(region.trainedBy(walking: walks)).level)
+                })
+                .frame(height: h)
+                .position(x: w / 2, y: h / 2)
 
-                ForEach(Array(levels.enumerated()), id: \.element.exercise) { index, item in
-                    let spot = spots.rings[index]
-                    LevelRing(exercise: item.exercise, progress: item.progress)
-                        .position(x: Self.x(for: spot, width: w), y: h * spot.y)
+                ForEach(movements, id: \.self) { exercise in
+                    let spot = Self.spot(for: exercise)
+                    LevelRing(exercise: exercise, progress: progress(exercise))
+                        .position(x: spot.left ? LevelRing.diameter / 2 - 4 : w - LevelRing.diameter / 2 + 4,
+                                  y: h * spot.y)
                 }
             }
         }
-        .frame(height: spots.height)
+        .frame(height: Self.stageHeight)
     }
 
-    private static let rexSize: CGFloat = 124
-
-    /// Where a ring goes. `side` is -1 left, 0 centre, 1 right; side rings sit
-    /// as far out as the card allows (a few points into its padding), because
-    /// Rex flexing is wide and anything nearer the middle lands on his arms.
-    /// `inset` pulls a ring back in, which is how six of them make an arc.
-    struct Spot {
-        var side: Int
-        var y: CGFloat
-        var inset: CGFloat = 0
-    }
-
-    private static func x(for spot: Spot, width: CGFloat) -> CGFloat {
-        let edge = LevelRing.diameter / 2 - 4 + spot.inset
-        switch spot.side {
-        case ..<0: return edge
-        case 0:    return width / 2
-        default:   return width - edge
-        }
-    }
-
-    /// Ring positions, Rex's height and the stage's height, by count. A table
-    /// rather than maths around a circle: Rex is taller than he is wide, and
-    /// rings evenly spaced on a circle land on his head and his feet. Three
-    /// sits as a podium, two at his shoulders and one at his feet.
-    static func layout(count: Int) -> (height: CGFloat, rexY: CGFloat, rings: [Spot]) {
-        switch count {
-        case 0, 1:
-            return (200, 0.5, [Spot(side: -1, y: 0.5)])
-        case 2:
-            return (200, 0.5, [Spot(side: -1, y: 0.5), Spot(side: 1, y: 0.5)])
-        case 3:
-            return (300, 0.33, [Spot(side: -1, y: 0.3), Spot(side: 1, y: 0.3),
-                                Spot(side: 0, y: 0.84)])
-        case 4:
-            return (290, 0.5, [Spot(side: -1, y: 0.2), Spot(side: 1, y: 0.2),
-                               Spot(side: -1, y: 0.8), Spot(side: 1, y: 0.8)])
-        case 5:
-            return (360, 0.36, [Spot(side: -1, y: 0.14, inset: 12), Spot(side: 1, y: 0.14, inset: 12),
-                                Spot(side: -1, y: 0.5), Spot(side: 1, y: 0.5),
-                                Spot(side: 0, y: 0.88)])
-        default:
-            return (380, 0.5, [Spot(side: -1, y: 0.14, inset: 12), Spot(side: 1, y: 0.14, inset: 12),
-                               Spot(side: -1, y: 0.5), Spot(side: 1, y: 0.5),
-                               Spot(side: -1, y: 0.86, inset: 12), Spot(side: 1, y: 0.86, inset: 12)])
+    /// Each ring beside the muscles it colours, alternating sides so they never
+    /// stack: push-ups at the chest, squats at the thighs, steps at the calves.
+    /// Heights are fractions of the figure, which fills the stage top to bottom.
+    private static func spot(for exercise: Exercise) -> (left: Bool, y: CGFloat) {
+        switch exercise {
+        case .pushUps: return (true, 0.27)
+        case .squats:  return (false, 0.58)
+        case .steps:   return (true, 0.84)
         }
     }
 
@@ -157,14 +133,54 @@ struct LevelsCard: View {
     }
 }
 
+/// The figure: light grey everywhere, each region in its level's colour, and
+/// the outline on top.
+///
+/// The same in light and dark mode on purpose. A pale body with dark lines reads
+/// on both backgrounds, and a figure that changed with the theme would make the
+/// level colours look different from one evening to the next.
+private struct BodyFigure: View {
+    let tint: (BodyRegion) -> UInt32?
+
+    static let aspect: CGFloat = 352.0 / 900.0
+    static let untrained = Color(red: 0.84, green: 0.85, blue: 0.83)
+    static let line = Color(red: 0.10, green: 0.11, blue: 0.10)
+
+    var body: some View {
+        ZStack {
+            layer("LevelFigureSkin", Self.untrained)
+            ForEach(BodyRegion.allCases, id: \.self) { region in
+                layer(region.assetName, tint(region).map { Color(hex: $0) } ?? Self.untrained)
+                    .animation(.easeInOut(duration: 0.6), value: tint(region))
+            }
+            layer("LevelFigureOutline", Self.line)
+        }
+        .aspectRatio(Self.aspect, contentMode: .fit)
+        // The rings carry the same information in words.
+        .accessibilityHidden(true)
+    }
+
+    private func layer(_ name: String, _ colour: Color) -> some View {
+        Image(name)
+            .renderingMode(.template)
+            .resizable()
+            .interpolation(.high)
+            .foregroundStyle(colour)
+    }
+}
+
 /// One movement's level: lifetime count in the middle, the ring filling toward
-/// the next level around it.
+/// the next level around it, in the colour that level will turn the body.
 private struct LevelRing: View {
     let exercise: Exercise
     let progress: ExerciseLevel.Progress
 
-    static let diameter: CGFloat = 94
+    static let diameter: CGFloat = 88
     private static let lineWidth: CGFloat = 7
+
+    private var nextColour: Color {
+        ExerciseLevel.tint(level: progress.level + 1).map { Color(hex: $0) } ?? Palette.brand
+    }
 
     var body: some View {
         ZStack {
@@ -172,16 +188,16 @@ private struct LevelRing: View {
             Circle().stroke(Palette.hairline, lineWidth: Self.lineWidth)
             Circle()
                 .trim(from: 0, to: progress.fraction)
-                .stroke(Palette.brand, style: StrokeStyle(lineWidth: Self.lineWidth, lineCap: .round))
+                .stroke(nextColour, style: StrokeStyle(lineWidth: Self.lineWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .animation(.snappy(duration: 0.5), value: progress.fraction)
 
             VStack(spacing: 0) {
-                ExerciseIcon(name: exercise.symbol, size: 14)
+                ExerciseIcon(name: exercise.symbol, size: 13)
                     .foregroundStyle(Palette.inkSoft)
-                    .frame(height: 18)
+                    .frame(height: 17)
                 Text(Self.compact(progress.count))
-                    .font(RansomFont.counter(22))
+                    .font(RansomFont.counter(21))
                     .foregroundStyle(Palette.ink)
                     .minimumScaleFactor(0.7)
                     .lineLimit(1)
@@ -190,7 +206,7 @@ private struct LevelRing: View {
                     .font(RansomFont.caption(11))
                     .foregroundStyle(Palette.inkSoft)
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 11)
         }
         .frame(width: Self.diameter, height: Self.diameter)
         .accessibilityElement(children: .ignore)

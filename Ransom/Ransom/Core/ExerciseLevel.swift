@@ -57,6 +57,22 @@ enum ExerciseLevel {
         }
     }
 
+    /// A colour per level, so every level-up visibly changes the body part it
+    /// trained. Warm first, through purple and blue to green, ending in gold,
+    /// which every level past the table keeps. Level 0 has none: untrained is
+    /// the figure's own grey.
+    static let tints: [UInt32] = [
+        0xFFE08A, 0xFFC857, 0xFFA94D, 0xFF8A3D, 0xF06027,
+        0xE8453C, 0xD62F4B, 0xC2255C, 0xA61E7A, 0x862E9C,
+        0x6741D9, 0x4C6EF5, 0x228BE6, 0x15AABF, 0x12B886,
+        0x40C057, 0x82C91E, 0xC9B400, 0xF5A300, 0xD4A017,
+    ]
+
+    static func tint(level: Int) -> UInt32? {
+        guard level > 0 else { return nil }
+        return tints[min(level, tints.count) - 1]
+    }
+
     static func progress(count: Int, for exercise: Exercise) -> Progress {
         let count = max(0, count)
         var level = 0
@@ -67,5 +83,34 @@ enum ExerciseLevel {
             floor: threshold(level: level, for: exercise),
             next: threshold(level: level + 1, for: exercise)
         )
+    }
+}
+
+/// The parts of the figure on Progress that can change colour, and which
+/// movement's level each one wears.
+enum BodyRegion: CaseIterable {
+    case chest, shoulders, arms, core, thighs, calves
+
+    /// Push-ups work the chest, shoulders, arms and core; squats the thighs;
+    /// walking the calves. Without steps the calves go with squats, which work
+    /// them too, rather than staying grey forever for somebody who never walks
+    /// for minutes.
+    func trainedBy(walking: Bool) -> Exercise {
+        switch self {
+        case .chest, .shoulders, .arms, .core: return .pushUps
+        case .thighs:                          return .squats
+        case .calves:                          return walking ? .steps : .squats
+        }
+    }
+
+    var assetName: String {
+        switch self {
+        case .chest:     return "LevelFigureChest"
+        case .shoulders: return "LevelFigureShoulders"
+        case .arms:      return "LevelFigureArms"
+        case .core:      return "LevelFigureCore"
+        case .thighs:    return "LevelFigureThighs"
+        case .calves:    return "LevelFigureCalves"
+        }
     }
 }
