@@ -23,6 +23,22 @@ public struct UsageMeter {
         self.defaults = defaults
     }
 
+    /// Whether the ladder can be believed on this iOS.
+    ///
+    /// Not on iOS 26. It delivers `eventDidReachThreshold` for rungs nobody has
+    /// reached - seconds after monitoring starts, on picking the phone up, on
+    /// plugging it in, with zero usage - which Apple's forums have tracked since
+    /// 26.2 with no fix. On a real phone that read 10h (the top rung) against
+    /// 6h 20m from iOS itself, and put "Fresh start tomorrow" on Home for a day
+    /// that was under its allowance. A threshold that fired cannot be told apart
+    /// from one that was reached, so the only safe reading is none: the ladder
+    /// is not registered there, and anything left over is ignored. The exact
+    /// figures come from the report extension, which draws them itself.
+    public static var isReliable: Bool {
+        if #available(iOS 26, *) { return false }
+        return true
+    }
+
     /// The ladder, fine where it matters and coarse where it stops mattering.
     ///
     /// Every rung is a registered `DeviceActivityEvent`, and iOS will not take an

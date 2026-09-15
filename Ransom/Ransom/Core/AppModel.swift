@@ -219,8 +219,14 @@ final class AppModel {
     ///
     /// It is a floor, not a reading: the meter knows which rung has been passed,
     /// not the minute. Anything quoted from it says "45+" and never interpolates.
+    ///
+    /// Always nil on iOS 26, where the meter reports rungs that were never
+    /// reached (`UsageMeter.isReliable`). Home then falls back to minutes bought,
+    /// which can only under-state the day, so "Fresh start tomorrow" appears
+    /// when the unlocks alone are past the allowance and never on a false 10h.
     var measuredScreenMinutes: Int? {
         _ = usageRevision
+        guard UsageMeter.isReliable else { return nil }
         return usage.isMeasuring ? usage.minutesToday : nil
     }
 

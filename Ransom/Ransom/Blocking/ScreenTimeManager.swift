@@ -43,8 +43,16 @@ final class ScreenTimeManager {
         syncUnlockState()
     }
 
-    var blockedCount: Int { store.count }
-    var hasSelection: Bool { !store.isEmpty }
+    /// Read from the observed `selection`, never from `store`. The store is
+    /// UserDefaults and invisible to observation, so Home read "no apps" from it,
+    /// kept showing "Pick your apps" after Save, and only caught up on relaunch.
+    /// `selection` writes the store on every change, so the two cannot disagree.
+    var blockedCount: Int {
+        selection.applicationTokens.count
+            + selection.categoryTokens.count
+            + selection.webDomainTokens.count
+    }
+    var hasSelection: Bool { blockedCount > 0 }
 
     // MARK: - Authorization
 
@@ -135,7 +143,7 @@ final class ScreenTimeManager {
     /// to lift - so an unlock is an unlock of nothing. The check is public
     /// because the spend buttons need it too: the bank is debited before this is
     /// called, and coins spent on nothing are not refundable from here.
-    var canUnlock: Bool { isAuthorized && !store.isEmpty }
+    var canUnlock: Bool { isAuthorized && hasSelection }
 
     /// Opens the apps for `minutes`. Returns false, having changed nothing, when
     /// there is nothing to open.
@@ -225,7 +233,12 @@ final class ScreenTimeManager {
         //
         // Blocking is unaffected. The shield reads `selection` separately; this
         // event set only measures.
-        for minutes in UsageMeter.milestones {
+        //
+        // Not registered at all where iOS fires thresholds that were never
+        // reached (see `UsageMeter.isReliable`). The daily schedule still runs
+        // without them: its interval start is what re-applies the shield at
+        // midnight and settles a day off.
+        for minutes in UsageMeter.milestones where UsageMeter.isReliable {
             events[DeviceActivityEvent.Name(UsageMeter.eventName(forMinutes: minutes))] =
                 DeviceActivityEvent(
                     applications: [],

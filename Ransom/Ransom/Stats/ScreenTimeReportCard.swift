@@ -1,3 +1,4 @@
+import Combine
 import DeviceActivity
 import FamilyControls
 import SwiftUI
@@ -35,15 +36,13 @@ struct ScreenTimeReportCard: View {
     /// a constant, sized to the five rows the extension caps its list at.
     private static let reportHeight: CGFloat = 318
 
+    /// When the filter was last worked out. See `ReportClock`.
+    @State private var now = Date()
+
     /// Today, from midnight. A `.daily` segment over a shorter interval is what
     /// makes the report a running total rather than yesterday's finished one.
     private var filter: DeviceActivityFilter {
-        let start = Calendar.current.startOfDay(for: Date())
-        return DeviceActivityFilter(
-            segment: .daily(during: DateInterval(start: start, end: max(start, Date()))),
-            users: .all,
-            devices: .init([.iPhone])
-        )
+        .ransomDays(back: 0, until: now)
     }
 
     var body: some View {
@@ -75,5 +74,64 @@ struct ScreenTimeReportCard: View {
                 .foregroundStyle(Palette.inkFaint)
         }
         .ransomCard()
+        .reportClock($now)
+    }
+}
+
+extension DeviceActivityFilter {
+    /// Whole days of this iPhone's screen time, one `.daily` segment each, from
+    /// midnight `back` days ago up to `until`. Every Ransom report asks the same
+    /// way, so the three cards on Progress always add up the same minutes.
+    static func ransomDays(back: Int, until now: Date) -> DeviceActivityFilter {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: now)
+        let start = calendar.date(byAdding: .day, value: -back, to: today) ?? today
+        return DeviceActivityFilter(
+            segment: .daily(during: DateInterval(start: start, end: max(start, now))),
+            users: .all,
+            devices: .init([.iPhone])
+        )
+    }
+}
+
+/// Keeps a report's "now" current.
+///
+/// A report's filter is fixed when it is built, and SwiftUI only rebuilds it
+/// when something the view reads changes. The filter used to call `Date()`
+/// inline and read nothing else, so leaving Ransom in the background overnight
+/// brought the morning back to yesterday's interval: yesterday's screen time
+/// under "today", until the app was quit and reopened. `now` is state, moved on
+/// whenever the answer could have changed: the screen appearing, the app coming
+/// back to the front, and midnight.
+private struct ReportClock: ViewModifier {
+    @Binding var now: Date
+    @Environment(\.scenePhase) private var scenePhase
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear { tick() }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { tick() }
+            }
+            .onReceive(
+                NotificationCenter.default.publisher(for: .NSCalendarDayChanged)
+                    .receive(on: RunLoop.main)
+            ) { _ in now = Date() }
+    }
+
+    /// Not within half a minute of the last one. A new filter makes the
+    /// extension draw the report again, and appearing straight after being
+    /// built would draw every card twice for nothing.
+    private func tick() {
+        let date = Date()
+        guard date.timeIntervalSince(now) > 30
+                || !Calendar.current.isDate(date, inSameDayAs: now) else { return }
+        now = date
+    }
+}
+
+extension View {
+    func reportClock(_ now: Binding<Date>) -> some View {
+        modifier(ReportClock(now: now))
     }
 }

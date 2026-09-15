@@ -31,14 +31,8 @@ public enum RansomCore {
         public static let minutesPerUnlock = "ransom.config.minutesPerUnlock"
         public static let exerciseName = "ransom.config.exerciseName"
         public static let shieldHeadline = "ransom.shield.headline"
-        /// Whole-device screen time today, written by the DeviceActivityReport
-        /// extension - the only process that can see it. See `DeviceUsageStore`.
-        public static let deviceUsageMinutes = "ransom.device.usageMinutes"
-        public static let deviceUsageDay = "ransom.device.usageDay"
-        /// Day-by-day usage, kept for a month so a trend can be drawn. See
-        /// `UsageHistory` for why there are two series.
+        /// Day-by-day readings of the usage ladder. See `UsageHistory`.
         public static let usageHistory = "ransom.usage.history"
-        public static let deviceUsageHistory = "ransom.device.usageHistory"
         /// A short breadcrumb trail written by the monitor extension. The
         /// extension runs in its own process, on iOS's schedule, and leaves no
         /// other trace - without this every question about what it did is a

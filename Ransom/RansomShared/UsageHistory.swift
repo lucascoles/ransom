@@ -6,29 +6,20 @@ import Foundation
 /// it at midnight, which is enough to answer "how is today going" and useless for
 /// "is this working", the question a progress screen actually exists to answer.
 ///
-/// Two series, because they are measured by different things and fail in
-/// different ways:
-///  * `guarded` - minutes in the apps Ransom watches, from the monitor
-///    extension's threshold callbacks. Recorded in the background whether or not
-///    anybody opens the app, so the series has no holes.
-///  * `device` - minutes across the whole phone, from the report extension. That
-///    only runs while its view is on screen, so this series is missing every day
-///    the user did not open Progress. Useful, and not to be drawn as if it were
-///    continuous.
+/// One series, `guarded`: the monitor extension's threshold ladder, day by day.
+/// There was a second, `device`, written by the report extension - but iOS drops
+/// every App Group write that extension makes, so it was never filled in. The
+/// Progress cards now get exact daily figures by being drawn in the report
+/// extension itself (`ScreenTimeSummary`), and nothing on screen reads this.
 public struct UsageHistory {
     private var defaults: UserDefaults { RansomCore.defaults }
 
     public init() {}
 
     public enum Series {
-        case guarded, device
+        case guarded
 
-        var key: String {
-            switch self {
-            case .guarded: return RansomCore.Key.usageHistory
-            case .device:  return RansomCore.Key.deviceUsageHistory
-            }
-        }
+        var key: String { RansomCore.Key.usageHistory }
     }
 
     /// Three years, which is effectively "keep it".

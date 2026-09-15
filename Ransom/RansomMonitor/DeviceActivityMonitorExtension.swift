@@ -72,7 +72,9 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         ledger.trace("threshold \(event.rawValue) on \(activity.rawValue)")
 
         if let minutes = UsageMeter.minutes(fromEventName: event.rawValue) {
-            usage.record(minutes: minutes)
+            // A rung left registered by an older build still fires here on
+            // iOS 26, true or not. Not recorded there.
+            if UsageMeter.isReliable { usage.record(minutes: minutes) }
             return
         }
 

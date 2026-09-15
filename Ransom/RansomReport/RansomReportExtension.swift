@@ -10,16 +10,23 @@ import SwiftUI
 /// still reaches the user's eyes. The app cannot read it: the extension is
 /// sandboxed with no network and its view is composited in, not returned.
 ///
-/// What it *can* do is write to the App Group, and that is how the figure gets
-/// back to the rest of the app. That route is not documented and could be closed
-/// by any iOS release, so nothing critical is built on it - the app always has
-/// the `UsageMeter` ladder to fall back on, and this only ever improves the
-/// number rather than being the only source of it.
+/// Nor can it be passed back through the App Group. This used to write the day's
+/// total there for the app to compare against yesterday; iOS drops every write
+/// this extension makes, silently, so the app never received a figure and fell
+/// back to the threshold ladder, which iOS 26 inflates. So anything that needs
+/// the exact figure is drawn here: today's total, today against yesterday, and
+/// the week.
 @main
 struct RansomReportExtension: DeviceActivityReportExtension {
     var body: some DeviceActivityReportScene {
         TotalActivityReport { day in
             TotalActivityView(day: day)
+        }
+        ComparisonReport { pair in
+            ComparisonView(pair: pair)
+        }
+        TrendReport { week in
+            TrendView(week: week)
         }
     }
 }
@@ -68,7 +75,6 @@ struct TotalActivityReport: DeviceActivityReportScene {
             .sorted { $0.minutes > $1.minutes }
             .prefix(5)
 
-        DeviceUsageStore().record(totalMinutes: Int(total / 60))
         return DayActivity(totalMinutes: Int(total / 60), apps: Array(apps))
     }
 }
