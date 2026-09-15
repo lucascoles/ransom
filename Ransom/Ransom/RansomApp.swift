@@ -30,6 +30,7 @@ struct RansomApp: App {
     @State private var isLaunching = true
 
     init() {
+        Revenue.configure()
         // Existing installs still have the retired 7pm nudge pending with
         // `repeats: true`; removing the code that scheduled it does not
         // unschedule it on a device that already has it.

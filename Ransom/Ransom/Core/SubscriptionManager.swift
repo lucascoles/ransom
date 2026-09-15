@@ -238,6 +238,9 @@ final class SubscriptionManager {
         purchaseState = .purchasing
         do {
             let result = try await product.purchase()
+            // Before the transaction is finished below: RevenueCat's rule for
+            // purchases the app completes itself. See `Revenue`.
+            await Revenue.record(result)
             switch result {
             case .success(let verification):
                 let transaction = try checkVerified(verification)
@@ -267,6 +270,7 @@ final class SubscriptionManager {
     func restore() async {
         purchaseState = .purchasing
         try? await AppStore.sync()
+        await Revenue.syncAfterRestore()
         await refreshEntitlement()
         purchaseState = isSubscribed ? .idle : .failed("No active subscription found.")
     }

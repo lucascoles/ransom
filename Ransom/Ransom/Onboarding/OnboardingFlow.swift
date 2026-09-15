@@ -36,6 +36,10 @@ struct OnboardingFlow: View {
         }
         .ransomScreenBackground()
         .animation(.spring(response: 0.42, dampingFraction: 0.86), value: step)
+        // The drop-off funnel: RevenueCat keeps the furthest step each person
+        // reached. See `Revenue.markIntakeStep`.
+        .onAppear { Revenue.markIntakeStep(step) }
+        .onChange(of: step) { _, reached in Revenue.markIntakeStep(reached) }
     }
 
     // MARK: - Chrome
@@ -135,6 +139,9 @@ struct OnboardingFlow: View {
                 context: .onboarding,
                 onFinish: finishOnboarding
             )
+            // On arrival rather than after a purchase, so the people who leave
+            // here carry their answers too and the two groups can be compared.
+            .onAppear { Revenue.tag(draft) }
         }
     }
 
@@ -165,6 +172,7 @@ struct OnboardingFlow: View {
     private func finishOnboarding() {
         model.profile = draft
         model.hasCompletedOnboarding = true
+        Revenue.markIntakeFinished()
         // Saved first, celebrated second: see `WelcomeCelebration`.
         model.showWelcome = true
         Haptics.success()

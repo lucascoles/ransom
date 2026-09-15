@@ -12,6 +12,7 @@
 		1A0000000000000000000062 /* RansomMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1A0000000000000000000023 /* RansomMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		1A0000000000000000000A07 /* RansomReport.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 1A0000000000000000000A02 /* RansomReport.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D34BC120A6FD0D126B52BDBB /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1473E192EF5051D0E54007D6 /* Foundation.framework */; };
+		1A0000000000000000000B01 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 1A0000000000000000000B03 /* RevenueCat */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -154,6 +155,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1A0000000000000000000B01 /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -290,6 +292,9 @@
 				1A0000000000000000000011 /* RansomShared */,
 			);
 			name = Ransom;
+			packageProductDependencies = (
+				1A0000000000000000000B03 /* RevenueCat */,
+			);
 			productName = Ransom;
 			productReference = 1A0000000000000000000020 /* Ransom.app */;
 			productType = "com.apple.product-type.application";
@@ -431,6 +436,9 @@
 				Base,
 			);
 			mainGroup = 1A0000000000000000000002;
+			packageReferences = (
+				1A0000000000000000000B02 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+			);
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1A0000000000000000000003 /* Products */;
@@ -990,6 +998,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		1A0000000000000000000B02 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.89.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1A0000000000000000000B03 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1A0000000000000000000B02 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 1A0000000000000000000001 /* Project object */;
 }
