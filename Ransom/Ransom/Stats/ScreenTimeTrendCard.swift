@@ -15,8 +15,9 @@ import SwiftUI
 struct ScreenTimeTrendCard: View {
     @Environment(ScreenTimeManager.self) private var screenTime
 
-    /// Header, a 110pt line and the weekday row. Fixed, as for every report.
-    private static let reportHeight: CGFloat = 214
+    /// Header, a 110pt line and the weekday row, with a little to spare. Fixed,
+    /// as for every report.
+    private static let reportHeight: CGFloat = 224
 
     @State private var now = Date()
 
@@ -24,6 +25,7 @@ struct ScreenTimeTrendCard: View {
         if screenTime.isAuthorized {
             // Fifteen days: this week, the week before it, and today.
             DeviceActivityReport(.trend, filter: .ransomDays(back: 14, until: now))
+                .id(now)
                 .frame(height: Self.reportHeight)
                 .ransomCard()
                 .reportClock($now)

@@ -21,6 +21,25 @@ struct ScreenTimeSummaryTests {
         #expect(ScreenTimeSummary.change(today: 380, yesterday: 0) == nil)
     }
 
+    @Test("Today is held against the same time yesterday, not all of it")
+    func sameTimeOfDay() {
+        // 9am: 40 minutes so far, yesterday had 50 by now and 6h in all.
+        // Against the whole day this was "-89%, Rex is impressed".
+        #expect(ScreenTimeSummary.verdict(today: 40, yesterdaySoFar: 50, yesterdayTotal: 360) == .change(-20))
+    }
+
+    @Test("Just after midnight it is too early to call, not -100%")
+    func tooEarly() {
+        #expect(ScreenTimeSummary.verdict(today: 2, yesterdaySoFar: 1, yesterdayTotal: 360) == .tooEarly)
+        #expect(ScreenTimeSummary.verdict(today: 0, yesterdaySoFar: 29, yesterdayTotal: 360) == .tooEarly)
+        #expect(ScreenTimeSummary.verdict(today: 0, yesterdaySoFar: 30, yesterdayTotal: 360) == .change(-100))
+    }
+
+    @Test("A phone with no yesterday says so")
+    func verdictNoYesterday() {
+        #expect(ScreenTimeSummary.verdict(today: 90, yesterdaySoFar: 0, yesterdayTotal: 0) == .noYesterday)
+    }
+
     @Test("Five percent either way is level, and figure and sentence agree")
     func directionBoundaries() {
         #expect(ScreenTimeSummary.direction(-6) == .down)

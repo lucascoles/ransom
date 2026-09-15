@@ -58,6 +58,9 @@ struct ScreenTimeReportCard: View {
 
             if screenTime.isAuthorized {
                 DeviceActivityReport(.totalActivity, filter: filter)
+                    // A new identity when the clock moves, so the report is
+                    // asked again even if the remote view ignores a new filter.
+                    .id(now)
                     // The report brings its own intrinsic size and it is not
                     // always sensible, so the card decides how much room it gets
                     // rather than being pushed around by another process's view.
@@ -79,15 +82,17 @@ struct ScreenTimeReportCard: View {
 }
 
 extension DeviceActivityFilter {
-    /// Whole days of this iPhone's screen time, one `.daily` segment each, from
-    /// midnight `back` days ago up to `until`. Every Ransom report asks the same
-    /// way, so the three cards on Progress always add up the same minutes.
-    static func ransomDays(back: Int, until now: Date) -> DeviceActivityFilter {
+    /// This iPhone's screen time from midnight `back` days ago up to `until`,
+    /// one `.daily` segment per day, or `.hourly` where the report has to cut a
+    /// day at the time of day. Every Ransom report asks the same way, so the
+    /// three cards on Progress always add up the same minutes.
+    static func ransomDays(back: Int, until now: Date, hourly: Bool = false) -> DeviceActivityFilter {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: now)
         let start = calendar.date(byAdding: .day, value: -back, to: today) ?? today
+        let interval = DateInterval(start: start, end: max(start, now))
         return DeviceActivityFilter(
-            segment: .daily(during: DateInterval(start: start, end: max(start, now))),
+            segment: hourly ? .hourly(during: interval) : .daily(during: interval),
             users: .all,
             devices: .init([.iPhone])
         )

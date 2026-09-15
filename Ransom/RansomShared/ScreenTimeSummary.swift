@@ -17,6 +17,32 @@ public enum ScreenTimeSummary {
         return Int(((Double(today - yesterday) / Double(yesterday)) * 100).rounded())
     }
 
+    /// What the comparison card can honestly say right now.
+    public enum Verdict: Equatable {
+        /// Screen Time has nothing for yesterday at all.
+        case noYesterday
+        /// Yesterday had barely started by this time of day, so any percentage
+        /// would be noise: 3 minutes against 1 is "+200%".
+        case tooEarly
+        case change(Int)
+    }
+
+    /// Below this much of yesterday by the same time, it is too early to call.
+    public static let minimumToCompare = 30
+
+    /// Today so far against yesterday **up to the same time of day**.
+    ///
+    /// Not against all of yesterday. Measured against a finished day, every
+    /// morning is "-90%" and "Rex is impressed" - true of the arithmetic and
+    /// false about the day, and the card would say it to everyone, every
+    /// morning. Same time against same time is the question the user means.
+    public static func verdict(today: Int, yesterdaySoFar: Int, yesterdayTotal: Int) -> Verdict {
+        guard yesterdayTotal > 0 else { return .noYesterday }
+        guard yesterdaySoFar >= minimumToCompare,
+              let change = change(today: today, yesterday: yesterdaySoFar) else { return .tooEarly }
+        return .change(change)
+    }
+
     public enum Direction { case down, level, up }
 
     /// Five percent either way is level. The figure, the arrow and the sentence

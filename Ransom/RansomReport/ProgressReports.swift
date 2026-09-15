@@ -22,19 +22,52 @@ private func minutesByDay(_ data: DeviceActivityResults<DeviceActivityData>) asy
 
 struct DayPair {
     var today: Int
-    var yesterday: Int
+    /// Yesterday from midnight up to this time of day.
+    var yesterdaySoFar: Int
+    var yesterdayTotal: Int
+
+    var verdict: ScreenTimeSummary.Verdict {
+        ScreenTimeSummary.verdict(today: today, yesterdaySoFar: yesterdaySoFar, yesterdayTotal: yesterdayTotal)
+    }
 }
 
+/// Asked for in hourly segments (see `ScreenTimeComparisonCard`), so yesterday
+/// can be cut off at this time of day. The hour that straddles the cut counts
+/// in proportion: at 10:20 this morning, yesterday's 10 o'clock hour counts a
+/// third.
 struct ComparisonReport: DeviceActivityReportScene {
     let context: DeviceActivityReport.Context = .comparison
     let content: (DayPair) -> ComparisonView
 
     func makeConfiguration(representing data: DeviceActivityResults<DeviceActivityData>) async -> DayPair {
-        let byDay = await minutesByDay(data)
         let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
+        let now = Date()
+        let today = calendar.startOfDay(for: now)
         let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
-        return DayPair(today: byDay[today] ?? 0, yesterday: byDay[yesterday] ?? 0)
+        let sameTimeYesterday = calendar.date(byAdding: .day, value: -1, to: now) ?? yesterday
+
+        var todaySeconds: TimeInterval = 0
+        var soFarSeconds: TimeInterval = 0
+        var yesterdaySeconds: TimeInterval = 0
+        for await result in data {
+            for await segment in result.activitySegments {
+                let interval = segment.dateInterval
+                let seconds = segment.totalActivityDuration
+                if interval.start >= today {
+                    todaySeconds += seconds
+                } else if interval.start >= yesterday {
+                    yesterdaySeconds += seconds
+                    if interval.end <= sameTimeYesterday {
+                        soFarSeconds += seconds
+                    } else if interval.start < sameTimeYesterday, interval.duration > 0 {
+                        soFarSeconds += seconds * sameTimeYesterday.timeIntervalSince(interval.start) / interval.duration
+                    }
+                }
+            }
+        }
+        return DayPair(today: Int(todaySeconds / 60),
+                       yesterdaySoFar: Int(soFarSeconds / 60),
+                       yesterdayTotal: Int(yesterdaySeconds / 60))
     }
 }
 
@@ -45,21 +78,30 @@ struct ComparisonView: View {
 
     var body: some View {
         Group {
-            if let change = ScreenTimeSummary.change(today: pair.today, yesterday: pair.yesterday) {
+            switch pair.verdict {
+            case .change(let change):
                 comparison(change)
-            } else {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("No yesterday to compare with")
-                        .font(ReportFont.headline(16))
-                        .foregroundStyle(ReportPalette.ink)
-                    Text("Screen Time has nothing for yesterday on this phone yet. Look in tomorrow and Rex can tell you which way it went.")
-                        .font(ReportFont.body(14))
-                        .foregroundStyle(ReportPalette.inkSoft)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+            case .tooEarly:
+                message("Too early to call",
+                        "Rex holds today up against this time yesterday. Look in again later and he will tell you which way it is going.")
+            case .noYesterday:
+                message("No yesterday to compare with",
+                        "Screen Time has nothing for yesterday on this phone yet. Look in tomorrow and Rex can tell you which way it went.")
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func message(_ title: String, _ body: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(ReportFont.headline(16))
+                .foregroundStyle(ReportPalette.ink)
+            Text(body)
+                .font(ReportFont.body(14))
+                .foregroundStyle(ReportPalette.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     private func comparison(_ change: Int) -> some View {
@@ -69,15 +111,17 @@ struct ComparisonView: View {
                 Text(ScreenTimeSummary.headline(change))
                     .font(ReportFont.display(34))
                     .foregroundStyle(tint(direction))
-                Text("vs yesterday")
+                Text("vs this time yesterday")
                     .font(ReportFont.body(15))
                     .foregroundStyle(ReportPalette.inkSoft)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
 
-            let peak = Double(max(pair.today, pair.yesterday, 1))
+            let peak = Double(max(pair.today, pair.yesterdaySoFar, 1))
             VStack(spacing: 8) {
                 row("Today", minutes: pair.today, fraction: Double(pair.today) / peak, colour: tint(direction))
-                row("Yesterday", minutes: pair.yesterday, fraction: Double(pair.yesterday) / peak, colour: ReportPalette.hairline)
+                row("Yesterday", minutes: pair.yesterdaySoFar, fraction: Double(pair.yesterdaySoFar) / peak, colour: ReportPalette.hairline)
             }
 
             HStack(spacing: 8) {
