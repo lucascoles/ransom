@@ -49,15 +49,16 @@ struct RootView: View {
         guard UserDefaults.standard.bool(forKey: "RansomSeedHistory") else { return }
         let calendar = Calendar.current
 
-        // Screen time coming down over a fortnight, with one day missing so the
-        // chart's gap handling is visible rather than assumed.
-        let minutes = [128, 141, 119, 133, 150, 126, 138, 118, 109, 0, 97, 104, 88, 92]
-        let usage = UsageHistory()
-        for (index, value) in minutes.enumerated() where value > 0 {
+        // A fortnight of walking, uneven like a real one, so the steps level
+        // has something to show. (Screen time is drawn by the report extension
+        // from iOS's own figures now, so there is nothing of it to seed.)
+        let steps = [6_200, 8_900, 4_100, 7_300, 11_800, 5_600, 7_700, 9_400, 3_900, 6_800, 12_300, 7_100, 5_500, 8_200]
+        let log = StepLog()
+        for (index, value) in steps.enumerated() {
             guard let day = calendar.date(byAdding: .day,
-                                          value: -(minutes.count - 1 - index),
+                                          value: -(steps.count - 1 - index),
                                           to: Date()) else { continue }
-            usage.record(.guarded, minutes: value, on: day)
+            log.record(value, on: day)
         }
 
         // Sets over three weeks. Deliberately uneven - a couple of rest days, a

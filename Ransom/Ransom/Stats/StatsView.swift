@@ -36,8 +36,12 @@ struct StatsView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
-                ScreenTimeReportCard()
+                // Every rep, as a level per movement. First, because it is the
+                // part of this tab that only ever goes up.
+                LevelsCard()
                     .padding(.top, 4)
+
+                ScreenTimeReportCard()
 
                 // Directly under the figure it is about. The number above says
                 // how long today has been; this says whether that is good.
@@ -50,8 +54,6 @@ struct StatsView: View {
                 if model.profile.commitmentDays != nil {
                     commitmentCard
                 }
-
-                lifetimeCard
 
                 SegmentPicker(
                     options: Window.allCases.map { (value: $0, label: $0.title) },
@@ -105,31 +107,6 @@ struct StatsView: View {
     }
 
     // MARK: - Sections
-
-    /// One number, all time, and nothing else on it.
-    ///
-    /// Rex used to greet the user here too, which meant two of him on one screen -
-    /// the streak card above has the one that has something to say.
-    private var lifetimeCard: some View {
-        VStack(spacing: 4) {
-            Text("LIFETIME")
-                .font(RansomFont.caption(11))
-                .tracking(1.4)
-                .foregroundStyle(Palette.inkFaint)
-
-            Text(model.lifetimeReps, format: .number)
-                .font(RansomFont.display(56))
-                .foregroundStyle(Palette.ink)
-                .contentTransition(.numericText(value: Double(model.lifetimeReps)))
-
-            Text(model.lifetimeReps == 1 ? "rep" : "reps")
-                .font(RansomFont.caption(13))
-                .foregroundStyle(Palette.inkSoft)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .ransomCard()
-    }
 
     private func minutes(_ value: Int) -> String {
         let v = max(0, value)

@@ -112,6 +112,7 @@ final class StepTracker {
         isDenied = false
         stepsToday = steps
         metresToday = today?.metres
+        StepLog().record(steps, on: start)
 
         let perMinute = plan.repsPerMinute(for: .steps)
         guard perMinute > 0 else { return 0 }
@@ -162,6 +163,7 @@ final class StepTracker {
                 }
             }
             result.append(DayCount(date: dayStart, steps: count))
+            if let count { StepLog().record(count, on: dayStart) }
         }
         week = result
     }
