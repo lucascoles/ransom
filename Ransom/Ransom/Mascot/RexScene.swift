@@ -9,8 +9,17 @@ struct RexScene: View {
     var bubbleAlignment: HorizontalAlignment = .leading
     /// Types the line out one character at a time the first time it appears.
     var typewriter: Bool = false
+    /// Puts a soft contact shadow under him, for the one place he stands on
+    /// something (Home's masthead) rather than floating on paper.
+    var grounded: Bool = false
 
     @State private var revealed: Int = 0
+
+    /// How far above the bottom of his frame his feet actually are, as a fraction
+    /// of `size`. Measured off the rendered artwork, not guessed.
+    private var feetInset: CGFloat {
+        RexImage.loopName(for: pose) != nil ? 0.205 : -0.007
+    }
 
     private var shownLine: String {
         guard typewriter else { return line }
@@ -23,11 +32,34 @@ struct RexScene: View {
             // A clip where one exists, the drawing everywhere else. Rex stops
             // being a picture of a character on the two screens you actually sit
             // and look at.
-            if let clip = RexImage.loopName(for: pose) {
-                RexClip(name: clip, size: size, fallback: pose)
-                    .id(clip)
-            } else {
-                RexImage(pose: pose, size: size)
+            Group {
+                if let clip = RexImage.loopName(for: pose) {
+                    RexClip(name: clip, size: size, fallback: pose)
+                        .id(clip)
+                } else {
+                    RexImage(pose: pose, size: size)
+                }
+            }
+            .background(alignment: .bottom) {
+                if grounded {
+                    // The clips and the stills sit differently in their frames — the
+                    // loops leave about a fifth of the height empty below his feet,
+                    // the PNGs only 3% — so the shadow follows whichever is actually
+                    // on screen. Getting this wrong is very visible: too low and it
+                    // reads as a smudge he floats above, too high and it disappears
+                    // inside him.
+                    Ellipse()
+                        .fill(
+                            RadialGradient(
+                                colors: [.black.opacity(0.15), .black.opacity(0)],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: size * 0.34
+                            )
+                        )
+                        .frame(width: size * 0.62, height: size * 0.10)
+                        .offset(y: -size * feetInset)
+                }
             }
             if bubbleAlignment == .leading { bubble }
         }

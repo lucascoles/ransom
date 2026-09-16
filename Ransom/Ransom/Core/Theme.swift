@@ -41,6 +41,26 @@ enum Palette {
 
     static let hairline   = Color.adaptive(light: 0xE7E5DC, dark: 0x2A3026)
 
+    /// The field the cards sit on, on the screens you live in. Deliberately a few
+    /// steps below `surface` — `canvas` was a percent and a half off white, which
+    /// is not enough for a card to read as raised, so the whole screen flattened
+    /// into one sheet. Kept separate from `canvas` because onboarding's intro clip
+    /// is keyed with `.blendMode(.multiply)` and needs the near-white behind it.
+    static let canvasDeep = Color.adaptive(light: 0xF6F2EA, dark: 0x0C0E0B)
+
+    /// Low warm light across the top, and the sun just off the corner. Sampled from
+    /// the App Store artwork, which has always shown Rex in a lit scene while the
+    /// app itself opened onto flat paper.
+    static let dawn       = Color.adaptive(light: 0xFEF6EF, dark: 0x15180F)
+    static let sun        = Color.adaptive(light: 0xFDE7D0, dark: 0x1C1A12)
+
+    /// The ground Rex stands on. Two depths, so the masthead has a far hill and a
+    /// near one instead of a single flat band. Both are tangerine tints and not the
+    /// grass the store art uses: green is the earned state, and a green that's
+    /// always on screen stops meaning it.
+    static let sandFar    = Color.adaptive(light: 0xFBE2C9, dark: 0x1E1710)
+    static let sandNear   = Color.adaptive(light: 0xF7CFA9, dark: 0x2A2016)
+
     /// Rex's tangerine. The brand colour — the character, the icon, and anything
     /// that needs to sound an alarm. Sampled from the artwork rather than picked,
     /// so the palette follows the character instead of fighting it.
@@ -100,6 +120,37 @@ enum Metrics {
     static let buttonHeight: CGFloat = 56
 }
 
+// MARK: - Background
+
+/// The warm field Home and the other card screens sit on: paper, a dawn wash over
+/// the top half, and the sun bleeding in off the corner behind the greeting. The
+/// wash stops at the middle so it reads as light falling on the screen rather than
+/// as a coloured panel.
+struct RansomBackground: View {
+    var body: some View {
+        ZStack {
+            Palette.canvasDeep
+
+            LinearGradient(
+                colors: [Palette.dawn, Palette.dawn.opacity(0)],
+                startPoint: .top,
+                endPoint: .center
+            )
+
+            GeometryReader { geo in
+                RadialGradient(
+                    colors: [Palette.sun, Palette.sun.opacity(0)],
+                    center: UnitPoint(x: 0.14, y: 0.13),
+                    startRadius: 0,
+                    endRadius: geo.size.width * 0.95
+                )
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+}
+
 // MARK: - Shared modifiers
 
 extension View {
@@ -121,6 +172,13 @@ extension View {
 
     func ransomScreenBackground() -> some View {
         background(Palette.canvas.ignoresSafeArea())
+    }
+
+    /// The lit version, for the screens with cards on them. Everything in it is
+    /// fixed, so the cards travel over a still field — that's what reads as depth
+    /// rather than as wallpaper.
+    func ransomAmbientBackground() -> some View {
+        background(RansomBackground())
     }
 
     /// Scales a view down slightly while pressed. Applied to every tappable surface.

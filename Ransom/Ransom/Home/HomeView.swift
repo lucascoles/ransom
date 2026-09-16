@@ -71,13 +71,23 @@ struct HomeView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
-                header
+                // The greeting and Rex share one lit plate. Above the cards is the
+                // only part of Home not doing a job, so it's the only part that can
+                // afford decoration — and it's bounded, so it can't crowd a card.
+                HomeMasthead {
+                    VStack(spacing: 2) {
+                        header
 
-                // Rex, smaller than he was and without a score beside him. The
-                // scoring hero is in the history if it is ever wanted again.
-                RexScene(pose: rexPose, line: rexLine, size: 84)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 2)
+                        // 100 rather than the 118 first tried: `size` is his width
+                        // and the art is 1.42x as tall, so every point here costs
+                        // one and a half of screen. Still well up from the old 84.
+                        RexScene(pose: rexPose, line: rexLine, size: 100, grounded: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                // Cancels the stack's margin so the ground reaches both edges; the
+                // masthead puts the margin back around its own text.
+                .padding(.horizontal, -Metrics.screenPadding)
 
                 if screenTime.isCurrentlyUnlocked {
                     activeUnlockCard
@@ -120,7 +130,7 @@ struct HomeView: View {
             .padding(.bottom, 28)
         }
         .debugScrollAnchor()
-        .ransomScreenBackground()
+        .ransomAmbientBackground()
         // Earned time can end two ways: the user locking it back up, or it simply
         // running out. Neither goes through SwiftUI, so the mirror is refreshed on
         // a tick and the card flips back on its own either way.

@@ -19,9 +19,19 @@ struct StepsView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
-                RexScene(pose: earned >= cap ? .cheer : .walking, line: rexLine, size: 84)
+                // The same lit plate Home uses. He's the only thing above the first
+                // card here, so the ground carries on its own what it shares with
+                // the greeting over there.
+                HomeMasthead {
+                    RexScene(
+                        pose: earned >= cap ? .cheer : .walking,
+                        line: rexLine,
+                        size: 100,
+                        grounded: true
+                    )
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 2)
+                }
+                .padding(.horizontal, -Metrics.screenPadding)
 
                 stepsCard
                 statsRow
@@ -32,7 +42,7 @@ struct StepsView: View {
             .padding(.horizontal, Metrics.screenPadding)
             .padding(.bottom, 28)
         }
-        .ransomScreenBackground()
+        .ransomAmbientBackground()
         .task {
             await steps.syncToday(plan: plan)
             await steps.loadWeek()
