@@ -44,6 +44,31 @@ struct RootView: View {
     /// cfprefsd, and the `defaults` CLI writes to a different store than the
     /// group container the app reads. The app writing its own is the only route
     /// that goes through the same door as the real thing.
+    /// `-RansomSeedMaxed 1` puts every movement near the top of the ladder, for
+    /// looking at the level colours without doing fifty thousand push-ups.
+    private func seedMaxedIfAsked() {
+        #if DEBUG
+        guard UserDefaults.standard.bool(forKey: "RansomSeedMaxed"), model.history.isEmpty else { return }
+        let calendar = Calendar.current
+        // Level 20 and past it: push-ups gold, squats and walking a rung or two
+        // below, so the body is not one flat colour.
+        for (index, batch) in [(Exercise.pushUps, 6_000), (.pushUps, 6_000), (.squats, 3_400), (.squats, 3_400)].enumerated() {
+            for week in 0..<5 {
+                guard let day = calendar.date(byAdding: .day, value: -(week * 7 + index), to: Date()) else { continue }
+                model.history.append(WorkoutRecord(
+                    date: day, exercise: batch.0, reps: batch.1,
+                    durationSeconds: 900, minutesGranted: 60
+                ))
+            }
+        }
+        let log = StepLog()
+        for back in 0..<40 {
+            guard let day = calendar.date(byAdding: .day, value: -back, to: Date()) else { continue }
+            log.record(60_000, on: day)
+        }
+        #endif
+    }
+
     private func seedHistoryIfAsked() {
         #if DEBUG
         guard UserDefaults.standard.bool(forKey: "RansomSeedHistory") else { return }
@@ -121,6 +146,7 @@ struct RootView: View {
         }
         .animation(.easeInOut(duration: 0.35), value: model.hasCompletedOnboarding)
         .onAppear(perform: seedHistoryIfAsked)
+        .onAppear(perform: seedMaxedIfAsked)
         .fullScreenCover(item: $workoutRequest) { request in
             WorkoutView(
                 exercise: request.exercise,
