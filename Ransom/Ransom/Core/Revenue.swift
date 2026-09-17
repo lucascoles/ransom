@@ -41,6 +41,13 @@ enum Revenue {
                 .with(purchasesAreCompletedBy: .myApp, storeKitVersion: .storeKit2)
                 .build()
         )
+
+        // Which Apple Search Ads campaign brought someone, so a trial can be
+        // traced back to the ad that paid for it. Apple's own attribution
+        // token: it names the campaign, not the person, needs no tracking
+        // permission and carries no advertising identifier, so the app still
+        // asks for nothing and tracks nobody across other apps.
+        Purchases.shared.attribution.enableAdServicesAttributionTokenCollection()
     }
 
     /// Hands a purchase `SubscriptionManager` just made to RevenueCat. Must run
