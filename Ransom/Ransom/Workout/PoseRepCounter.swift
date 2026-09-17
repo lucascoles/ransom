@@ -448,6 +448,8 @@ final class PoseRepCounter: NSObject {
     /// rep is in both piles and is caught either way.
     private var repAnkleLifts: [Double] = []
     private var repKneeHeights: [Double] = []
+    /// Hips above knees, sampled through the rep. The plank check.
+    private var repHipLifts: [Double] = []
     private var downAnkleLifts: [Double] = []
     private var downKneeHeights: [Double] = []
     /// Ankles above knees, in shoulder widths, past which the shins are folded
@@ -870,6 +872,10 @@ final class PoseRepCounter: NSObject {
         /// ankles, which is the point: kneeling hides them. Nil when either the
         /// knees or the hands are out of shot. Push-ups only.
         var kneeHeight: Double?
+        /// How far the hips sit above the knees, in shoulder widths. A push-up
+        /// keeps the body extended and the hips high; a crouch drops them to the
+        /// knee line. Nil when the hips or the knees are out of shot.
+        var hipLift: Double?
         /// Whether the joints this movement is measured on were actually seen
         /// this frame, rather than served from `jointMemory`.
         ///
@@ -1052,6 +1058,7 @@ final class PoseRepCounter: NSObject {
         var drop: Double?
         var ankleLift: Double?
         var kneeHeight: Double?
+        var hipLift: Double?
 
         switch movement.kind {
         case .pushUp:
@@ -1117,6 +1124,20 @@ final class PoseRepCounter: NSObject {
                     if !wrists.isEmpty {
                         let wristY = Double(wrists.reduce(0, +)) / Double(wrists.count)
                         kneeHeight = (kneeY - wristY) / width
+                    }
+                    // Hips against knees: the one thing that tells a push-up from a
+                    // squat with the hands on the floor.
+                    //
+                    // In every push-up, on the knees or not, the body is extended
+                    // and the hips ride well above the knee line. Sink into a
+                    // crouch and the hips drop between the heels while the knees
+                    // come up to meet them. Bending the arms from there passes the
+                    // elbow travel and the shoulder drop with room to spare, which
+                    // is how a set of squats banked ten push-ups.
+                    let hips = [measured(.leftHip)?.y, measured(.rightHip)?.y].compactMap { $0 }
+                    if !hips.isEmpty {
+                        let hipY = Double(hips.reduce(0, +)) / Double(hips.count)
+                        hipLift = (hipY - kneeY) / width
                     }
                 }
 
@@ -1225,7 +1246,7 @@ final class PoseRepCounter: NSObject {
         let seenEnough = essentials.isEmpty || unseenNow * 2 < essentials.count
 
         let reading = Reading(primary: primary, drop: drop, shoulderWidth: width,
-                              knee: ankleLift, kneeHeight: kneeHeight,
+                              knee: ankleLift, kneeHeight: kneeHeight, hipLift: hipLift,
                               measuredJointsSeen: seenEnough,
                               frame: PoseFrame(joints: joints, aspect: frameAspect))
         return reading.isUsable ? reading : nil
@@ -1269,6 +1290,10 @@ final class PoseRepCounter: NSObject {
             repKneeHeights.append(kneeHeight)
             if isDown { downKneeHeights.append(kneeHeight) }
         }
+        if let hipLift = reading.hipLift {
+            hasSeenLegs = true
+            repHipLifts.append(hipLift)
+        }
         if let spread = bodySpread { repSpreads.append(spread) }
         if let pending = pendingRep {
             settle(pending, dropNow: drop)
@@ -1283,13 +1308,14 @@ final class PoseRepCounter: NSObject {
         switch movement.kind {
         case .pushUp:
             diagnostics = String(
-                format: "e %@ · top %@ btm %@ · drop %@ · lift %@ · knee %@ · spread %@ · %@%@",
+                format: "e %@ · top %@ btm %@ · drop %@ · lift %@ · knee %@ · hip %@ · spread %@ · %@%@",
                 primary.map { String(format: "%.0f°", $0) } ?? "-",
                 repTop.map { String(format: "%.0f", $0) } ?? "-",
                 repBottom.map { String(format: "%.0f", $0) } ?? "-",
                 repWindow.dropTravel.map { String(format: "%.2f", $0) } ?? "-",
                 repAnkleLifts.last.map { String(format: "%+.2f", $0) } ?? "-",
                 repKneeHeights.last.map { String(format: "%+.2f", $0) } ?? "-",
+                median(of: repHipLifts).map { String(format: "%+.2f", $0) } ?? "-",
                 bodySpread.map { String(format: "%.1f", $0) } ?? "-",
                 status,
                 rejectionSummary
@@ -1471,6 +1497,33 @@ final class PoseRepCounter: NSObject {
             }
         }
 
+        // The crouch, and the one leg check that works head on.
+        //
+        // Hands on the floor, sunk into a squat on the toes, bending the arms.
+        // It passed everything: 50 to 65 degrees of elbow travel, 0.4 to 0.6
+        // shoulder widths of drop, corroborated, and ten squats banked ten
+        // push-ups. Nothing above it can catch that, because as far as the arms
+        // and the shoulders are concerned it *is* a push-up.
+        //
+        // What gives it away is where the hips are. Every push-up keeps the body
+        // extended, so the hips ride above the knee line whether the knees are
+        // down or not; a crouch drops the hips between the heels and brings the
+        // knees up to meet them. Measured across five recordings: the crouch ran
+        // a median of -0.04 shoulder widths, the four honest sets +0.55, +0.62,
+        // +0.66 and +1.17. Judged per rep in 1s windows, a 0.25 line refused 91%
+        // of the crouch and none of 104 honest windows.
+        //
+        // Unlike the knee gate this survives the head-on view, because it reads
+        // the hips against the knees rather than trying to separate two joints
+        // that project onto the same spot. Same three hurdles as the kneeling
+        // verdict, and the same rule underneath them: hips or knees out of shot
+        // is not evidence, and the rep is allowed.
+        if movement.crouchHipLift > -.infinity,
+           kneelingVerdict(repHipLifts, says: { $0 < movement.crouchHipLift }) {
+            reject("crouch", movement.crouchHint)
+            return
+        }
+
         if duration < minimumRepDuration {
             reject("fast", "Too fast to read - lower under control.", quietly: true)
             return
@@ -1572,6 +1625,7 @@ final class PoseRepCounter: NSObject {
     private func clearLegSamples() {
         repAnkleLifts = []
         repKneeHeights = []
+        repHipLifts = []
         downAnkleLifts = []
         downKneeHeights = []
         repSpreads = []
@@ -1798,6 +1852,11 @@ private struct Movement {
     /// enough that a close-up is *possible*. Never enough on its own; see
     /// `blindDescentTop`.
     let tooCloseWidth: Double
+    /// Hips above knees, below which the body is crouching rather than
+    /// extended, so the rep is a squat with the hands on the floor. `-infinity`
+    /// switches the check off.
+    let crouchHipLift: Double
+    let crouchHint: String
     /// The primary signal above which the body is still at the top of a rep.
     ///
     /// Used to recognise a descent the camera never saw: if the body vanishes
@@ -1965,6 +2024,11 @@ private struct Movement {
             // the arm happens to be.
             topCarry: 15,
             tooCloseWidth: tooCloseWidth,
+            // Measured, not reasoned: the crouch that banked ten reps ran a
+            // median of -0.04 shoulder widths of hip over knee, the four honest
+            // sets +0.55 to +1.17. The line sits in the gap, nearer the cheat.
+            crouchHipLift: 0.25,
+            crouchHint: "Legs back, body flat like a plank.",
             blindDescentTop: blindDescentTop,
             checksKneeling: true,
             needSignalHint: "Rex needs to see your elbows. Get your hands in frame.",
@@ -2117,6 +2181,11 @@ private struct Movement {
             stillDropRange: stillHipRange,
             topCarry: topCarry,
             tooCloseWidth: tooCloseWidth,
+            // A squat is *meant* to put the hips at the knees, so this check has
+            // nothing to say here. The squat's cheat is the half rep, and depth
+            // is what judges that.
+            crouchHipLift: -.infinity,
+            crouchHint: "",
             // Standing tall, a hair under the gap that says "not squatting yet",
             // so a body that vanishes upright is read the same way a push-up
             // that vanishes with straight arms is. Guess, like the rest of this
