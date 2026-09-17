@@ -14,6 +14,12 @@ struct RexScene: View {
     var grounded: Bool = false
 
     @State private var revealed: Int = 0
+    @Environment(\.colorScheme) private var scheme
+
+    /// A contact shadow has to be darker than the ground it falls on, and the
+    /// ground in dark mode is already nearly black: 15% black over it was
+    /// nothing, so Rex floated. Deeper in the dark, unchanged on paper.
+    private var contactShadow: Double { scheme == .dark ? 0.5 : 0.15 }
 
     /// How far above the bottom of his frame his feet actually are, as a fraction
     /// of `size`. Measured off the rendered artwork, not guessed.
@@ -51,7 +57,7 @@ struct RexScene: View {
                     Ellipse()
                         .fill(
                             RadialGradient(
-                                colors: [.black.opacity(0.15), .black.opacity(0)],
+                                colors: [.black.opacity(contactShadow), .black.opacity(0)],
                                 center: .center,
                                 startRadius: 0,
                                 endRadius: size * 0.34

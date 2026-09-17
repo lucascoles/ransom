@@ -46,13 +46,23 @@ enum Palette {
     /// is not enough for a card to read as raised, so the whole screen flattened
     /// into one sheet. Kept separate from `canvas` because onboarding's intro clip
     /// is keyed with `.blendMode(.multiply)` and needs the near-white behind it.
-    static let canvasDeep = Color.adaptive(light: 0xF6F2EA, dark: 0x0C0E0B)
+    ///
+    /// The dark value sits below `canvas` rather than equalling it, which is what
+    /// it used to do: the two were byte-identical, so in dark mode this token did
+    /// nothing, the whole treatment was invisible and the screen went back to
+    /// being one flat sheet. Cards are lit from `surface` in the dark, so the
+    /// field has to get out of their way by going darker, not lighter.
+    static let canvasDeep = Color.adaptive(light: 0xF6F2EA, dark: 0x06080A)
 
     /// Low warm light across the top, and the sun just off the corner. Sampled from
     /// the App Store artwork, which has always shown Rex in a lit scene while the
     /// app itself opened onto flat paper.
-    static let dawn       = Color.adaptive(light: 0xFEF6EF, dark: 0x15180F)
-    static let sun        = Color.adaptive(light: 0xFDE7D0, dark: 0x1C1A12)
+    ///
+    /// Dark keeps the same idea and inverts the amount: light in a dark room is
+    /// a hint, so these lift the field by a few percent instead of washing it,
+    /// and stay warm so it reads as a low sun and not as grey haze.
+    static let dawn       = Color.adaptive(light: 0xFEF6EF, dark: 0x181A11)
+    static let sun        = Color.adaptive(light: 0xFDE7D0, dark: 0x2A2114)
 
     /// The ground Rex stands on. Two depths, so the masthead has a far hill and a
     /// near one instead of a single flat band. Both are tangerine tints and not the
