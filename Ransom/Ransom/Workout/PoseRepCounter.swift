@@ -515,10 +515,10 @@ final class PoseRepCounter: NSObject {
     /// at the moment the body vanished can be read after the fact.
     private var lastPrimarySeen: Double?
     private var lastWidthSeen: Double?
-    /// When the current run of bodyless frames began.
-    private var lostAt: Date?
+    /// When the current run of frames without this movement's joints began.
+    private var unseenSince: Date?
     /// How long a gap has to be to count as a rep rather than a blink. The
-    /// broken set's gaps ran 0.47 to 0.57s; ordinary joint blinks are a frame
+    /// broken set's gaps ran 0.67 to 0.93s; ordinary joint blinks are a frame
     /// or two.
     private let blindDescentGap: TimeInterval = 0.25
     private let blindDescentsBeforeSpeaking = 2
@@ -617,7 +617,7 @@ final class PoseRepCounter: NSObject {
         blindDescents = 0
         lastPrimarySeen = nil
         lastWidthSeen = nil
-        lostAt = nil
+        unseenSince = nil
         blocker = nil
         startTiltWatch()
         disarm()
@@ -658,15 +658,30 @@ final class PoseRepCounter: NSObject {
         phase = .idle
     }
 
-    /// Called on the first frame with a body after a run without one. Decides
-    /// whether what just happened off camera was a rep.
-    private func noteRecovery(gap: TimeInterval) {
-        guard gap >= blindDescentGap,
-              let primary = lastPrimarySeen, primary >= movement.blindDescentTop,
-              let width = lastWidthSeen, width > movement.tooCloseWidth
-        else { return }
-        blindDescents += 1
-        if blindDescents >= blindDescentsBeforeSpeaking { isTooClose = true }
+    /// Called once per frame with whether this movement's joints were really
+    /// seen. A stretch of frames where they weren't, long enough to hold a rep
+    /// and entered from a body that hadn't started bending, is a rep that
+    /// happened where the camera couldn't watch it.
+    private func trackVisibility(seen: Bool, now: Date, primary: Double?, width: Double?) {
+        guard seen else {
+            if unseenSince == nil { unseenSince = now }
+            return
+        }
+        if let since = unseenSince {
+            let gap = now.timeIntervalSince(since)
+            unseenSince = nil
+            if gap >= blindDescentGap,
+               let last = lastPrimarySeen, last >= movement.blindDescentTop,
+               let wide = lastWidthSeen, wide > movement.tooCloseWidth {
+                blindDescents += 1
+                if blindDescents >= blindDescentsBeforeSpeaking { isTooClose = true }
+            }
+        }
+        // Only frames that saw the body update the reference, so the comparison
+        // above is always against the last honest measurement rather than a
+        // held one.
+        if let primary { lastPrimarySeen = primary }
+        if let width { lastWidthSeen = width }
     }
 
     /// A flat phone outranks whatever else is true at the same time, because it
@@ -855,6 +870,14 @@ final class PoseRepCounter: NSObject {
         /// ankles, which is the point: kneeling hides them. Nil when either the
         /// knees or the hands are out of shot. Push-ups only.
         var kneeHeight: Double?
+        /// Whether the joints this movement is measured on were actually seen
+        /// this frame, rather than served from `jointMemory`.
+        ///
+        /// The difference matters only to the close-up check, and it matters
+        /// there completely: held joints keep the skeleton on screen and keep
+        /// the angle readable, so from the outside nothing looks lost, while
+        /// the angle they report is the one from before the blink.
+        var measuredJointsSeen: Bool
         var frame: PoseFrame
         var isUsable: Bool { primary != nil || drop != nil }
     }
@@ -980,7 +1003,6 @@ final class PoseRepCounter: NSObject {
             if seen > 0.02 {
                 width = seen
                 lastShoulderWidth = seen
-                lastWidthSeen = seen
                 // Width alone never raises the flag any more: an honest close set
                 // measures the same as a broken one at the bottom of a rep, and
                 // the difference between them is whether the camera still sees
@@ -1192,8 +1214,19 @@ final class PoseRepCounter: NSObject {
             if let p = raw(name) { joints[key] = CGPoint(x: p.x, y: 1 - p.y) }
         }
 
+        // Fresh confidence, before `jointHold` has a say. Half of the joints the
+        // movement is measured on gone is the line: the elbow angle needs a
+        // shoulder, an elbow and a wrist on one side, so two of four missing is
+        // already an angle standing on memory.
+        let unseenNow = essentials.filter { joint in
+            guard let p = recognized[joint] else { return true }
+            return p.confidence <= threshold(for: joint)
+        }.count
+        let seenEnough = essentials.isEmpty || unseenNow * 2 < essentials.count
+
         let reading = Reading(primary: primary, drop: drop, shoulderWidth: width,
                               knee: ankleLift, kneeHeight: kneeHeight,
+                              measuredJointsSeen: seenEnough,
                               frame: PoseFrame(joints: joints, aspect: frameAspect))
         return reading.isUsable ? reading : nil
     }
@@ -2188,7 +2221,7 @@ extension PoseRepCounter: AVCaptureVideoDataOutputSampleBufferDelegate {
 
         guard let observation = subject(from: poseRequest.results ?? []),
               let reading = read(observation, now: now) else {
-            if missingBodyFrames == 0 { lostAt = now }
+            trackVisibility(seen: false, now: now, primary: nil, width: nil)
             missingBodyFrames += 1
             guard missingBodyFrames > 25 else { return }
             let hint = movement.lostBodyHint
@@ -2203,12 +2236,9 @@ extension PoseRepCounter: AVCaptureVideoDataOutputSampleBufferDelegate {
             return
         }
 
-        if missingBodyFrames > 0, let lost = lostAt {
-            noteRecovery(gap: now.timeIntervalSince(lost))
-        }
-        lostAt = nil
+        trackVisibility(seen: reading.measuredJointsSeen, now: now,
+                        primary: reading.primary, width: reading.shoulderWidth)
         missingBodyFrames = 0
-        lastPrimarySeen = reading.primary ?? lastPrimarySeen
         let switched = subjectSwitched
         subjectSwitched = false
 
