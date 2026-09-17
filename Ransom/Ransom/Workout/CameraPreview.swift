@@ -192,6 +192,10 @@ struct CameraWindow: View {
     var target: Int
     /// Shown while the camera hasn't found anyone yet.
     var status: String?
+    /// Whether the count is actually running. A bright count over a counter that
+    /// hasn't armed yet is a promise the screen can't keep: people start their
+    /// set against it and lose the first reps.
+    var isLive: Bool = true
 
     var body: some View {
         ZStack {
@@ -207,9 +211,10 @@ struct CameraWindow: View {
                 // The count sits on the video, where the user is already looking.
                 Text("\(reps) / \(target)")
                     .font(RansomFont.counter(46))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.white.opacity(isLive ? 1 : 0.4))
                     .contentTransition(.numericText(value: Double(reps)))
                     .animation(.snappy(duration: 0.2), value: reps)
+                    .animation(.easeInOut(duration: 0.2), value: isLive)
                     .shadow(color: .black.opacity(0.45), radius: 10, y: 2)
                     .padding(.bottom, 16)
             }

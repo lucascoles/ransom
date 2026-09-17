@@ -100,7 +100,11 @@ public enum Exercise: String, CaseIterable, Codable, Identifiable, Sendable {
     /// camera can see nothing — so the camera path needs its own instructions.
     public var cameraCue: String {
         switch self {
-        case .pushUps: return "Prop the phone against a wall to your side, a few feet away, so your whole body is in shot."
+        // Facing the user, not side on. A push-up is read from the elbows and
+        // the shoulder line, which the counter sees head on and half loses from
+        // the side, so the setup copy has to ask for the framing the detector
+        // was actually built for.
+        case .pushUps: return "Prop the phone against a wall and face it toward you, a few feet back, with your whole body in shot."
         case .squats:  return "Stand the phone up a few feet away, facing you."
         case .steps:   return "Nothing to set up. Your phone is already counting."
         }

@@ -2,6 +2,7 @@
 // one serial queue, which is exactly what `queue` is and the only place the
 // session is ever started or stopped.
 @preconcurrency import AVFoundation
+import CoreMotion
 import Foundation
 import Observation
 import UIKit
@@ -83,6 +84,43 @@ final class PoseRepCounter: NSObject {
         case blocked(String)
     }
 
+    /// Why nothing is being counted, as a state rather than a sentence.
+    ///
+    /// The sentences still exist and still explain themselves, but a sentence is
+    /// not what somebody face down on the floor can read. Each of these carries
+    /// two or three words the screen can shout instead, with the explanation
+    /// underneath it in the size prose belongs in.
+    enum Blocker: Equatable {
+        /// Close enough that the joints leave the frame at the bottom of a rep.
+        case tooClose
+        /// A body is in shot, but the joints this movement is measured on aren't.
+        case bodyNotInShot
+        /// No usable body in frame at all.
+        case noBody
+        /// The phone is lying back far enough to be watching the ceiling.
+        case phoneTilted
+
+        /// Short enough to read at a glance, from the floor, mid-rep.
+        var shout: String {
+            switch self {
+            case .tooClose:      return "BACK UP"
+            case .bodyNotInShot: return "MOVE INTO SHOT"
+            case .noBody:        return "CAN'T SEE YOU"
+            case .phoneTilted:   return "PHONE TOO FLAT"
+            }
+        }
+
+        /// Used only when the detector has no more specific sentence of its own.
+        var detail: String {
+            switch self {
+            case .tooClose:      return "Back up so your whole body stays in shot."
+            case .bodyNotInShot: return "Shift until Rex can see all of you."
+            case .noBody:        return "Step in front of the phone."
+            case .phoneTilted:   return "Stand it up against a wall so it faces you."
+            }
+        }
+    }
+
     private(set) var reps = 0
     private(set) var phase: Phase = .idle
     private(set) var tracking: Tracking = .idle
@@ -90,6 +128,8 @@ final class PoseRepCounter: NSObject {
     private(set) var depth: Double = 0
     /// Nil when form is fine; otherwise one short correction.
     private(set) var formHint: String?
+    /// Nil when nothing is in the way. Whatever this holds, the screen shouts.
+    private(set) var blocker: Blocker?
     /// Bounces rejected as too fast to be real. Kept so the count can be defended.
     private(set) var rejectedReps = 0
     /// The body as last seen, for the skeleton drawn over the preview. Seeing the
@@ -456,6 +496,31 @@ final class PoseRepCounter: NSObject {
 
     private var isTooClose = false
 
+    // MARK: - How the phone is standing
+    //
+    // Vision copes with a little lean and copes badly with a lot: past roughly
+    // fifty degrees off vertical the body arrives foreshortened, and the
+    // shoulder width that every height in this file is measured against stops
+    // describing the same distance twice. A phone flat on the floor pointing at
+    // the ceiling is the worst case and the most common one, and until now it
+    // produced a screen that simply never counted, with nothing to suggest the
+    // phone was the problem.
+    //
+    // Only the lean is read, never the heading: which way the user faces is
+    // their business, and `RotationCoordinator` already handles portrait
+    // against landscape.
+
+    private let motion = CMMotionManager()
+    /// Share of gravity running through the screen. 0 is standing upright, 1 is
+    /// lying on its back. Generous on purpose, because propping a phone against
+    /// a wall always leans it a little.
+    private let flatGravity = 0.8
+    /// Held, not glimpsed. A phone passes through flat on its way to being
+    /// propped up, and a warning that flashes during setup is noise.
+    private let tiltGrace: TimeInterval = 1.0
+    private var tiltedSince: Date?
+    private var isPhoneTilted = false
+
 
     /// How much of the *smallest* countable travel counts as "started descending".
     ///
@@ -521,6 +586,8 @@ final class PoseRepCounter: NSObject {
         clearLegSamples()
         hintExpiresAt = nil
         isTooClose = false
+        blocker = nil
+        startTiltWatch()
         disarm()
 
         // Steps belong to the pedometer: there is no body movement for a camera
@@ -559,7 +626,36 @@ final class PoseRepCounter: NSObject {
         phase = .idle
     }
 
+    /// A flat phone outranks whatever else is true at the same time, because it
+    /// is usually the cause of it: a phone on the floor is exactly how a body
+    /// ends up cropped, and telling that user to back up sends them further
+    /// from the fix.
+    private func blocking(_ candidate: Blocker?) -> Blocker? {
+        isPhoneTilted ? .phoneTilted : candidate
+    }
+
+    /// Watches the lean while the set runs. Read on the main queue and consumed
+    /// by whichever queue asks, the same way the session is.
+    private func startTiltWatch() {
+        guard motion.isDeviceMotionAvailable else { return }
+        isPhoneTilted = false
+        tiltedSince = nil
+        motion.deviceMotionUpdateInterval = 0.2
+        motion.startDeviceMotionUpdates(to: .main) { [weak self] data, _ in
+            guard let self, let gravity = data?.gravity else { return }
+            guard abs(gravity.z) > self.flatGravity else {
+                self.tiltedSince = nil
+                self.isPhoneTilted = false
+                return
+            }
+            let since = self.tiltedSince ?? Date()
+            self.tiltedSince = since
+            self.isPhoneTilted = Date().timeIntervalSince(since) >= self.tiltGrace
+        }
+    }
+
     private func stopSession() {
+        motion.stopDeviceMotionUpdates()
         rotationObservation?.invalidate()
         rotationObservation = nil
         queue.async { [session] in
@@ -1135,6 +1231,7 @@ final class PoseRepCounter: NSObject {
 
         guard let primary else {
             formHint = movement.needSignalHint
+            blocker = blocking(.bodyNotInShot)
             return
         }
 
@@ -1208,8 +1305,12 @@ final class PoseRepCounter: NSObject {
         if let expiry = hintExpiresAt, expiry > Date() { return }
         hintExpiresAt = nil
 
+        blocker = blocking(isTooClose ? .tooClose : nil)
+
         if isTooClose {
             formHint = movement.tooCloseHint
+        } else if isPhoneTilted {
+            formHint = nil
         } else if movement.checksKneeling, !hasSeenLegs, reps == 0 {
             // Said once, gently: with the legs out of shot the count still works,
             // it just can't tell a push-up from a knee push-up.
@@ -1533,6 +1634,7 @@ final class PoseRepCounter: NSObject {
         // set ended with "Not deep enough" in red over a rep that counted and
         // banked the set, which is the counter contradicting itself on screen.
         formHint = nil
+        blocker = nil
         hintExpiresAt = nil
         Haptics.rep()
         if reps >= target { stop() }
@@ -2022,6 +2124,7 @@ extension PoseRepCounter: AVCaptureVideoDataOutputSampleBufferDelegate {
                 self.tracking = .searching
                 self.poseFrame = nil
                 self.formHint = hint
+                self.blocker = self.blocking(.noBody)
                 self.disarm()
             }
             return

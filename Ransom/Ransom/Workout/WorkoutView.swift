@@ -168,15 +168,32 @@ struct WorkoutView: View {
             // exactly when it matters. "Go!" is decoration by comparison, and the
             // reason a rep didn't count is the most important thing on the screen
             // the moment it exists.
-            Text(headline)
-                .font(RansomFont.title(hasFeedback ? 30 : 26))
-                .foregroundStyle(hasFeedback ? Palette.danger : Palette.ink)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 24)
-                .frame(minHeight: 74)
-                .contentTransition(.opacity)
-                .animation(.easeInOut(duration: 0.15), value: headline)
+            //
+            // A setup problem is shouted rather than explained, because the
+            // explanation is unreadable from where the user is lying. Two words
+            // at 40pt carry the instruction; the sentence sits under them for
+            // whoever has time to read it.
+            VStack(spacing: 4) {
+                Text(banner.text)
+                    .font(RansomFont.title(banner.shouts ? 40 : 28))
+                    .foregroundStyle(banner.tint)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(2)
+
+                if let detail = banner.detail {
+                    Text(detail)
+                        .font(RansomFont.body(14))
+                        .foregroundStyle(Palette.inkSoft)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.horizontal, 24)
+            .frame(minHeight: 88)
+            .contentTransition(.opacity)
+            .animation(.easeInOut(duration: 0.15), value: banner.text)
 
             CameraWindow(
                 session: pose.previewSession,
@@ -184,7 +201,8 @@ struct WorkoutView: View {
                 pose: pose.poseFrame,
                 reps: reps,
                 target: target,
-                status: cameraStatus
+                status: cameraStatus,
+                isLive: pose.tracking == .tracking
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 26, style: .continuous)
@@ -241,15 +259,15 @@ struct WorkoutView: View {
 
     /// Only the states the user can act on. "Tracking" needs no label — the
     /// skeleton on their body already says it.
+    /// Only the states the banner above the window isn't already shouting.
+    ///
+    /// "Looking for you" and the arming cue both moved up there, where they are
+    /// legible; repeating them inside the frame in 12pt was the same sentence
+    /// twice in two sizes.
     private var cameraStatus: String? {
-        switch pose.tracking {
         // The window is on screen before the session has delivered anything, so
         // this covers the brief black frame rather than leaving it unexplained.
-        case .idle:        return "Getting the camera ready…"
-        case .searching:   return "Looking for you…"
-        case .calibrating: return exercise.armingCue
-        default:           return nil
-        }
+        pose.tracking == .idle ? "Getting the camera ready…" : nil
     }
 
     /// True while there is something to say about the last rep.
@@ -264,13 +282,31 @@ struct WorkoutView: View {
     /// is always saying something is legible at a glance from the floor.
     private var borderColour: Color? {
         guard usingCamera else { return nil }
-        if hasFeedback { return Palette.danger }
+        if hasFeedback || pose.blocker != nil { return Palette.danger }
         return pose.tracking == .tracking ? Palette.green : nil
     }
 
-    private var headline: String {
-        if let formHint { return formHint }
-        return pose.tracking == .tracking ? "Go!" : "Get set"
+    /// What the screen says, how loudly, and in what colour.
+    ///
+    /// Four things can be true at once, and they are ordered by what the user
+    /// can do about them: a setup problem stops every rep and is fixed by
+    /// moving, a refused rep is fixed by going deeper, and the rest is just
+    /// telling them whether the count is live.
+    ///
+    /// "GET SET" is shouted at the same size as a problem, because people were
+    /// starting their set into a counter that had not armed yet and losing the
+    /// first few reps. At 26pt in the same grey as everything else, it read as a
+    /// label rather than an instruction to wait.
+    private var banner: (text: String, detail: String?, tint: Color, shouts: Bool) {
+        guard usingCamera else {
+            return (formHint ?? "Go!", nil, formHint == nil ? Palette.ink : Palette.danger, false)
+        }
+        if let blocker = pose.blocker {
+            return (blocker.shout, formHint ?? blocker.detail, Palette.danger, true)
+        }
+        if let formHint { return (formHint, nil, Palette.danger, false) }
+        if pose.tracking == .tracking { return ("GO!", nil, Palette.green, true) }
+        return ("GET SET", exercise.armingCue, Palette.brand, true)
     }
 
     /// Form correction first, then whatever the user most needs to hear: how to
@@ -280,7 +316,10 @@ struct WorkoutView: View {
         // it twice on one screen reads as a stutter.
         guard usingCamera else { return formHint ?? exercise.coachingCue }
         if case let .blocked(reason) = pose.tracking { return reason }
-        return exercise.cameraCue
+        // The banner is already carrying a sentence. Printing the setup cue
+        // under it as well gives two instructions at once, which is how someone
+        // mid-set ends up reading neither.
+        return banner.detail == nil ? exercise.cameraCue : ""
     }
 
     private var header: some View {
