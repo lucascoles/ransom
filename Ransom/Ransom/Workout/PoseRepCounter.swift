@@ -97,7 +97,9 @@ final class PoseRepCounter: NSObject {
         case bodyNotInShot
         /// No usable body in frame at all.
         case noBody
-        /// The phone is lying back far enough to be watching the ceiling.
+        /// The phone is lying back far enough to be watching the ceiling. Named
+        /// after the fix rather than the fault: "flat" describes what a sensor
+        /// noticed, and nobody reading it mid-set has to care about that.
         case phoneTilted
 
         /// Short enough to read at a glance, from the floor, mid-rep.
@@ -106,17 +108,17 @@ final class PoseRepCounter: NSObject {
             case .tooClose:      return "BACK UP"
             case .bodyNotInShot: return "MOVE INTO SHOT"
             case .noBody:        return "CAN'T SEE YOU"
-            case .phoneTilted:   return "PHONE TOO FLAT"
+            case .phoneTilted:   return "PROP THE PHONE UP"
             }
         }
 
         /// Used only when the detector has no more specific sentence of its own.
         var detail: String {
             switch self {
-            case .tooClose:      return "Back up so your whole body stays in shot."
+            case .tooClose:      return "Back up a little bit before continuing."
             case .bodyNotInShot: return "Shift until Rex can see all of you."
             case .noBody:        return "Step in front of the phone."
-            case .phoneTilted:   return "Stand it up against a wall so it faces you."
+            case .phoneTilted:   return "Lean it against a wall so it faces you."
             }
         }
     }
@@ -496,6 +498,32 @@ final class PoseRepCounter: NSObject {
 
     private var isTooClose = false
 
+    // MARK: - Descents the camera never saw
+    //
+    // The close-up failure, measured. A ten-rep set counted four: at the bottom
+    // of nearly every rep Vision returned no body at all for about half a
+    // second, and the frames either side of the gap had the arms still straight,
+    // so there was never any travel to measure. Nothing was wrong with the
+    // counting; the rep simply happened off camera.
+    //
+    // This is what that looks like from in here: the body disappears from the
+    // top of a rep and reappears at the top of one. Two of those, with the
+    // shoulders wide enough for a close-up to explain it, is enough to stop
+    // guessing and say "back up" - roughly two reps in, rather than ten.
+
+    /// The primary signal and the shoulder width as last measured, so the state
+    /// at the moment the body vanished can be read after the fact.
+    private var lastPrimarySeen: Double?
+    private var lastWidthSeen: Double?
+    /// When the current run of bodyless frames began.
+    private var lostAt: Date?
+    /// How long a gap has to be to count as a rep rather than a blink. The
+    /// broken set's gaps ran 0.47 to 0.57s; ordinary joint blinks are a frame
+    /// or two.
+    private let blindDescentGap: TimeInterval = 0.25
+    private let blindDescentsBeforeSpeaking = 2
+    private var blindDescents = 0
+
     // MARK: - How the phone is standing
     //
     // Vision copes with a little lean and copes badly with a lot: past roughly
@@ -586,6 +614,10 @@ final class PoseRepCounter: NSObject {
         clearLegSamples()
         hintExpiresAt = nil
         isTooClose = false
+        blindDescents = 0
+        lastPrimarySeen = nil
+        lastWidthSeen = nil
+        lostAt = nil
         blocker = nil
         startTiltWatch()
         disarm()
@@ -624,6 +656,17 @@ final class PoseRepCounter: NSObject {
         stopSession()
         tracking = .idle
         phase = .idle
+    }
+
+    /// Called on the first frame with a body after a run without one. Decides
+    /// whether what just happened off camera was a rep.
+    private func noteRecovery(gap: TimeInterval) {
+        guard gap >= blindDescentGap,
+              let primary = lastPrimarySeen, primary >= movement.blindDescentTop,
+              let width = lastWidthSeen, width > movement.tooCloseWidth
+        else { return }
+        blindDescents += 1
+        if blindDescents >= blindDescentsBeforeSpeaking { isTooClose = true }
     }
 
     /// A flat phone outranks whatever else is true at the same time, because it
@@ -937,10 +980,17 @@ final class PoseRepCounter: NSObject {
             if seen > 0.02 {
                 width = seen
                 lastShoulderWidth = seen
-                // A body filling the frame means the joints that matter leave it
-                // at the bottom of every rep, which reads as reps that simply
-                // vanish.
-                isTooClose = seen > movement.tooCloseWidth
+                lastWidthSeen = seen
+                // Width alone never raises the flag any more: an honest close set
+                // measures the same as a broken one at the bottom of a rep, and
+                // the difference between them is whether the camera still sees
+                // the descent. `noteRecovery` is what raises it. Coming back
+                // under the line does clear it, because that is the one thing
+                // the width can say by itself - they backed up.
+                if seen <= movement.tooCloseWidth {
+                    isTooClose = false
+                    blindDescents = 0
+                }
             }
         }
 
@@ -1711,9 +1761,16 @@ private struct Movement {
     let stillDropRange: Double
     /// How far the carried-forward top may fall behind the last one after a rep.
     let topCarry: Double
-    /// Shoulder width as a share of frame height, past which the body is too
-    /// close for the joints that matter to stay in shot at the bottom of a rep.
+    /// Shoulder width as a share of frame height, past which the body is close
+    /// enough that a close-up is *possible*. Never enough on its own; see
+    /// `blindDescentTop`.
     let tooCloseWidth: Double
+    /// The primary signal above which the body is still at the top of a rep.
+    ///
+    /// Used to recognise a descent the camera never saw: if the body vanishes
+    /// while the arms are still near straight, and comes back a moment later,
+    /// whatever happened in between was a rep with no evidence in it.
+    let blindDescentTop: Double
     /// Whether the knee-push-up gate is live: whether leg samples are gathered
     /// and the "legs in shot" hint is shown.
     let checksKneeling: Bool
@@ -1810,25 +1867,34 @@ private struct Movement {
         /// frame to frame; the shoulders held to within 0.08 shoulder widths.
         let restingElbow: Double = 150
         let stillElbowRange: Double = 15
-        /// Shoulder width as a share of the frame *height*, past which the body
-        /// is too close for the arms to stay in shot at the bottom of a rep.
+        /// Shoulder width as a share of the frame *height*, past which a body is
+        /// close enough for the close-up failure to be possible.
         ///
-        /// Unreachable in practice, and recorded here so nobody verifies it by
-        /// accident. The buffer is portrait (720 wide, 1280 tall) and `measured`
-        /// scales x by width / height, so two shoulders both inside the frame
-        /// span at most 0.5625 of its height. 0.55 therefore means "both
-        /// shoulders within 2% of the frame's edges", which no recording has
-        /// produced. The edge fallback in `read` is the check that actually
-        /// fires. An extreme close-up (head filling the preview, shoulders
-        /// 0.58 to 0.80 of the frame width at the top of every rep) got past
-        /// both: at the bottom of each rep Vision returned no body at all for
-        /// 0.75 to 1.0s, and on the frames where it returned shoulders alone
-        /// they sat 16% and 87% across the frame, nowhere near an edge.
-        /// Deliberately not lowered. The honest close set in the bedroom clip
-        /// reaches 0.60 to 0.66 of the frame width at the bottom of reps that
-        /// count, which overlaps the close-up's tops, so a per-frame line low
-        /// enough to catch the close-up would nag honest reps in red mid set.
-        let tooCloseWidth: Double = 0.55
+        /// 0.55 used to sit here and could never be reached: the buffer is
+        /// portrait (720 wide, 1280 tall) and `measured` scales x by width over
+        /// height, so two shoulders both inside the frame span at most 0.5625 of
+        /// its height. The check never fired, and a ten-rep set that counted
+        /// four said nothing about why.
+        ///
+        /// 0.24 comes off four screen recordings replayed through this same
+        /// Vision request. Three sets that counted correctly measured 0.096 to
+        /// 0.232 (medians 0.128, 0.176, 0.182); the set that counted 4 of 10
+        /// never went below 0.275 and ran 0.275 to 0.395 (median 0.316).
+        ///
+        /// It is still not enough on its own, and the reason is in the history:
+        /// an honest close set reached 0.34 to 0.37 at the bottom of reps that
+        /// counted, which overlaps the broken set. A width line low enough to
+        /// catch the close-up would nag someone whose reps are counting, so the
+        /// width only opens the question and `blindDescentTop` answers it.
+        let tooCloseWidth: Double = 0.24
+        /// Rest tops read 155-180 degrees, so arms above 140 are still straight.
+        ///
+        /// In the broken set every one of the eleven dropouts began between 150
+        /// and 162 degrees: the body left the frame before it had bent at all,
+        /// and came back 0.5s later at the top. In the three sets that counted,
+        /// the dropouts began at 54 to 89 degrees - already deep, with the
+        /// travel measured before the blink.
+        let blindDescentTop: Double = 140
 
         return Movement(
             kind: .pushUp,
@@ -1866,9 +1932,10 @@ private struct Movement {
             // the arm happens to be.
             topCarry: 15,
             tooCloseWidth: tooCloseWidth,
+            blindDescentTop: blindDescentTop,
             checksKneeling: true,
             needSignalHint: "Rex needs to see your elbows. Get your hands in frame.",
-            tooCloseHint: "You're a little close - back up so your arms stay in shot.",
+            tooCloseHint: "Back up a little bit before continuing. Rex loses your arms at the bottom.",
             lostBodyHint: "Stand the phone up facing you, past your hands.",
             shallowHint: "Not deep enough - bend your elbows further.",
             lockedHint: "Arms stayed straight - bend them to count.",
@@ -2017,10 +2084,15 @@ private struct Movement {
             stillDropRange: stillHipRange,
             topCarry: topCarry,
             tooCloseWidth: tooCloseWidth,
+            // Standing tall, a hair under the gap that says "not squatting yet",
+            // so a body that vanishes upright is read the same way a push-up
+            // that vanishes with straight arms is. Guess, like the rest of this
+            // profile, and waiting on squat footage.
+            blindDescentTop: standingGap - 0.05,
             // The legs are the rep. There is no separate cheat to check them for.
             checksKneeling: false,
             needSignalHint: "Rex needs to see your hips and knees. Step back so your whole body is in shot.",
-            tooCloseHint: "You're a little close - back up so your legs stay in shot.",
+            tooCloseHint: "Back up a little bit before continuing, so your legs stay in shot.",
             lostBodyHint: "Stand the phone up a few feet away, facing you, with your whole body in shot.",
             shallowHint: "Not deep enough - sit lower, thighs to parallel.",
             lockedHint: "Didn't get low enough - hips down to knee height.",
@@ -2116,6 +2188,7 @@ extension PoseRepCounter: AVCaptureVideoDataOutputSampleBufferDelegate {
 
         guard let observation = subject(from: poseRequest.results ?? []),
               let reading = read(observation, now: now) else {
+            if missingBodyFrames == 0 { lostAt = now }
             missingBodyFrames += 1
             guard missingBodyFrames > 25 else { return }
             let hint = movement.lostBodyHint
@@ -2130,7 +2203,12 @@ extension PoseRepCounter: AVCaptureVideoDataOutputSampleBufferDelegate {
             return
         }
 
+        if missingBodyFrames > 0, let lost = lostAt {
+            noteRecovery(gap: now.timeIntervalSince(lost))
+        }
+        lostAt = nil
         missingBodyFrames = 0
+        lastPrimarySeen = reading.primary ?? lastPrimarySeen
         let switched = subjectSwitched
         subjectSwitched = false
 

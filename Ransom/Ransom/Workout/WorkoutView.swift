@@ -175,7 +175,7 @@ struct WorkoutView: View {
             // whoever has time to read it.
             VStack(spacing: 4) {
                 Text(banner.text)
-                    .font(RansomFont.title(banner.shouts ? 40 : 28))
+                    .font(RansomFont.title(banner.shouts ? 46 : 28))
                     .foregroundStyle(banner.tint)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)

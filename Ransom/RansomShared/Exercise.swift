@@ -116,8 +116,11 @@ public enum Exercise: String, CaseIterable, Codable, Identifiable, Sendable {
     /// squatter to straighten their arms would have them checking the wrong limb.
     public var armingCue: String {
         switch self {
-        case .pushUps: return "Hold still at the top, arms straight, and Rex will start counting."
-        case .squats:  return "Stand tall and still, facing the phone, and Rex will start counting."
+        // Short, because this sits under a 46pt GET SET and gets read in a
+        // glance or not at all. The old versions said the same thing in twice
+        // the words and people started their set straight through them.
+        case .pushUps: return "Hold still at the top, arms straight."
+        case .squats:  return "Stand tall and still, facing the phone."
         case .steps:   return "Nothing to set up. Your phone is already counting."
         }
     }
