@@ -220,10 +220,17 @@ public struct UnlockLedger {
 
     /// The shield extensions can't read the app's main store, so the app mirrors the
     /// handful of values the shield needs to render accurate copy.
-    public func mirrorConfig(reps: Int, minutes: Int, exercise: Exercise) {
+    public func mirrorConfig(reps: Int, minutes: Int, exercise: Exercise, allowance: Int = 0) {
+        if allowance > 0 { defaults.set(allowance, forKey: RansomCore.Key.allowanceMinutes) }
         defaults.set(reps, forKey: RansomCore.Key.repsPerUnlock)
         defaults.set(minutes, forKey: RansomCore.Key.minutesPerUnlock)
         defaults.set(exercise.title, forKey: RansomCore.Key.exerciseName)
+    }
+
+    /// Today's ceiling, as the app last saw it. Zero when it has never been
+    /// written, which the report reads as "no goal to judge against".
+    public var allowanceMinutes: Int {
+        defaults.integer(forKey: RansomCore.Key.allowanceMinutes)
     }
 
     public var repsPerUnlock: Int {

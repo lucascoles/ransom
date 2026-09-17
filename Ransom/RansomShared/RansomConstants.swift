@@ -27,6 +27,10 @@ public enum RansomCore {
         public static let unlockedTokens = "ransom.unlock.tokens"
         public static let pendingUnlockRequest = "ransom.unlock.pendingRequest"
         public static let pendingUnlockAppName = "ransom.unlock.pendingAppName"
+        /// Today's ceiling in minutes, mirrored for the report extension: the
+        /// brain is coloured against it, and the extension is the only process
+        /// that can see the screen time to compare it with.
+        public static let allowanceMinutes = "ransom.config.allowanceMinutes"
         public static let repsPerUnlock = "ransom.config.repsPerUnlock"
         public static let minutesPerUnlock = "ransom.config.minutesPerUnlock"
         public static let exerciseName = "ransom.config.exerciseName"

@@ -416,7 +416,8 @@ final class AppModel {
         ledger.mirrorConfig(
             reps: plan.setTarget,
             minutes: plan.minutesPerUnlock,
-            exercise: plan.exercise
+            exercise: plan.exercise,
+            allowance: todayAllowance
         )
         // They flagged late-night scrolling during intake; charge for it.
         ledger.nightSurchargeEnabled = profile.peakTimes.contains(.lateNight)

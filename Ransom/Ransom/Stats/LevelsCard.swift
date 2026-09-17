@@ -1,4 +1,5 @@
 import CoreMotion
+import DeviceActivity
 import SwiftUI
 
 /// A body in the middle, a level ring for each movement beside the muscles it
@@ -18,6 +19,13 @@ import SwiftUI
 /// image tinted here.
 struct LevelsCard: View {
     @Environment(AppModel.self) private var model
+    @Environment(ScreenTimeManager.self) private var screenTime
+
+    /// The extension's view has no intrinsic height, same as the other reports:
+    /// the glyph and one line of copy, with room for two on a narrow phone.
+    private static let brainHeight: CGFloat = 78
+
+    @State private var now = Date()
 
     /// Read once and refreshed after the pedometer back-fills, not observed:
     /// the log is UserDefaults, which SwiftUI cannot watch.
@@ -67,6 +75,21 @@ struct LevelsCard: View {
                     .font(RansomFont.caption(12))
                     .foregroundStyle(Palette.inkSoft)
                     .contentTransition(.numericText(value: Double(model.lifetimeReps)))
+            }
+
+            // Today's screen time, above the body.
+            //
+            // The two halves of the same argument: the body is what the reps
+            // have built, the brain is what today on the phone is doing to the
+            // thing they were for. It is drawn by the report extension because
+            // total screen time exists nowhere else on the phone - see
+            // `BrainReport` - so it arrives as a fixed block of remote view
+            // rather than as a number this card can lay out.
+            if screenTime.isAuthorized {
+                DeviceActivityReport(.brain, filter: .ransomDays(back: 0, until: now))
+                    .id(now)
+                    .frame(height: Self.brainHeight)
+                    .reportClock($now)
             }
 
             stage

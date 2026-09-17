@@ -14,4 +14,6 @@ public extension DeviceActivityReport.Context {
     static let comparison = Self("Comparison")
     /// The last week, day by day, on Progress.
     static let trend = Self("Trend")
+    /// Today's screen time as a brain, at the top of the Levels card.
+    static let brain = Self("Brain")
 }
