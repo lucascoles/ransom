@@ -1,12 +1,17 @@
 import DeviceActivity
 import SwiftUI
 
-/// Today's screen time, drawn as a brain that stops looking well.
+/// Today's screen time, drawn as a brain in the figure's head.
 ///
-/// It sits above the body on the Levels card, and it is the other half of the
-/// same idea: the body shows what the reps have built, the brain shows what the
-/// day on the phone is doing to the thing the reps are for. One is earned over
-/// months, the other is spent by lunchtime.
+/// It is the other half of what the body is saying: the muscles carry what the
+/// reps have built, the brain carries what today on the phone is doing to the
+/// thing they were for. One is earned over months, the other is spent by
+/// lunchtime, and putting them in one figure is the only way the second reads
+/// as a cost rather than as a statistic.
+///
+/// No number here. The glyph is a few points across inside the head, which is
+/// no place for text, and the hours are already on screen in the card directly
+/// below this one. The colour is the whole message.
 ///
 /// **Drawn here because it cannot be drawn anywhere else.** The number is total
 /// screen time, and this extension is the only process on the phone that can
@@ -76,18 +81,16 @@ struct BrainView: View {
     }
 
     var body: some View {
-        VStack(spacing: 6) {
-            Image(systemName: "brain.head.profile")
-                .font(.system(size: 44, weight: .regular))
-                .foregroundStyle(tint)
-                .accessibilityLabel(label)
-
-            Text(label)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundStyle(ReportPalette.inkSoft)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
+        // The organ on its own, not `brain.head.profile`: the figure supplies
+        // the head, and a second head inside the first one looks like a
+        // mistake. Resizable because the app sizes this to the skull it has to
+        // sit in, and the extension is told that only as its own bounds.
+        Image(systemName: "brain")
+            .resizable()
+            .scaledToFit()
+            .foregroundStyle(tint)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .accessibilityLabel(label)
     }
 
     private func blend(_ from: Color, _ to: Color, _ amount: Double) -> Color {
