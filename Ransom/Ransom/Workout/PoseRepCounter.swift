@@ -1374,6 +1374,19 @@ final class PoseRepCounter: NSObject {
         }
 
         if !isArmed {
+            // Before the count arms, width alone is enough to say "back up".
+            //
+            // The corroborated rule below is there so nobody whose reps are
+            // counting gets nagged, and it costs two reps to reach a verdict.
+            // That is the right price mid-set and the wrong one here: a set
+            // that was over this line in its first frame ran for two uncounted
+            // reps before the screen said anything, which reads as the app
+            // being broken rather than as the phone being in the wrong place.
+            // Nothing can be refused by a warning given at this point, so it
+            // needs no evidence beyond the distance itself.
+            if let seen = reading.shoulderWidth, seen > movement.setupWidth {
+                isTooClose = true
+            }
             updateArming(primary: primary, drop: drop)
             // Armed on this frame: the user has just held the top still for a
             // second, so this frame's shoulder width is the top width.
@@ -1892,6 +1905,11 @@ private struct Movement {
     /// Hips above knees, below which the body is crouching rather than
     /// extended, so the rep is a squat with the hands on the floor. `-infinity`
     /// switches the check off.
+    /// Shoulder width above which somebody is plainly too close, judged before
+    /// the count has armed. Higher than `tooCloseWidth`, and it needs no
+    /// corroboration, because nothing is at stake yet: no rep can be refused by
+    /// a warning given while they are still getting into position.
+    let setupWidth: Double
     let crouchHipLift: Double
     /// How much wider than the hips the knees have to be before the hips'
     /// verdict is believed. Both or neither: a single geometric fact about a
@@ -2065,6 +2083,13 @@ private struct Movement {
             // the arm happens to be.
             topCarry: 15,
             tooCloseWidth: tooCloseWidth,
+            // Measured at rest, which is where somebody is when this speaks.
+            // The sets that counted correctly sat at 0.16 to 0.23 and never
+            // reached this; the sets that lost reps to a close-up were at 0.25
+            // to 0.29 before the first rep, and one of them was over this line
+            // in its very first frame while the warning took two reps to
+            // arrive.
+            setupWidth: 0.26,
             // Six recordings: the crouch runs a median of -0.04 to -0.08
             // shoulder widths of hip over knee, honest sets +0.51 to +1.17.
             // Judged per rep in 1s windows, this line refuses 29 of 33 crouch
@@ -2236,6 +2261,11 @@ private struct Movement {
             stillDropRange: stillHipRange,
             topCarry: topCarry,
             tooCloseWidth: tooCloseWidth,
+            // Untested, like the rest of this profile, but safe by a distance:
+            // a squat needs the whole body in frame, which puts the shoulders
+            // around 0.10 to 0.15 of the frame. Anybody at 0.26 is close enough
+            // to have lost their knees.
+            setupWidth: 0.26,
             // A squat is *meant* to put the hips at the knees, so this check has
             // nothing to say here. The squat's cheat is the half rep, and depth
             // is what judges that.
