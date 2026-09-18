@@ -51,7 +51,7 @@ func angle(_ a: CGPoint, _ b: CGPoint, _ c: CGPoint) -> Double {
 let lenient: Set<VNHumanBodyPoseObservation.JointName> = [.leftWrist, .rightWrist, .leftElbow, .rightElbow]
 func bar(_ j: VNHumanBodyPoseObservation.JointName) -> Float { lenient.contains(j) ? 0.15 : 0.2 }
 
-print("t,found,swidth,elbow,elbowL,elbowR,shoulderY,wristY,hipY,kneeY,ankleY,missLenient,againstEdge,confLS,confRS,confLE,confRE,confLW,confRW")
+print("t,found,swidth,elbow,elbowL,elbowR,shoulderY,wristY,hipY,kneeY,ankleY,missLenient,againstEdge,confLS,confRS,confLE,confRE,confLW,confRW,kneeSpread,ankleSpread,hipSpread,wristSpread,kneeWristY")
 
 var nextEmit = 0.0
 let step = 1.0 / targetFPS
@@ -79,7 +79,7 @@ while let sample = output.copyNextSampleBuffer() {
     try? VNImageRequestHandler(cgImage: cg, orientation: .up, options: [:]).perform([request])
 
     guard let obs = (request.results ?? []).first else {
-        print("\(String(format: "%.3f", t)),0,,,,,,,,,,,,,,,,,")
+        print("\(String(format: "%.3f", t)),0,,,,,,,,,,,,,,,,,,,,,,")
         continue
     }
     let points = (try? obs.recognizedPoints(.all)) ?? [:]
@@ -117,6 +117,18 @@ while let sample = output.copyNextSampleBuffer() {
     let confident = points.values.filter { $0.confidence > 0.15 }.map { $0.location }
     let againstEdge = confident.contains { $0.x < 0.02 || $0.x > 0.98 || $0.y < 0.02 || $0.y > 0.98 }
 
+    // Horizontal spreads, in shoulder widths: a plank's legs point away from
+    // the lens and project close together, a crouch splays the knees outside
+    // the arms.
+    func spread(_ a: VNHumanBodyPoseObservation.JointName, _ b: VNHumanBodyPoseObservation.JointName) -> Double? {
+        guard let l = measured(a), let r = measured(b), let w = swidth, w > 0.02 else { return nil }
+        return Double(abs(l.x - r.x)) / w
+    }
+    let kneeSpread = spread(.leftKnee, .rightKnee)
+    let ankleSpread = spread(.leftAnkle, .rightAnkle)
+    let hipSpread = spread(.leftHip, .rightHip)
+    let wristSpread = spread(.leftWrist, .rightWrist)
+
     print([
         String(format: "%.3f", t), "1",
         f(swidth), f(elbow), f(elbowL), f(elbowR),
@@ -125,5 +137,7 @@ while let sample = output.copyNextSampleBuffer() {
         conf(.leftShoulder), conf(.rightShoulder),
         conf(.leftElbow), conf(.rightElbow),
         conf(.leftWrist), conf(.rightWrist),
+        f(kneeSpread), f(ankleSpread), f(hipSpread), f(wristSpread),
+        f(mean(kneeY).flatMap { k in mean(wristY).map { k - $0 } }),
     ].joined(separator: ","))
 }

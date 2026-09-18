@@ -26,6 +26,8 @@ struct WorkoutView: View {
     @State private var countdown: Int? = 3
     @State private var showCompletion = false
     @State private var grantedMinutes = 0
+    /// Whether the count has had a moment on screen at its final value.
+    @State private var hasShownFinalRep = false
 
     /// `-RansomDebugHUD 1` shows the detector readout under the camera.
     private var showsDiagnostics: Bool {
@@ -192,8 +194,11 @@ struct WorkoutView: View {
             }
             .padding(.horizontal, 24)
             .frame(minHeight: 88)
-            .contentTransition(.opacity)
-            .animation(.easeInOut(duration: 0.15), value: banner.text)
+            // Deliberately not animated. A 0.15s cross-fade drew both strings
+            // at once, at two sizes, in two colours: "GO!" over the top of
+            // "Legs back, body flat like a plank." twice in one set, and
+            // unreadable while it lasted. A hard cut is legible.
+            .animation(nil, value: banner.text)
 
             CameraWindow(
                 session: pose.previewSession,
@@ -222,8 +227,12 @@ struct WorkoutView: View {
             // fixed. Never ships either way.
             if showsDiagnostics, let diagnostics = pose.diagnostics {
                 Text(diagnostics)
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.system(size: 9, design: .monospaced))
                     .foregroundStyle(Palette.inkFaint)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 8)
             }
             #endif
         }
@@ -407,6 +416,14 @@ struct WorkoutView: View {
 
     private func finish() {
         guard !showCompletion else { return }
+        // The tenth rep never appeared: the count reached 9, the last rep
+        // landed, and the completion screen replaced the screen in the same
+        // frame. Somebody who did ten push-ups deserves to see the tenth.
+        guard hasShownFinalRep else {
+            hasShownFinalRep = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { finish() }
+            return
+        }
         // A stopped-early set still counts — partial credit beats a rage quit,
         // but no time is granted unless the target was met.
         let earnedFullSet = reps >= target
