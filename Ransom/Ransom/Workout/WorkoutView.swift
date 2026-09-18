@@ -276,7 +276,7 @@ struct WorkoutView: View {
     private var cameraStatus: String? {
         // The window is on screen before the session has delivered anything, so
         // this covers the brief black frame rather than leaving it unexplained.
-        pose.tracking == .idle ? "Getting the camera ready…" : nil
+        (pose.tracking == .idle && !hasShownFinalRep) ? "Getting the camera ready…" : nil
     }
 
     /// True while there is something to say about the last rep.
@@ -310,6 +310,11 @@ struct WorkoutView: View {
         guard usingCamera else {
             return (formHint ?? "Go!", nil, formHint == nil ? Palette.ink : Palette.danger, false)
         }
+        // The set is over and the camera has stopped; the screen is only still
+        // here so the last rep can be seen. Anything the idle counter says now
+        // ("Get set", "Getting the camera ready") is about a set that has
+        // already finished.
+        if hasShownFinalRep { return ("GO!", nil, Palette.green, true) }
         if let blocker = pose.blocker {
             return (blocker.shout, formHint ?? blocker.detail, Palette.danger, true)
         }
@@ -424,6 +429,7 @@ struct WorkoutView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { finish() }
             return
         }
+        hasShownFinalRep = true
         // A stopped-early set still counts — partial credit beats a rage quit,
         // but no time is granted unless the target was met.
         let earnedFullSet = reps >= target

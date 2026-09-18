@@ -534,6 +534,10 @@ final class PoseRepCounter: NSObject {
     /// or two.
     private let blindDescentGap: TimeInterval = 0.25
     private let blindDescentsBeforeSpeaking = 2
+    /// How long the movement's own signal has to be missing before the screen
+    /// says so. Long enough that a blink says nothing.
+    private let signalGrace: TimeInterval = 0.35
+    private var primaryMissingSince: Date?
     private var blindDescents = 0
 
     // MARK: - How the phone is standing
@@ -627,6 +631,7 @@ final class PoseRepCounter: NSObject {
         hintExpiresAt = nil
         isTooClose = false
         blindDescents = 0
+        primaryMissingSince = nil
         lastPrimarySeen = nil
         lastWidthSeen = nil
         unseenSince = nil
@@ -1369,9 +1374,17 @@ final class PoseRepCounter: NSObject {
 
         guard let primary else {
             formHint = movement.needSignalHint
-            blocker = blocking(.bodyNotInShot)
+            // Held, not glimpsed. A single frame without an elbow angle is a
+            // blink, and flashing MOVE INTO SHOT for one frame in the middle of
+            // a set is noise that costs the banner its authority.
+            let missingSince = primaryMissingSince ?? Date()
+            primaryMissingSince = missingSince
+            if Date().timeIntervalSince(missingSince) >= signalGrace {
+                blocker = blocking(.bodyNotInShot)
+            }
             return
         }
+        primaryMissingSince = nil
 
         if !isArmed {
             // Before the count arms, width alone is enough to say "back up".
@@ -1451,12 +1464,21 @@ final class PoseRepCounter: NSObject {
         if let top = repTop, let bottom = repBottom {
             depth = max(0, min(1, (top - primary) / max(movement.minTravel, top - bottom)))
         }
+        // The blocker is judged every frame, before the rejection hold below.
+        //
+        // It used to be worked out after it, so a 2.5s rejection froze it at
+        // whatever it had been: BACK UP appeared for a single frame, vanished
+        // under "Not deep enough" for four, then came back. Worse, the screen
+        // spent two and a half seconds telling somebody to go deeper while the
+        // real problem was that they were too close to be seen at all - which
+        // is why a setup problem outranks a refused rep on the banner. The
+        // distance is the reason the rep was shallow.
+        blocker = blocking(isTooClose ? .tooClose : nil)
+
         // A rejection has the floor until it times out. Anything else here would
         // wipe it before it could be read.
         if let expiry = hintExpiresAt, expiry > Date() { return }
         hintExpiresAt = nil
-
-        blocker = blocking(isTooClose ? .tooClose : nil)
 
         if isTooClose {
             formHint = movement.tooCloseHint
