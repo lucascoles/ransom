@@ -28,9 +28,6 @@ struct RansomReportExtension: DeviceActivityReportExtension {
         TrendReport { week in
             TrendView(week: week)
         }
-        BrainReport { today in
-            BrainView(day: today)
-        }
     }
 }
 

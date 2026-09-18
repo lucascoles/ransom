@@ -1,5 +1,4 @@
 import CoreMotion
-import DeviceActivity
 import SwiftUI
 
 /// A body in the middle, a level ring for each movement beside the muscles it
@@ -19,20 +18,6 @@ import SwiftUI
 /// image tinted here.
 struct LevelsCard: View {
     @Environment(AppModel.self) private var model
-    @Environment(ScreenTimeManager.self) private var screenTime
-
-    // Where the brain goes, measured off `LevelFigureOutline` (326 x 900): the
-    // head runs from y=2 down to the neck's narrowest point at y=100, is widest
-    // at 81px across, and is centred on the figure's axis. The glyph sits a
-    // little above the middle of that, where a skull keeps its brain.
-    // Both numbers were walked in against a render of the real asset: 70px
-    // across broke the crown and spilled past the temples, 56 touched the
-    // outline. 52 sits inside the skull with a margin all round.
-    private static let headCentreY: CGFloat = 48.0 / 900.0
-    private static let brainSpan: CGFloat = 52.0 / 326.0
-
-    @State private var now = Date()
-
     /// Read once and refreshed after the pedometer back-fills, not observed:
     /// the log is UserDefaults, which SwiftUI cannot watch.
     @State private var lifetimeSteps = StepLog().lifetime
@@ -106,19 +91,6 @@ struct LevelsCard: View {
                 })
                 .frame(height: h)
                 .position(x: w / 2, y: h / 2)
-
-                // Today's screen time, in the head. Drawn by the report
-                // extension because total screen time exists in no other
-                // process on the phone (see `BrainReport`), which is why a few
-                // points of skull are hosting a whole remote view.
-                if screenTime.isAuthorized {
-                    let span = h * BodyFigure.aspect * Self.brainSpan
-                    DeviceActivityReport(.brain, filter: .ransomDays(back: 0, until: now))
-                        .id(now)
-                        .frame(width: span, height: span)
-                        .position(x: w / 2, y: h * Self.headCentreY)
-                        .reportClock($now)
-                }
 
                 ForEach(movements, id: \.self) { exercise in
                     let spot = Self.spot(for: exercise)
