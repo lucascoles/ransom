@@ -158,16 +158,34 @@ struct RootView: View {
         .overlay {
             if model.showWelcome {
                 WelcomeCelebration {
-                    withAnimation(.easeInOut(duration: 0.35)) { model.showWelcome = false }
+                    Task {
+                        let ask = await NotificationManager.isUndetermined()
+                        withAnimation(.easeInOut(duration: 0.35)) {
+                            model.showNotificationAsk = ask
+                            model.showWelcome = false
+                        }
+                    }
                 }
                 // Appears at once and only fades on the way out. Fading in let
                 // Home show through for a third of a second, blended with the
                 // paywall leaving underneath it.
                 .transition(.asymmetric(insertion: .identity, removal: .opacity))
                 .zIndex(1)
+            } else if model.showNotificationAsk {
+                // Straight after the welcome: they have just paid, Rex has just
+                // cheered, and the two alerts are what makes the minutes they
+                // buy with reps feel looked after.
+                NotificationsStep {
+                    withAnimation(.easeInOut(duration: 0.35)) { model.showNotificationAsk = false }
+                }
+                .ransomScreenBackground()
+                .preferredColorScheme(.light)
+                .transition(.opacity)
+                .zIndex(1)
             }
         }
         .animation(.easeInOut(duration: 0.35), value: model.showWelcome)
+        .animation(.easeInOut(duration: 0.35), value: model.showNotificationAsk)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { refresh() }
         }
@@ -229,6 +247,9 @@ struct RootView: View {
         // `-RansomWelcome 1` shows the post-paywall welcome on launch, so it can
         // be looked at without buying the subscription again.
         if UserDefaults.standard.bool(forKey: "RansomWelcome") { model.showWelcome = true }
+        // `-RansomNotifyAsk 1` opens straight on the notifications ask that
+        // follows the welcome.
+        if UserDefaults.standard.bool(forKey: "RansomNotifyAsk") { model.showNotificationAsk = true }
         #endif
 
         guard !hasWiredDarwinObserver else { return }

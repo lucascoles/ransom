@@ -651,12 +651,16 @@ struct NotificationsStep: View {
                 PrimaryButton(title: "Yes, keep me posted", isLoading: isRequesting) {
                     isRequesting = true
                     Task {
-                        await NotificationManager.requestPermission()
+                        let granted = await NotificationManager.requestPermission()
+                        Revenue.markNotifications(granted ? "allowed" : "declined")
                         isRequesting = false
                         onNext()
                     }
                 }
-                TextButton(title: "Not now", action: onNext)
+                TextButton(title: "Not now") {
+                    Revenue.markNotifications("not-now")
+                    onNext()
+                }
             }
             .padding(.horizontal, Metrics.screenPadding)
             .padding(.bottom, 24)

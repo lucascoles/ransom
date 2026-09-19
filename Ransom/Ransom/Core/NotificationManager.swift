@@ -16,6 +16,13 @@ enum NotificationManager {
             .requestAuthorization(options: [.alert, .sound, .badge])) ?? false
     }
 
+    /// True until iOS has shown its permission alert once. After that the
+    /// answer can only be changed in the Settings app, so asking again in-app
+    /// would be a button that does nothing.
+    static func isUndetermined() async -> Bool {
+        await UNUserNotificationCenter.current().notificationSettings().authorizationStatus == .notDetermined
+    }
+
     /// The two alerts a granted unlock is allowed to raise: one warning shortly
     /// before the minutes run out, and one when they do.
     ///

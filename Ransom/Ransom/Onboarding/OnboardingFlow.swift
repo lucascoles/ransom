@@ -122,10 +122,7 @@ struct OnboardingFlow: View {
             BlockingExplainerStep(profile: draft, onNext: { advance(to: .firstRep) })
 
         case .firstRep:
-            FirstRepStep(profile: draft, onNext: { advance(to: .notifications) })
-
-        case .notifications:
-            NotificationsStep(onNext: { advance(to: .building) })
+            FirstRepStep(profile: draft, onNext: { advance(to: .building) })
 
         case .building:
             BuildingPlanStep(profile: draft, onNext: { advance(to: .plan) })
@@ -186,8 +183,9 @@ struct OnboardingFlow: View {
 /// projection after the reality check, the bank after the pace step) or asking
 /// for something nothing used (age, height and weight). The rating ask went
 /// because it sat between the plan and the trial, and asked people to rate an
-/// app they had not opened yet. The notifications ask was folded into the
-/// trial-reminder screen, where the permission finally has a reason attached.
+/// app they had not opened yet. The notifications ask is not in here at all: it
+/// comes after the paywall, behind the welcome (see `RootView`), so it never
+/// stands between someone and the purchase.
 enum OnboardingStep: Int, CaseIterable, Hashable {
     // Three taps naming the problem, before anything is asked for. Ends by
     // turning the story on the reader, which is the whole welcome.
@@ -222,9 +220,6 @@ enum OnboardingStep: Int, CaseIterable, Hashable {
     // set is worth, so "your reps open them" is a sentence they can check.
     case blocking
     case firstRep
-    // Asked right after they've earned something, which is the one moment the
-    // permission reads as Rex keeping his side of the deal rather than a tax.
-    case notifications
     case building
     case plan
     // Asked while the plan is still on screen and before any money is mentioned,

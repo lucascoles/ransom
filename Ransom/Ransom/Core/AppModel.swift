@@ -43,6 +43,11 @@ final class AppModel {
     /// persisted: it is a moment, and a relaunch should never replay it.
     var showWelcome = false
 
+    /// Set as the welcome closes, when iOS has never asked about notifications.
+    /// The ask lives after the paywall so it never stands in front of a
+    /// purchase. Not persisted, for the same reason as `showWelcome`.
+    var showNotificationAsk = false
+
     /// Bumped whenever the rules change or the clock crosses a window's edge, so
     /// the views that quote a price redraw. `FocusRuleStore` reads the App Group
     /// and is not observable on its own.

@@ -103,6 +103,13 @@ enum Revenue {
         Purchases.shared.attribution.setAttributes(["intake_step": label])
     }
 
+    /// The answer to the notifications ask after the paywall: `allowed`,
+    /// `declined` (said yes to Rex, no to iOS) or `not-now`.
+    @MainActor static func markNotifications(_ answer: String) {
+        guard Purchases.isConfigured else { return }
+        Purchases.shared.attribution.setAttributes(["notifications": answer])
+    }
+
     /// Past the paywall and into the app: the end of the funnel.
     @MainActor static func markIntakeFinished() {
         guard Purchases.isConfigured else { return }
