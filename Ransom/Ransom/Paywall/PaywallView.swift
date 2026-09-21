@@ -101,6 +101,14 @@ struct PaywallView: View {
         .onChange(of: store.isSubscribed) { _, subscribed in
             if subscribed { complete() }
         }
+        // Somebody who redeemed an offer code before opening the app arrives here
+        // already entitled, and `onChange` never fires for a value that was true
+        // on arrival. Without this they have to find Restore to get past a screen
+        // asking them to buy what they already have.
+        .task {
+            await store.refreshEntitlement()
+            if store.isSubscribed { complete() }
+        }
     }
 
     // MARK: - Pieces
