@@ -29,8 +29,11 @@ struct RansomApp: App {
     /// two-second title card between them and the set is a tax on being interrupted.
     @State private var isLaunching = true
 
+    @Environment(\.scenePhase) private var scenePhase
+
     init() {
         Revenue.configure()
+        AdMeasurement.configure()
         // Existing installs still have the retired 7pm nudge pending with
         // `repeats: true`; removing the code that scheduled it does not
         // unschedule it on a device that already has it.
@@ -55,6 +58,9 @@ struct RansomApp: App {
                         // dark frame in an otherwise light sequence.
                         .preferredColorScheme(.light)
                 }
+            }
+            .onChange(of: scenePhase, initial: true) { _, phase in
+                if phase == .active { AdMeasurement.appBecameActive() }
             }
         }
     }

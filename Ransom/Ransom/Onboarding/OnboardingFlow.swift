@@ -39,7 +39,10 @@ struct OnboardingFlow: View {
         // The drop-off funnel: RevenueCat keeps the furthest step each person
         // reached. See `Revenue.markIntakeStep`.
         .onAppear { Revenue.markIntakeStep(step) }
-        .onChange(of: step) { _, reached in Revenue.markIntakeStep(reached) }
+        .onChange(of: step) { _, reached in
+            Revenue.markIntakeStep(reached)
+            if reached == .paywall { AdMeasurement.paywallReached() }
+        }
     }
 
     // MARK: - Chrome

@@ -13,6 +13,7 @@
 		1A0000000000000000000A07 /* RansomReport.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 1A0000000000000000000A02 /* RansomReport.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D34BC120A6FD0D126B52BDBB /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1473E192EF5051D0E54007D6 /* Foundation.framework */; };
 		1A0000000000000000000B01 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 1A0000000000000000000B03 /* RevenueCat */; };
+		1A0000000000000000000B04 /* FacebookCore in Frameworks */ = {isa = PBXBuildFile; productRef = 1A0000000000000000000B06 /* FacebookCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -156,6 +157,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1A0000000000000000000B01 /* RevenueCat in Frameworks */,
+				1A0000000000000000000B04 /* FacebookCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -294,6 +296,7 @@
 			name = Ransom;
 			packageProductDependencies = (
 				1A0000000000000000000B03 /* RevenueCat */,
+				1A0000000000000000000B06 /* FacebookCore */,
 			);
 			productName = Ransom;
 			productReference = 1A0000000000000000000020 /* Ransom.app */;
@@ -438,6 +441,7 @@
 			mainGroup = 1A0000000000000000000002;
 			packageReferences = (
 				1A0000000000000000000B02 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				1A0000000000000000000B05 /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */,
 			);
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
@@ -650,7 +654,10 @@
 				CURRENT_PROJECT_VERSION = 9;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = YES;
+				FACEBOOK_APP_ID = "";
+				FACEBOOK_CLIENT_TOKEN = "";
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Ransom-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Ransom;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Ransom watches your form to count reps honestly. Everything is processed on your device — no video is recorded, saved or uploaded.";
@@ -682,7 +689,10 @@
 				CURRENT_PROJECT_VERSION = 9;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_PREVIEWS = YES;
+				FACEBOOK_APP_ID = "";
+				FACEBOOK_CLIENT_TOKEN = "";
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Ransom-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Ransom;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Ransom watches your form to count reps honestly. Everything is processed on your device — no video is recorded, saved or uploaded.";
@@ -1008,6 +1018,14 @@
 				minimumVersion = 5.89.0;
 			};
 		};
+		1A0000000000000000000B05 /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/facebook/facebook-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 18.1.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1015,6 +1033,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 1A0000000000000000000B02 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
 			productName = RevenueCat;
+		};
+		1A0000000000000000000B06 /* FacebookCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1A0000000000000000000B05 /* XCRemoteSwiftPackageReference "facebook-ios-sdk" */;
+			productName = FacebookCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
