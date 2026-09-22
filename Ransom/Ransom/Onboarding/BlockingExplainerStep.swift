@@ -47,11 +47,11 @@ struct BlockingExplainerStep: View {
                         .padding(.top, 4)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Your apps get a doorman")
+                        Text("Your apps, on your terms")
                             .font(RansomFont.title(28))
                             .foregroundStyle(Palette.ink)
                             .fixedSize(horizontal: false, vertical: true)
-                        Text("Nothing is deleted. Rex stands at the door and asks for a set first.")
+                        Text("Nothing is deleted. Your apps stay right where they are. You just earn them with a set first.")
                             .font(RansomFont.body(15))
                             .foregroundStyle(Palette.inkSoft)
                             .fixedSize(horizontal: false, vertical: true)
@@ -66,7 +66,7 @@ struct BlockingExplainerStep: View {
                             detail: "\(plan.setTarget) \(plan.exercise.title.lowercased()) banks \(Currency.coins(plan.minutesPerUnlock)). One coin is one minute, spent on any app you locked.")
                         row(icon: "lock.open.fill",
                             title: "There is always a way in.",
-                            detail: "Opening a locked app spends from your bank. When the bank is empty, Rex is back at the door.")
+                            detail: "Opening a locked app spends from your bank. When it runs out, one more set gets you back in.")
                     }
                 }
                 .padding(.horizontal, Metrics.screenPadding)
@@ -246,7 +246,7 @@ private struct AppLockGrid: View {
             Spacer(minLength: 0)
         }
         .frame(height: Self.cellSize + 20)
-        .accessibilityLabel("Rex, the doorman")
+        .accessibilityLabel("Rex, your coach")
     }
 
     private func tileView(_ tile: Tile, order: Int) -> some View {

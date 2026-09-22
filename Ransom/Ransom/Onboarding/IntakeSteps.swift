@@ -192,9 +192,6 @@ struct WelcomeStep: View {
 
             VStack(spacing: 12) {
                 PrimaryButton(title: "Let's go", action: onStart)
-                Text("Takes about a minute.")
-                    .font(RansomFont.caption(12))
-                    .foregroundStyle(Palette.inkFaint)
             }
             .padding(.horizontal, Metrics.screenPadding)
             .padding(.bottom, 28)
@@ -215,7 +212,7 @@ struct AgeStep: View {
     var body: some View {
         StepScaffold(
             title: "How old are you?",
-            subtitle: "Rex uses this to size your sets. That's all.",
+            subtitle: "Rex uses this to add up the years ahead. That's all.",
             onNext: onNext
         ) {
             VStack(spacing: 18) {
