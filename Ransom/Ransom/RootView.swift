@@ -11,6 +11,7 @@ struct RootView: View {
     @State private var workoutRequest: WorkoutRequest?
     @State private var selectedTab = RootView.startingTab()
     @State private var hasWiredDarwinObserver = false
+    @State private var asksTracking = false
 
     /// `-RansomTab 1` opens straight onto Progress, `2` onto Settings. Lets a
     /// screenshot run reach every tab without a UI-test target. Debug builds only.
@@ -186,6 +187,20 @@ struct RootView: View {
         }
         .animation(.easeInOut(duration: 0.35), value: model.showWelcome)
         .animation(.easeInOut(duration: 0.35), value: model.showNotificationAsk)
+        // Apple's tracking question comes last: after the paywall, the welcome
+        // and the notifications ask, so it never sits in the intake or stacks
+        // on another alert. Only for people finishing the intake now.
+        .onChange(of: model.showWelcome) { _, showing in
+            if showing { asksTracking = true }
+        }
+        .onAppear { if model.showWelcome { asksTracking = true } }
+        .task(id: asksTracking && !model.showWelcome && !model.showNotificationAsk) {
+            guard asksTracking, !model.showWelcome, !model.showNotificationAsk else { return }
+            try? await Task.sleep(for: .seconds(0.8))
+            guard !Task.isCancelled else { return }
+            asksTracking = false
+            await AdMeasurement.askTrackingIfNeeded()
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { refresh() }
         }

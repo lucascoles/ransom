@@ -1,3 +1,4 @@
+import AppTrackingTransparency
 import FacebookCore
 import Foundation
 import RevenueCat
@@ -12,8 +13,10 @@ import RevenueCat
 /// logging is off in Info.plist for the same reason, since it includes
 /// in-app purchases.
 ///
-/// There is no tracking prompt and no advertising identifier. Meta matches
-/// these events through Apple's SKAdNetwork and its own aggregated measurement.
+/// Apple counts an SDK like this as tracking, so the app asks Apple's
+/// tracking question once, after the intake. People who allow it are matched
+/// precisely; everyone else is still counted, anonymously, through Apple's
+/// SKAdNetwork and Meta's aggregated measurement.
 ///
 /// Stays switched off while `FACEBOOK_APP_ID` is empty, so the app builds and
 /// runs the same before the Meta app exists.
@@ -45,6 +48,19 @@ enum AdMeasurement {
     static func appBecameActive() {
         guard isStarted else { return }
         AppEvents.shared.activateApp()
+    }
+
+    /// Apple's "Allow tracking?" question, once, after the intake is over.
+    /// Either answer carries straight on into the app.
+    @MainActor static func askTrackingIfNeeded() async {
+        guard isStarted,
+              ATTrackingManager.trackingAuthorizationStatus == .notDetermined
+        else { return }
+        let status = await ATTrackingManager.requestTrackingAuthorization()
+        if status == .authorized, Purchases.isConfigured {
+            Purchases.shared.attribution.collectDeviceIdentifiers()
+        }
+        Revenue.markTracking(status == .authorized ? "allowed" : "declined")
     }
 
     private static let paywallLoggedKey = "ransom.meta.paywallReached"

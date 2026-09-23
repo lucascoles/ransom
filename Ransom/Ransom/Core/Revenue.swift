@@ -110,6 +110,12 @@ enum Revenue {
         Purchases.shared.attribution.setAttributes(["notifications": answer])
     }
 
+    /// The answer to Apple's tracking question: `allowed` or `declined`.
+    @MainActor static func markTracking(_ answer: String) {
+        guard Purchases.isConfigured else { return }
+        Purchases.shared.attribution.setAttributes(["tracking": answer])
+    }
+
     /// Past the paywall and into the app: the end of the funnel.
     @MainActor static func markIntakeFinished() {
         guard Purchases.isConfigured else { return }

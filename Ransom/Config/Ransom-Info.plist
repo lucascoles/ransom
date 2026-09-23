@@ -11,6 +11,6 @@
 	<key>FacebookAutoLogAppEventsEnabled</key>
 	<false/>
 	<key>FacebookAdvertiserIDCollectionEnabled</key>
-	<false/>
+	<true/>
 </dict>
 </plist>
